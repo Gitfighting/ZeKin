@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="720" viewBox="0 0 1180 720">
+  <rect width="1180" height="720" fill="#f8fafc"/>
+  <rect x="0" y="0" width="1180" height="68" fill="#166534"/>
+  <text x="32" y="42" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#fff">ZeKin 教师审核工作台</text>
+  <text x="950" y="42" font-family="Arial, sans-serif" font-size="14" fill="#dcfce7">辅导员：张老师</text>
+
+  <rect x="24" y="92" width="1132" height="76" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="44" y="122" font-family="Arial, sans-serif" font-size="14" fill="#475569">班级</text>
+  <rect x="84" y="104" width="150" height="36" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="102" y="127" font-family="Arial, sans-serif" font-size="14" fill="#0f172a">软件 2401</text>
+  <text x="270" y="122" font-family="Arial, sans-serif" font-size="14" fill="#475569">日期</text>
+  <rect x="312" y="104" width="150" height="36" rx="8" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="330" y="127" font-family="Arial, sans-serif" font-size="14" fill="#0f172a">2026-06-22</text>
+  <text x="500" y="122" font-family="Arial, sans-serif" font-size="14" fill="#475569">状态</text>
+  <rect x="542" y="104" width="110" height="36" rx="8" fill="#dcfce7" stroke="#86efac"/>
+  <text x="570" y="127" font-family="Arial, sans-serif" font-size="14" fill="#166534">待审核</text>
+
+  <rect x="24" y="192" width="700" height="490" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="48" y="226" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">待审核队列</text>
+  <g>
+    <rect x="48" y="250" width="652" height="86" rx="12" fill="#f0fdf4" stroke="#bbf7d0"/>
+    <text x="70" y="282" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">李明 · 查寝打卡</text>
+    <text x="70" y="308" font-family="Arial, sans-serif" font-size="13" fill="#475569">内容：今日学习了思政课程相关材料，已在宿舍...</text>
+    <text x="580" y="282" font-family="Arial, sans-serif" font-size="13" fill="#166534">定位正常</text>
+  </g>
+  <g>
+    <rect x="48" y="352" width="652" height="86" rx="12" fill="#fff7ed" stroke="#fed7aa"/>
+    <text x="70" y="384" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">周然 · 实习打卡</text>
+    <text x="70" y="410" font-family="Arial, sans-serif" font-size="13" fill="#475569">内容：今日完成企业导师安排的日报整理...</text>
+    <text x="580" y="384" font-family="Arial, sans-serif" font-size="13" fill="#c2410c">定位异常</text>
+  </g>
+  <g>
+    <rect x="48" y="454" width="652" height="86" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="70" y="486" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#0f172a">陈晨 · 上课打卡</text>
+    <text x="70" y="512" font-family="Arial, sans-serif" font-size="13" fill="#475569">内容：已到达教室，准备参与课堂讨论...</text>
+    <text x="580" y="486" font-family="Arial, sans-serif" font-size="13" fill="#166534">定位正常</text>
+  </g>
+
+  <rect x="748" y="192" width="408" height="490" rx="12" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="776" y="226" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">打卡详情</text>
+  <text x="776" y="266" font-family="Arial, sans-serif" font-size="14" fill="#475569">学生：李明 · 软件 2401</text>
+  <text x="776" y="296" font-family="Arial, sans-serif" font-size="14" fill="#475569">类型：查寝打卡</text>
+  <text x="776" y="326" font-family="Arial, sans-serif" font-size="14" fill="#475569">时间：2026-06-22 22:14</text>
+  <text x="776" y="356" font-family="Arial, sans-serif" font-size="14" fill="#475569">定位：宿舍楼附近 · 正常</text>
+  <rect x="776" y="384" width="340" height="120" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="796" y="414" font-family="Arial, sans-serif" font-size="14" fill="#334155">今日学习了思政课程相关材料，</text>
+  <text x="796" y="440" font-family="Arial, sans-serif" font-size="14" fill="#334155">结合班级活动完成心得总结，</text>
+  <text x="796" y="466" font-family="Arial, sans-serif" font-size="14" fill="#334155">当前已在宿舍。</text>
+  <rect x="776" y="532" width="160" height="48" rx="10" fill="#16a34a"/>
+  <text x="828" y="562" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#fff">通过</text>
+  <rect x="956" y="532" width="160" height="48" rx="10" fill="#fee2e2" stroke="#fca5a5"/>
+  <text x="1008" y="562" font-family="Arial, sans-serif" font-size="16" font-weight="700" fill="#b91c1c">驳回</text>
+</svg>

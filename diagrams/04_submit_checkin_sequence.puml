@@ -1,0 +1,43 @@
+@startuml
+title UC-02 提交打卡 顺序图
+skinparam backgroundColor #F8FAFC
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #1D4ED8
+  ActorBorderColor #1D4ED8
+  LifeLineBorderColor #94A3B8
+  ParticipantBorderColor #1D4ED8
+  ParticipantBackgroundColor #FFFFFF
+}
+
+actor "学生" as Student
+boundary "学生端打卡页\nCheckinPage" as Page
+control "打卡控制器\nCheckinController" as Controller
+control "打卡服务\nCheckinService" as Service
+entity "打卡记录库\nCheckinRepository" as Repo
+database "MySQL" as DB
+participant "定位服务\nGeolocation" as Geo
+
+Student -> Page : 选择类型并填写内容
+Page -> Geo : requestLocation()
+alt 定位成功
+  Geo --> Page : lat,lng
+else 定位失败
+  Geo --> Page : location_error
+  Page -> Page : 标记定位异常
+end
+Student -> Page : 点击提交
+Page -> Controller : POST /checkins
+Controller -> Service : submitCheckin(command)
+Service -> Repo : existsToday(user,type,date)
+Repo -> DB : 查询同日同类型记录
+DB --> Repo : exists=false
+Repo --> Service : 可提交
+Service -> Repo : save(checkin)
+Repo -> DB : INSERT checkins
+DB --> Repo : checkin_id
+Repo --> Service : Checkin
+Service --> Controller : SubmitResult
+Controller --> Page : 201 Created\n待审核
+Page --> Student : 展示提交成功并刷新今日状态
+@enduml

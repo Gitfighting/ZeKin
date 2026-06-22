@@ -1,0 +1,55 @@
+@startuml
+title ZeKin 72小时MVP 用例图
+left to right direction
+skinparam backgroundColor #F8FAFC
+skinparam handwritten false
+skinparam shadowing false
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #FFFFFF
+  BorderColor #2563EB
+  FontColor #0F172A
+  ArrowColor #334155
+}
+skinparam rectangle {
+  BackgroundColor #EFF6FF
+  BorderColor #93C5FD
+}
+
+actor "学生" as Student
+actor "辅导员/教师" as Teacher
+actor "管理员" as Admin
+actor "定位服务" as Geo
+
+rectangle "ZeKin AI思政打卡系统\n72小时MVP边界" {
+  usecase "UC-01\n用户登录" as UC01
+  usecase "UC-02\n提交打卡" as UC02
+  usecase "UC-03\n查看今日状态与历史" as UC03
+  usecase "UC-04\n教师审核打卡" as UC04
+  usecase "UC-05\n查看统计概览" as UC05
+  usecase "采集定位" as UCGeo
+  usecase "校验重复打卡" as UCDup
+  usecase "记录审核结果" as UCReviewLog
+}
+
+Student --> UC01
+Student --> UC02
+Student --> UC03
+Teacher --> UC01
+Teacher --> UC04
+Teacher --> UC05
+Admin --> UC01
+Admin --> UC05
+Geo --> UCGeo
+
+UC02 .> UCGeo : <<include>>
+UC02 .> UCDup : <<include>>
+UC04 .> UCReviewLog : <<include>>
+UC05 .> UC04 : <<extend>>\n从异常指标进入审核
+
+note bottom of UC02
+MVP只记录定位与照片占位；
+AI审核、人脸识别留作扩展点。
+end note
+@enduml

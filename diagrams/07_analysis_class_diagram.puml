@@ -1,0 +1,129 @@
+@startuml
+title ZeKin 72小时MVP 分析类图
+skinparam backgroundColor #F8FAFC
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #334155
+  FontColor #0F172A
+  AttributeFontColor #334155
+}
+
+package "Boundary 边界类" #DBEAFE {
+  class StudentCheckinPage <<boundary>> {
+    +showTodayStatus()
+    +submitCheckin()
+    +showHistory()
+  }
+  class TeacherReviewPage <<boundary>> {
+    +filterCheckins()
+    +openDetail()
+    +approve()
+    +reject()
+  }
+  class AdminDashboardPage <<boundary>> {
+    +showOverview()
+    +openExceptions()
+  }
+  class GeolocationAdapter <<boundary>> {
+    +getCurrentPosition()
+  }
+}
+
+package "Control 控制类" #DCFCE7 {
+  class AuthController <<control>> {
+    +login()
+    +identifyRole()
+  }
+  class CheckinController <<control>> {
+    +submit()
+    +today()
+    +history()
+  }
+  class ReviewController <<control>> {
+    +listForTeacher()
+    +review()
+  }
+  class StatisticsController <<control>> {
+    +overview()
+  }
+  class PermissionService <<control>> {
+    +canViewClass()
+    +canReview()
+  }
+}
+
+package "Entity 实体类" #FEF3C7 {
+  class User <<entity>> {
+    +id
+    +account
+    +realName
+    +role
+    +classId
+    +status
+  }
+  class ClassGroup <<entity>> {
+    +id
+    +name
+    +teacherId
+  }
+  class Checkin <<entity>> {
+    +id
+    +studentId
+    +type
+    +content
+    +photoUrl
+    +latitude
+    +longitude
+    +locationStatus
+    +teacherStatus
+    +submittedAt
+  }
+  class Review <<entity>> {
+    +id
+    +checkinId
+    +teacherId
+    +action
+    +comment
+    +reviewedAt
+  }
+  class Course <<entity>> {
+    +id
+    +name
+    +classId
+    +teacherId
+    +weekday
+    +startTime
+  }
+  class LocationRule <<entity>> {
+    +id
+    +name
+    +type
+    +latitude
+    +longitude
+    +radius
+  }
+}
+
+StudentCheckinPage --> CheckinController
+StudentCheckinPage --> GeolocationAdapter
+TeacherReviewPage --> ReviewController
+AdminDashboardPage --> StatisticsController
+AuthController --> User
+CheckinController --> Checkin
+CheckinController --> PermissionService
+ReviewController --> Review
+ReviewController --> Checkin
+ReviewController --> PermissionService
+StatisticsController --> Checkin
+StatisticsController --> Review
+PermissionService --> User
+PermissionService --> ClassGroup
+
+User "1" -- "0..*" Checkin : 学生提交
+User "1" -- "0..*" Review : 教师审核
+ClassGroup "1" -- "0..*" User : 包含学生
+ClassGroup "1" -- "0..*" Course : 开设课程
+Checkin "1" -- "0..*" Review : 审核记录
+LocationRule ..> Checkin : 校验依据
+@enduml

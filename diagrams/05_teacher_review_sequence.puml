@@ -1,0 +1,44 @@
+@startuml
+title UC-04 教师审核打卡 顺序图
+skinparam backgroundColor #F8FAFC
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #15803D
+  ActorBorderColor #15803D
+  ParticipantBorderColor #15803D
+  ParticipantBackgroundColor #FFFFFF
+}
+
+actor "辅导员/教师" as Teacher
+boundary "教师审核页\nReviewPage" as Page
+control "审核控制器\nReviewController" as Controller
+control "权限服务\nPermissionService" as Permission
+control "审核服务\nReviewService" as Service
+entity "审核记录库\nReviewRepository" as ReviewRepo
+entity "打卡记录库\nCheckinRepository" as CheckinRepo
+database "MySQL" as DB
+
+Teacher -> Page : 选择班级/日期/状态
+Page -> Controller : GET /teacher/checkins
+Controller -> Permission : canViewClass(teacher,class)
+Permission --> Controller : true
+Controller -> CheckinRepo : findByFilter()
+CheckinRepo -> DB : SELECT checkins
+DB --> CheckinRepo : records
+CheckinRepo --> Controller : 打卡列表
+Controller --> Page : 列表数据
+
+Teacher -> Page : 打开详情并选择通过/驳回
+Page -> Controller : POST /teacher/reviews
+Controller -> Permission : canReview(teacher,checkin)
+Permission --> Controller : true
+Controller -> Service : review(command)
+Service -> ReviewRepo : saveReview()
+ReviewRepo -> DB : INSERT reviews
+Service -> CheckinRepo : updateTeacherStatus()
+CheckinRepo -> DB : UPDATE checkins
+DB --> CheckinRepo : ok
+Service --> Controller : ReviewResult
+Controller --> Page : 审核成功
+Page --> Teacher : 刷新列表与统计
+@enduml

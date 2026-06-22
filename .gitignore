@@ -1,37 +1,18 @@
-# See https://help.github.com/articles/ignoring-files/
-
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
+# Local environment
 .env
-.env.local
-.env.*.local
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
+.env.*
+!.env.example
 
-# Node
-node_modules/
-dist/
-*.local
+# Generated diagram exports
+*.png
+*.pdf
+*.svg.tmp
 
-# IDE
-.idea/
-.vscode/
-*.swp
+# Office temp files
+~$*.docx
 
-# OS
+# OS / IDE
 .DS_Store
 Thumbs.db
-
-# Uploads & logs
-uploads/
-*.log
-
-# Docker volumes
-data/
-
-# Internal extraction (temp)
-docs/_extracted_requirements.txt
+.idea/
+.vscode/

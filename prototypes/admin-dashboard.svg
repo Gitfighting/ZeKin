@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="720" viewBox="0 0 1180 720">
+  <rect width="1180" height="720" fill="#f8fafc"/>
+  <rect x="0" y="0" width="1180" height="68" fill="#0f172a"/>
+  <text x="32" y="42" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#fff">ZeKin 管理统计概览</text>
+  <text x="960" y="42" font-family="Arial, sans-serif" font-size="14" fill="#cbd5e1">72小时MVP演示</text>
+
+  <g>
+    <rect x="28" y="100" width="260" height="120" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="52" y="134" font-family="Arial, sans-serif" font-size="14" fill="#64748b">今日应打卡</text>
+    <text x="52" y="182" font-family="Arial, sans-serif" font-size="38" font-weight="700" fill="#0f172a">128</text>
+  </g>
+  <g>
+    <rect x="314" y="100" width="260" height="120" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="338" y="134" font-family="Arial, sans-serif" font-size="14" fill="#64748b">已打卡</text>
+    <text x="338" y="182" font-family="Arial, sans-serif" font-size="38" font-weight="700" fill="#16a34a">109</text>
+  </g>
+  <g>
+    <rect x="600" y="100" width="260" height="120" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="624" y="134" font-family="Arial, sans-serif" font-size="14" fill="#64748b">打卡率</text>
+    <text x="624" y="182" font-family="Arial, sans-serif" font-size="38" font-weight="700" fill="#1d4ed8">85%</text>
+  </g>
+  <g>
+    <rect x="886" y="100" width="260" height="120" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+    <text x="910" y="134" font-family="Arial, sans-serif" font-size="14" fill="#64748b">待审核 / 异常</text>
+    <text x="910" y="182" font-family="Arial, sans-serif" font-size="38" font-weight="700" fill="#c2410c">23</text>
+  </g>
+
+  <rect x="28" y="252" width="720" height="390" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="56" y="290" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">近 7 日打卡率趋势</text>
+  <polyline points="72,560 160,500 248,520 336,455 424,430 512,390 610,350 704,330" fill="none" stroke="#1d4ed8" stroke-width="5"/>
+  <line x1="72" y1="580" x2="704" y2="580" stroke="#cbd5e1"/>
+  <line x1="72" y1="330" x2="72" y2="580" stroke="#cbd5e1"/>
+  <text x="80" y="615" font-family="Arial, sans-serif" font-size="13" fill="#64748b">Mon</text>
+  <text x="670" y="615" font-family="Arial, sans-serif" font-size="13" fill="#64748b">Sun</text>
+
+  <rect x="776" y="252" width="370" height="390" rx="14" fill="#ffffff" stroke="#e2e8f0"/>
+  <text x="804" y="290" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">异常待处理</text>
+  <rect x="804" y="318" width="314" height="68" rx="10" fill="#fff7ed" stroke="#fed7aa"/>
+  <text x="824" y="346" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#0f172a">软件2401 · 定位异常 4 条</text>
+  <text x="824" y="370" font-family="Arial, sans-serif" font-size="13" fill="#64748b">建议进入教师审核列表处理</text>
+  <rect x="804" y="406" width="314" height="68" rx="10" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="824" y="434" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#0f172a">未打卡学生 19 人</text>
+  <text x="824" y="458" font-family="Arial, sans-serif" font-size="13" fill="#64748b">集中在查寝场景</text>
+  <rect x="804" y="512" width="314" height="50" rx="10" fill="#0f172a"/>
+  <text x="906" y="543" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#fff">进入审核列表</text>
+</svg>

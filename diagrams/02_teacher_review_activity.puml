@@ -1,0 +1,51 @@
+@startuml
+title UC-04 教师审核打卡 活动图
+skinparam backgroundColor #F8FAFC
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #16A34A
+  FontColor #0F172A
+  DiamondBackgroundColor #DCFCE7
+  DiamondBorderColor #16A34A
+}
+
+start
+partition "教师" {
+  :进入审核工作台;
+  :选择班级/日期/类型/状态;
+}
+partition "系统" {
+  :校验教师班级权限;
+  if (有权限?) then (是)
+    :查询打卡列表;
+  else (否)
+    :拒绝访问;
+    stop
+  endif
+}
+partition "教师" {
+  :打开打卡详情;
+  :查看内容、定位、照片占位、提交时间;
+  if (审核结论?) then (通过)
+    :点击通过;
+  else (驳回)
+    :填写驳回原因;
+    :点击驳回;
+  endif
+}
+partition "系统" {
+  if (驳回且原因为空?) then (是)
+    :提示必须填写驳回原因;
+    stop
+  else (否)
+    :保存审核记录;
+    :更新打卡教师审核状态;
+    :刷新待审核列表与统计;
+  endif
+}
+partition "学生" {
+  :在历史记录中看到审核结果;
+}
+stop
+@enduml
