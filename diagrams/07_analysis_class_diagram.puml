@@ -10,51 +10,51 @@ skinparam class {
 }
 
 package "Boundary 边界类" #DBEAFE {
-  class StudentCheckinPage <<boundary>> {
+  class StudentCheckinPage <<Boundary>> {
     +showTodayStatus()
     +submitCheckin()
     +showHistory()
   }
-  class TeacherReviewPage <<boundary>> {
+  class TeacherReviewPage <<Boundary>> {
     +filterCheckins()
     +openDetail()
     +approve()
     +reject()
   }
-  class AdminDashboardPage <<boundary>> {
+  class AdminDashboardPage <<Boundary>> {
     +showOverview()
     +openExceptions()
   }
-  class GeolocationAdapter <<boundary>> {
+  class GeolocationAdapter <<Boundary>> {
     +getCurrentPosition()
   }
 }
 
 package "Control 控制类" #DCFCE7 {
-  class AuthController <<control>> {
+  class AuthController <<Control>> {
     +login()
     +identifyRole()
   }
-  class CheckinController <<control>> {
+  class CheckinController <<Control>> {
     +submit()
     +today()
     +history()
   }
-  class ReviewController <<control>> {
+  class ReviewController <<Control>> {
     +listForTeacher()
     +review()
   }
-  class StatisticsController <<control>> {
+  class StatisticsController <<Control>> {
     +overview()
   }
-  class PermissionService <<control>> {
+  class PermissionService <<Control>> {
     +canViewClass()
     +canReview()
   }
 }
 
 package "Entity 实体类" #FEF3C7 {
-  class User <<entity>> {
+  class User <<Entity>> {
     +id
     +account
     +realName
@@ -62,12 +62,12 @@ package "Entity 实体类" #FEF3C7 {
     +classId
     +status
   }
-  class ClassGroup <<entity>> {
+  class ClassGroup <<Entity>> {
     +id
     +name
     +teacherId
   }
-  class Checkin <<entity>> {
+  class Checkin <<Entity>> {
     +id
     +studentId
     +type
@@ -79,7 +79,7 @@ package "Entity 实体类" #FEF3C7 {
     +teacherStatus
     +submittedAt
   }
-  class Review <<entity>> {
+  class Review <<Entity>> {
     +id
     +checkinId
     +teacherId
@@ -87,7 +87,7 @@ package "Entity 实体类" #FEF3C7 {
     +comment
     +reviewedAt
   }
-  class Course <<entity>> {
+  class Course <<Entity>> {
     +id
     +name
     +classId
@@ -95,7 +95,7 @@ package "Entity 实体类" #FEF3C7 {
     +weekday
     +startTime
   }
-  class LocationRule <<entity>> {
+  class LocationRule <<Entity>> {
     +id
     +name
     +type
