@@ -1,0 +1,37 @@
+# See https://help.github.com/articles/ignoring-files/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.local
+.env.*.local
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+dist/
+*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Uploads & logs
+uploads/
+*.log
+
+# Docker volumes
+data/
+
+# Internal extraction (temp)
+docs/_extracted_requirements.txt

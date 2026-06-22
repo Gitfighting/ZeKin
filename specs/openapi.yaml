@@ -1,0 +1,398 @@
+openapi: 3.1.0
+info:
+  title: ZeKin AI 思政打卡 API
+  version: 1.0.0
+  description: |
+    规格驱动开发单一事实来源（Single Source of Truth）。
+    团队：王韩韵(PO) · 赵耀(Backend) · 胡钊炫(Admin) · 华心仪(Student)
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local
+  - url: https://dev.zekin.example.com/api/v1
+    description: Dev
+  - url: https://uat.zekin.example.com/api/v1
+    description: UAT
+  - url: https://api.zekin.example.com/api/v1
+    description: Production
+
+tags:
+  - name: Auth
+  - name: Checkins
+  - name: Teacher
+  - name: Stats
+  - name: Admin
+  - name: System
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ApiResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+          example: 200
+        message:
+          type: string
+          example: success
+        data:
+          nullable: true
+
+    UserRole:
+      type: string
+      enum: [student, teacher, admin]
+
+    CheckinType:
+      type: string
+      enum: [dorm, class, internship]
+
+    UserOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        real_name:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        class_name:
+          type: string
+          nullable: true
+        phone:
+          type: string
+
+    RegisterRequest:
+      type: object
+      required: [phone, password, real_name, role]
+      properties:
+        phone:
+          type: string
+          pattern: '^1[3-9]\d{9}$'
+        password:
+          type: string
+          minLength: 6
+        real_name:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        class_name:
+          type: string
+          description: 学生必填
+
+    LoginRequest:
+      type: object
+      required: [phone, password]
+      properties:
+        phone:
+          type: string
+        password:
+          type: string
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          example: bearer
+        expires_in:
+          type: integer
+          example: 604800
+
+    CheckinCreate:
+      type: object
+      required: [checkin_type, content]
+      properties:
+        checkin_type:
+          $ref: '#/components/schemas/CheckinType'
+        content:
+          type: string
+          minLength: 20
+          maxLength: 500
+        photo_url:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+
+    CheckinOut:
+      type: object
+      properties:
+        id:
+          type: integer
+        checkin_type:
+          $ref: '#/components/schemas/CheckinType'
+        content:
+          type: string
+        photo_url:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        ai_status:
+          type: string
+          enum: [pending, pass, fail]
+        teacher_status:
+          type: string
+          enum: [pending, approved, rejected]
+        created_at:
+          type: string
+          format: date-time
+
+    TodayStatus:
+      type: object
+      properties:
+        dorm:
+          type: string
+          enum: [done, pending, not_required]
+        class:
+          type: string
+          enum: [done, pending, not_required]
+        internship:
+          type: string
+          enum: [done, pending, not_required]
+
+    ReviewCreate:
+      type: object
+      required: [checkin_id, action]
+      properties:
+        checkin_id:
+          type: integer
+        action:
+          type: string
+          enum: [approved, rejected]
+        comment:
+          type: string
+          nullable: true
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: 健康检查
+      responses:
+        '200':
+          description: OK
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: 用户注册
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: 注册成功
+        '409':
+          description: 手机号已存在
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: 用户登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 返回 JWT
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: 认证失败
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      security:
+        - bearerAuth: []
+      summary: 当前用户信息
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserOut'
+
+  /checkins:
+    post:
+      tags: [Checkins]
+      security:
+        - bearerAuth: []
+      summary: 提交打卡
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckinCreate'
+      responses:
+        '200':
+          description: 打卡成功
+        '400':
+          description: 重复打卡或校验失败
+    get:
+      tags: [Checkins]
+      security:
+        - bearerAuth: []
+      summary: 我的打卡历史
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: 分页列表
+
+  /checkins/today:
+    get:
+      tags: [Checkins]
+      security:
+        - bearerAuth: []
+      summary: 今日打卡状态
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TodayStatus'
+
+  /teacher/checkins:
+    get:
+      tags: [Teacher]
+      security:
+        - bearerAuth: []
+      summary: 班级打卡列表
+      parameters:
+        - name: class_name
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+        '403':
+          description: 无班级权限
+
+  /teacher/reviews:
+    post:
+      tags: [Teacher]
+      security:
+        - bearerAuth: []
+      summary: 提交审核
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+      responses:
+        '200':
+          description: 审核成功
+        '409':
+          description: 已审核
+
+  /stats/overview:
+    get:
+      tags: [Stats]
+      security:
+        - bearerAuth: []
+      summary: 统计概览
+      parameters:
+        - name: class_name
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /stats/export:
+    get:
+      tags: [Stats]
+      security:
+        - bearerAuth: []
+      summary: 导出 Excel
+      parameters:
+        - name: class_name
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Excel 文件流
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
