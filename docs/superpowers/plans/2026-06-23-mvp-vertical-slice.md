@@ -27,7 +27,7 @@
 - `backend/tests/test_mvp_api.py`: end-to-end API tests with SQLite.
 - `backend/requirements.txt`: backend runtime and test dependencies.
 - `backend/.env.example`: local MySQL/Redis/JWT configuration sample.
-- `bruno/ZeKin-MVP`: Bruno collection with auth, checkin, teacher review, stats requests.
+- `test/bruno/ZeKin-MVP`: Bruno collection with auth, checkin, teacher review, stats requests.
 - `admin-web`: Vue 3 admin shell matching the Octo Code design direction.
 - `student-miniprogram`: WeChat mini program pages for student login, home, submit, history.
 - `teacher-miniprogram`: WeChat mini program pages for teacher login, review list, review detail, overview.
@@ -86,9 +86,9 @@ Expected: all tests pass.
 ## Task 3: Bruno API Tests
 
 **Files:**
-- Create: `bruno/ZeKin-MVP/collection.bru`
-- Create: `bruno/ZeKin-MVP/environments/local.bru`
-- Create: request files under `bruno/ZeKin-MVP/Auth`, `Checkins`, `Teacher`, and `Stats`.
+- Create: `test/bruno/ZeKin-MVP/collection.bru`
+- Create: `test/bruno/ZeKin-MVP/environments/local.bru`
+- Create: request files under `test/bruno/ZeKin-MVP/Auth`, `Checkins`, `Teacher`, and `Stats`.
 
 - [ ] **Step 1: Create Git-friendly Bruno collection**
 
@@ -99,7 +99,7 @@ Use Bruno `.bru` files so requests and assertions can be reviewed in Git.
 Document:
 
 ```powershell
-cd bruno\ZeKin-MVP
+cd test\bruno\ZeKin-MVP
 bru run --env Local
 ```
 

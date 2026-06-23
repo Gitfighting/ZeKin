@@ -7,6 +7,27 @@ def auth_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
+def test_cors_allows_local_dev_origins():
+    with TestClient(app) as client:
+        for origin in [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:4173",
+            "http://192.168.1.10:5173",
+        ]:
+            response = client.options(
+                "/api/auth/login",
+                headers={
+                    "Origin": origin,
+                    "Access-Control-Request-Method": "POST",
+                    "Access-Control-Request-Headers": "content-type,x-client",
+                },
+            )
+
+            assert response.status_code == 200
+            assert response.headers["access-control-allow-origin"] == origin
+
+
 def test_student_checkin_teacher_review_and_stats_flow():
     with TestClient(app) as client:
         student_payload = {

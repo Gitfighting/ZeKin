@@ -1,24 +1,24 @@
 meta {
-  name: 11 Admin Checkins
+  name: 07 My Checkins
   type: http
-  seq: 11
+  seq: 7
 }
 
 get {
-  url: {{baseUrl}}/api/admin/checkins
+  url: {{baseUrl}}/api/checkins/my
   auth: bearer
 }
 
 auth:bearer {
-  token: {{admin_token}}
+  token: {{student_token}}
 }
 
 headers {
-  X-Client: admin-web
+  X-Client: student-miniapp
 }
 
 tests {
-  test("admin can list shared checkins", function () {
+  test("student can list own checkins", function () {
     expect(res.getStatus()).to.equal(200);
     expect(res.getBody().data.items.length).to.be.greaterThan(0);
   });

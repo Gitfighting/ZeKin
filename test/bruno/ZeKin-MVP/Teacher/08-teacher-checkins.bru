@@ -1,24 +1,24 @@
 meta {
-  name: 06 My Checkins
+  name: 08 Teacher Checkins
   type: http
-  seq: 6
+  seq: 8
 }
 
 get {
-  url: {{baseUrl}}/api/checkins/my
+  url: {{baseUrl}}/api/teacher/checkins
   auth: bearer
 }
 
 auth:bearer {
-  token: {{student_token}}
+  token: {{teacher_token}}
 }
 
 headers {
-  X-Client: student-miniapp
+  X-Client: teacher-miniapp
 }
 
 tests {
-  test("student can list own checkins", function () {
+  test("teacher can list class checkins", function () {
     expect(res.getStatus()).to.equal(200);
     expect(res.getBody().data.items.length).to.be.greaterThan(0);
   });
