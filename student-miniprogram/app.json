@@ -1,10 +1,10 @@
 {
   "pages": [
+    "pages/login/login",
     "pages/home/home",
     "pages/submit/submit",
     "pages/history/history",
-    "pages/profile/profile",
-    "pages/login/login"
+    "pages/profile/profile"
   ],
   "window": {
     "navigationBarTitleText": "知勤打卡",

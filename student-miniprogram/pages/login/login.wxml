@@ -1,9 +1,130 @@
-<view class="page">
-  <view class="title">知勤打卡</view>
-  <view class="card">
-    <input data-field="username" value="{{username}}" placeholder="手机号或账号" bindinput="onInput" />
-    <input data-field="password" value="{{password}}" password placeholder="密码" bindinput="onInput" />
-    <button class="primary-button" loading="{{loading}}" bindtap="login">登录</button>
-    <button bindtap="prepareDemo">准备演示账号</button>
+<view class="login-page">
+  <view class="hero" style="padding-top: {{heroPaddingTop}}px;">
+    <view class="cloud cloud-a"></view>
+    <view class="cloud cloud-b"></view>
+    <view class="cloud cloud-c"></view>
+
+    <view class="brand">
+      <view class="brand-title">{{pageMock.title}}</view>
+      <view class="brand-subtitle">{{pageMock.subtitle}}</view>
+    </view>
+
+    <view class="campus-scene">
+      <view class="building building-left">
+        <view class="roof"></view>
+        <view class="window-row"><text></text><text></text><text></text></view>
+        <view class="window-row"><text></text><text></text><text></text></view>
+      </view>
+      <view class="building tower">
+        <view class="tower-roof"></view>
+        <view class="clock">勤</view>
+        <view class="window-row"><text></text><text></text></view>
+        <view class="window-row"><text></text><text></text></view>
+        <view class="door"></view>
+      </view>
+      <view class="building building-right">
+        <view class="roof"></view>
+        <view class="window-row"><text></text><text></text><text></text></view>
+        <view class="window-row"><text></text><text></text><text></text></view>
+      </view>
+      <view class="tree tree-a"></view>
+      <view class="tree tree-b"></view>
+      <view class="tree tree-c"></view>
+      <view class="road"></view>
+    </view>
+  </view>
+
+  <view class="auth-panel">
+    <view class="tabs">
+      <block wx:for="{{tabs}}" wx:key="key">
+        <view
+          class="tab {{activeTab === item.key ? 'active' : ''}}"
+          data-key="{{item.key}}"
+          bindtap="switchTab"
+        >
+          {{item.label}}
+        </view>
+      </block>
+    </view>
+
+    <view class="notice">
+      <view class="notice-icon">✓</view>
+      <text>{{pageMock.notice}}</text>
+    </view>
+
+    <view class="form">
+      <view class="field">
+        <view class="field-icon icon-user"></view>
+        <input
+          data-field="account"
+          value="{{form.account}}"
+          placeholder="学号/手机号"
+          placeholder-class="placeholder"
+          bindinput="onInput"
+        />
+      </view>
+
+      <view class="field">
+        <view class="field-icon icon-lock"></view>
+        <input
+          data-field="password"
+          value="{{form.password}}"
+          password="{{!passwordVisible}}"
+          placeholder="密码"
+          placeholder-class="placeholder"
+          bindinput="onInput"
+        />
+        <view class="eye {{passwordVisible ? 'open' : ''}}" bindtap="togglePassword"></view>
+      </view>
+
+      <view class="field code-field">
+        <view class="field-icon icon-shield">✓</view>
+        <input
+          data-field="captcha"
+          value="{{form.captcha}}"
+          placeholder="验证码"
+          placeholder-class="placeholder"
+          bindinput="onInput"
+        />
+        <view class="divider"></view>
+        <button class="code-button" bindtap="getCaptcha">{{captchaButtonText}}</button>
+      </view>
+    </view>
+
+    <view class="form-options">
+      <view class="remember" bindtap="toggleRemember">
+        <view class="check {{remember ? 'checked' : ''}}">✓</view>
+        <text>记住登录</text>
+      </view>
+      <button class="text-button" bindtap="forgotPassword">忘记密码?</button>
+    </view>
+
+    <button class="submit-button" loading="{{loading}}" bindtap="submitAuth">
+      {{activeTab === 'login' ? '立即登录' : '立即注册'}}
+    </button>
+
+    <button class="outline-button" bindtap="toggleAuthMode">
+      {{activeTab === 'login' ? '没有账号？ 去注册' : '已有账号？ 去登录'}}
+    </button>
+
+    <view class="other-login">
+      <view class="line"></view>
+      <text>其他登录方式</text>
+      <view class="line"></view>
+    </view>
+
+    <button class="school-login" bindtap="schoolLogin">
+      <view class="cap">
+        <view class="cap-top"></view>
+        <view class="cap-band"></view>
+        <view class="cap-tail"></view>
+      </view>
+    </button>
+  </view>
+
+  <view class="agreement">
+    登录即表示同意
+    <text bindtap="openAgreement">《用户协议》</text>
+    <text bindtap="openPrivacy">《隐私政策》</text>
   </view>
 </view>

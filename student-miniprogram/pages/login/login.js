@@ -1,60 +1,170 @@
-const { request } = require("../../utils/request");
 const app = getApp();
+
+const mockUser = {
+  id: 10001,
+  username: "student_demo",
+  real_name: "王同学",
+  role: "student",
+  class_name: "软件一班",
+  phone: "13910000002"
+};
 
 Page({
   data: {
-    username: "student_demo",
-    password: "Passw0rd!",
+    heroPaddingTop: 96,
+    activeTab: "login",
+    tabs: [
+      { key: "login", label: "登录" },
+      { key: "register", label: "注册" }
+    ],
+    pageMock: {
+      title: "考勤助手",
+      subtitle: "智慧考勤，轻松校园生活",
+      notice: "欢迎回来！请登录您的账号继续使用"
+    },
+    form: {
+      account: "student_demo",
+      password: "Passw0rd!",
+      captcha: ""
+    },
+    captchaButtonText: "获取验证码",
+    captchaCounting: false,
+    passwordVisible: false,
+    remember: true,
     loading: false
   },
 
-  onInput(e) {
-    this.setData({ [e.currentTarget.dataset.field]: e.detail.value });
+  onLoad() {
+    this.updateHeroPadding();
   },
 
-  async prepareDemo() {
-    wx.showLoading({ title: "准备中" });
+  onUnload() {
+    this.clearCaptchaTimer();
+  },
+
+  updateHeroPadding() {
     try {
-      await request("/api/auth/register", {
-        method: "POST",
-        data: {
-          username: "student_demo",
-          password: "Passw0rd!",
-          real_name: "王同学",
-          role: "student",
-          class_name: "软件一班",
-          phone: "13910000002"
-        }
-      }).catch(() => null);
-      wx.showToast({ title: "演示账号已准备" });
-    } finally {
-      wx.hideLoading();
+      const system = wx.getSystemInfoSync();
+      const menu = wx.getMenuButtonBoundingClientRect ? wx.getMenuButtonBoundingClientRect() : null;
+      const menuBottom = menu && menu.bottom ? menu.bottom : system.statusBarHeight + 44;
+      this.setData({ heroPaddingTop: menuBottom + 34 });
+    } catch (error) {
+      this.setData({ heroPaddingTop: 96 });
     }
   },
 
-  async login() {
-    if (!this.data.username || !this.data.password) {
-      wx.showToast({ title: "请输入账号密码", icon: "none" });
+  onInput(e) {
+    const { field } = e.currentTarget.dataset;
+    this.setData({
+      [`form.${field}`]: e.detail.value
+    });
+  },
+
+  switchTab(e) {
+    const activeTab = e.currentTarget.dataset.key;
+    this.setAuthMode(activeTab);
+  },
+
+  toggleAuthMode() {
+    this.setAuthMode(this.data.activeTab === "login" ? "register" : "login");
+  },
+
+  setAuthMode(activeTab) {
+    this.setData({
+      activeTab,
+      pageMock: {
+        ...this.data.pageMock,
+        notice: activeTab === "login" ? "欢迎回来！请登录您的账号继续使用" : "欢迎加入！使用 mock 信息快速注册"
+      }
+    });
+  },
+
+  togglePassword() {
+    this.setData({ passwordVisible: !this.data.passwordVisible });
+  },
+
+  toggleRemember() {
+    this.setData({ remember: !this.data.remember });
+  },
+
+  getCaptcha() {
+    if (this.data.captchaCounting) {
       return;
     }
-    this.setData({ loading: true });
-    try {
-      const data = await request("/api/auth/login", {
-        method: "POST",
-        data: {
-          username: this.data.username,
-          password: this.data.password
-        }
-      });
-      app.globalData.token = data.access_token;
-      app.globalData.user = data.user;
-      wx.setStorageSync("student_token", data.access_token);
-      wx.setStorageSync("student_user", data.user);
-      wx.switchTab({ url: "/pages/home/home" });
-    } catch (error) {
-      wx.showToast({ title: error.message, icon: "none" });
-    } finally {
-      this.setData({ loading: false });
+
+    this.setData({
+      "form.captcha": "246810",
+      captchaCounting: true,
+      captchaButtonText: "60s"
+    });
+    wx.showToast({ title: "验证码 246810", icon: "none" });
+
+    let seconds = 60;
+    this.captchaTimer = setInterval(() => {
+      seconds -= 1;
+      if (seconds <= 0) {
+        this.clearCaptchaTimer();
+        this.setData({
+          captchaCounting: false,
+          captchaButtonText: "获取验证码"
+        });
+        return;
+      }
+      this.setData({ captchaButtonText: `${seconds}s` });
+    }, 1000);
+  },
+
+  clearCaptchaTimer() {
+    if (this.captchaTimer) {
+      clearInterval(this.captchaTimer);
+      this.captchaTimer = null;
     }
+  },
+
+  forgotPassword() {
+    wx.showToast({ title: "已发送 mock 找回提示", icon: "none" });
+  },
+
+  schoolLogin() {
+    wx.showToast({ title: "校园统一身份认证暂为 mock", icon: "none" });
+  },
+
+  openAgreement() {
+    wx.showToast({ title: "用户协议静态页占位", icon: "none" });
+  },
+
+  openPrivacy() {
+    wx.showToast({ title: "隐私政策静态页占位", icon: "none" });
+  },
+
+  submitAuth() {
+    const { account, password, captcha } = this.data.form;
+    if (!account || !password) {
+      wx.showToast({ title: "请输入账号和密码", icon: "none" });
+      return;
+    }
+    if (!captcha) {
+      wx.showToast({ title: "请输入验证码", icon: "none" });
+      return;
+    }
+
+    this.setData({ loading: true });
+
+    setTimeout(() => {
+      const token = "mock-student-token";
+      app.globalData.token = token;
+      app.globalData.user = mockUser;
+      if (this.data.remember) {
+        wx.setStorageSync("student_token", token);
+        wx.setStorageSync("student_user", mockUser);
+      }
+
+      wx.showToast({
+        title: this.data.activeTab === "login" ? "登录成功" : "注册成功",
+        icon: "success"
+      });
+
+      this.setData({ loading: false });
+    }, 600);
   }
 });
