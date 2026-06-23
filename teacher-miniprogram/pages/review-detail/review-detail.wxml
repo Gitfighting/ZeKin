@@ -1,13 +1,13 @@
 <view class="page">
   <view class="title">审核详情</view>
   <view class="card">
-    <view>王同学 · 软件一班</view>
-    <view class="muted">查寝 · 今天 09:30</view>
+    <view>{{item.student_name}} · {{item.class_name}}</view>
+    <view class="muted">{{item.type}} · {{item.created_at}}</view>
   </view>
-  <view class="card">今天按时完成查寝打卡，宿舍情况正常。</view>
+  <view class="card">{{item.content}}</view>
   <view class="card">
-    <textarea placeholder="填写评语，拒绝时必填" />
+    <textarea value="{{comment}}" placeholder="填写评语，拒绝时必填" bindinput="onCommentInput" />
   </view>
-  <button>拒绝</button>
-  <button class="primary-button">通过</button>
+  <button data-action="rejected" loading="{{loading}}" bindtap="review">拒绝</button>
+  <button class="primary-button" data-action="approved" loading="{{loading}}" bindtap="review">通过</button>
 </view>

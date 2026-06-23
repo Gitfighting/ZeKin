@@ -28,3 +28,5 @@ admin-web/dist/
 admin-web/node_modules/
 backend/logs/
 backend/.pytest_cache/
+project.private.config.json
+project.config.json

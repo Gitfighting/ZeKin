@@ -1,7 +1,8 @@
 <view class="page">
   <view class="title">我的</view>
   <view class="card">
-    <view>王同学</view>
-    <view class="muted">学生 · 软件一班</view>
+    <view>{{user.real_name || '未登录'}}</view>
+    <view class="muted">{{user.role || '学生'}} · {{user.class_name || ''}}</view>
   </view>
+  <button bindtap="logout">退出登录</button>
 </view>

@@ -3,11 +3,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import Base, engine
 from app.core.logging import configure_logging
 from app.middleware.request_logger import RequestLoggerMiddleware
-from app.routers import auth, checkins, stats, teacher
+from app.routers import admin, auth, checkins, stats, teacher
 
 
 @asynccontextmanager
@@ -19,11 +20,19 @@ async def lifespan(_: FastAPI):
 configure_logging()
 
 app = FastAPI(title="ZeKin MVP API", version="0.1.0", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.add_middleware(RequestLoggerMiddleware)
 app.include_router(auth.router)
 app.include_router(checkins.router)
 app.include_router(teacher.router)
 app.include_router(stats.router)
+app.include_router(admin.router)
 
 
 @app.get("/health")

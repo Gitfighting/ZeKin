@@ -1,6 +1,6 @@
 <view class="page">
   <view class="title">班级概览</view>
-  <view class="card">今日打卡率：86%</view>
-  <view class="card">未打卡人数：12</view>
-  <view class="card">待审核人数：18</view>
+  <view class="card">今日打卡率：{{stats.checkin_rate * 100 || 0}}%</view>
+  <view class="card">未打卡人数：{{stats.missing_students || 0}}</view>
+  <view class="card">待审核人数：{{stats.pending_checkins || 0}}</view>
 </view>

@@ -1,13 +1,14 @@
 <view class="page">
   <view class="title">打卡历史</view>
   <view class="card">
-    <view class="chip active">全部</view>
-    <view class="chip">待审核</view>
-    <view class="chip">已通过</view>
-    <view class="chip">已拒绝</view>
+    <view class="chip {{filter === '' ? 'active' : ''}}" data-status="" bindtap="chooseFilter">全部</view>
+    <view class="chip {{filter === 'pending' ? 'active' : ''}}" data-status="pending" bindtap="chooseFilter">待审核</view>
+    <view class="chip {{filter === 'approved' ? 'active' : ''}}" data-status="approved" bindtap="chooseFilter">已通过</view>
+    <view class="chip {{filter === 'rejected' ? 'active' : ''}}" data-status="rejected" bindtap="chooseFilter">已拒绝</view>
   </view>
-  <view class="card">
-    <view>查寝 · 待审核</view>
-    <view class="muted">今天 09:30 · 今天按时完成查寝打卡...</view>
+  <view wx:if="{{items.length === 0}}" class="card">暂无打卡记录</view>
+  <view wx:for="{{items}}" wx:key="id" wx:if="{{!filter || item.status === filter}}" class="card">
+    <view>{{item.type}} · {{item.status}}</view>
+    <view class="muted">{{item.created_at}} · {{item.content}}</view>
   </view>
 </view>

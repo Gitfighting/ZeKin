@@ -115,3 +115,61 @@ def test_student_cannot_access_teacher_review_api():
         assert response.status_code == 403
         assert response.json()["message"] == "权限不足"
 
+
+def test_admin_reads_shared_users_and_checkins_from_same_database():
+    with TestClient(app) as client:
+        client.post(
+            "/api/auth/register",
+            json={
+                "username": "admin001",
+                "password": "Passw0rd!",
+                "real_name": "管理员",
+                "role": "admin",
+                "class_name": "校级",
+                "phone": "13800000004",
+            },
+        )
+        client.post(
+            "/api/auth/register",
+            json={
+                "username": "student003",
+                "password": "Passw0rd!",
+                "real_name": "胡同学",
+                "role": "student",
+                "class_name": "软件三班",
+                "phone": "13800000005",
+            },
+        )
+
+        admin_token = client.post(
+            "/api/auth/login",
+            json={"username": "admin001", "password": "Passw0rd!"},
+        ).json()["data"]["access_token"]
+        student_token = client.post(
+            "/api/auth/login",
+            json={"username": "student003", "password": "Passw0rd!"},
+        ).json()["data"]["access_token"]
+
+        checkin = client.post(
+            "/api/checkins",
+            json={
+                "type": "class",
+                "content": "今天按时完成课堂打卡。",
+                "photo_url": "https://example.com/class.jpg",
+                "lat": 30.2741,
+                "lng": 120.1551,
+            },
+            headers=auth_headers(student_token),
+        )
+        assert checkin.status_code == 201
+
+        users = client.get("/api/admin/users", headers=auth_headers(admin_token))
+        assert users.status_code == 200
+        assert any(item["username"] == "student003" for item in users.json()["data"]["items"])
+
+        checkins = client.get("/api/admin/checkins", headers=auth_headers(admin_token))
+        assert checkins.status_code == 200
+        assert any(item["student_name"] == "胡同学" for item in checkins.json()["data"]["items"])
+
+        forbidden = client.get("/api/admin/users", headers=auth_headers(student_token))
+        assert forbidden.status_code == 403

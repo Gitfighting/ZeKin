@@ -13,10 +13,46 @@ body {
   background: #0d1117;
 }
 
-.app-shell {
+.app-shell,
+.login-page {
   display: grid;
-  grid-template-columns: 240px 1fr;
   min-height: 100vh;
+}
+
+.app-shell {
+  grid-template-columns: 240px 1fr;
+}
+
+.login-page {
+  place-items: center;
+}
+
+.login-panel {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 24px;
+  width: min(420px, calc(100vw - 32px));
+}
+
+.login-panel p,
+.notice {
+  color: #8b949e;
+  font-size: 13px;
+}
+
+.notice {
+  background: #1c2128;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+label {
+  color: #8b949e;
+  display: block;
+  font-size: 12px;
+  margin: 14px 0 6px;
 }
 
 .sidebar {
@@ -36,14 +72,18 @@ nav {
   gap: 4px;
 }
 
-nav a {
+nav button {
   border-radius: 6px;
   color: #8b949e;
+  background: transparent;
+  border: 0;
+  height: 38px;
   padding: 10px 12px;
+  text-align: left;
 }
 
-nav a.active,
-nav a:hover {
+nav button.active,
+nav button:hover {
   background: #1c2128;
   color: #e6edf3;
   border-left: 2px solid #f78166;
@@ -60,13 +100,30 @@ nav a:hover {
 }
 
 input {
-  width: 360px;
+  width: 100%;
   height: 36px;
   border-radius: 6px;
   border: 1px solid #30363d;
   background: #0d1117;
   color: #e6edf3;
   padding: 0 12px;
+}
+
+.topbar input {
+  width: 360px;
+}
+
+.top-actions,
+.button-row,
+.panel-title {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.top-actions,
+.panel-title {
+  justify-content: space-between;
 }
 
 .content {
@@ -101,6 +158,25 @@ button {
   background: #238636;
   color: white;
   padding: 0 16px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+button.outline {
+  background: transparent;
+  color: #e6edf3;
+}
+
+select {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #e6edf3;
+  height: 32px;
+  padding: 0 10px;
 }
 
 .metric,
@@ -177,6 +253,11 @@ th {
   border: 1px solid #30363d;
   border-radius: 6px;
   padding: 2px 8px;
+}
+
+.empty {
+  color: #8b949e;
+  text-align: center;
 }
 
 .mono {

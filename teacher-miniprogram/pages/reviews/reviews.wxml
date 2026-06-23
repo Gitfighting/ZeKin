@@ -1,12 +1,13 @@
 <view class="page">
   <view class="title">班级审核</view>
   <view class="card">
-    <view class="chip active">待审核 12</view>
-    <view class="chip">已通过 30</view>
-    <view class="chip">已拒绝 2</view>
+    <view class="chip {{filter === 'pending' ? 'active' : ''}}" data-status="pending" bindtap="chooseFilter">待审核 {{pendingCount}}</view>
+    <view class="chip {{filter === 'approved' ? 'active' : ''}}" data-status="approved" bindtap="chooseFilter">已通过 {{approvedCount}}</view>
+    <view class="chip {{filter === 'rejected' ? 'active' : ''}}" data-status="rejected" bindtap="chooseFilter">已拒绝 {{rejectedCount}}</view>
   </view>
-  <view class="card" bindtap="goDetail">
-    <view>王同学 · 软件一班</view>
-    <view class="muted">查寝 · 今天 09:30 · 今天按时完成查寝打卡...</view>
+  <view wx:if="{{items.length === 0}}" class="card">暂无待审核记录</view>
+  <view wx:for="{{items}}" wx:key="id" wx:if="{{item.status === filter}}" class="card" data-id="{{item.id}}" bindtap="goDetail">
+    <view>{{item.student_name}} · {{item.class_name}}</view>
+    <view class="muted">{{item.type}} · {{item.created_at}} · {{item.content}}</view>
   </view>
 </view>

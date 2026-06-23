@@ -36,5 +36,12 @@ class RedisCache:
         except redis.RedisError as exc:
             logger.warning("Redis 写入失败，已降级 key=%s error=%s", key, exc.__class__.__name__)
 
+    def delete_pattern(self, pattern: str) -> None:
+        try:
+            for key in self._client.scan_iter(match=pattern, count=100):
+                self._client.delete(key)
+        except redis.RedisError as exc:
+            logger.warning("Redis 清理失败，已降级 pattern=%s error=%s", pattern, exc.__class__.__name__)
+
 
 cache = RedisCache()

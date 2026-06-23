@@ -5,6 +5,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.database import get_db
+from app.core.cache import cache
 from app.core.security import require_role
 from app.models import Checkin, Review, User
 from app.routers.checkins import to_checkin_out
@@ -50,5 +51,5 @@ def create_review(
     db.add(review)
     db.commit()
     db.refresh(review)
+    cache.delete_pattern("stats:overview:*")
     return ApiResponse(data=ReviewOut.model_validate(review).model_dump())
-

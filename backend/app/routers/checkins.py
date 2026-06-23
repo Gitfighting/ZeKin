@@ -5,6 +5,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.cache import cache
 from app.core.security import require_role
 from app.models import Checkin, User
 from app.schemas import ApiResponse, CheckinCreate, CheckinOut
@@ -39,6 +40,7 @@ def create_checkin(
     db.add(checkin)
     db.commit()
     db.refresh(checkin)
+    cache.delete_pattern("stats:overview:*")
     checkin.user = current_user
     return ApiResponse(data=to_checkin_out(checkin))
 
@@ -56,4 +58,3 @@ def my_checkins(
     for item in items:
         item.user = current_user
     return ApiResponse(data={"items": [to_checkin_out(item) for item in items]})
-
