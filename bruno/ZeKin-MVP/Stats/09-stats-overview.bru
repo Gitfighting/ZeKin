@@ -1,0 +1,25 @@
+meta {
+  name: 09 Stats Overview
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/stats/overview
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacher_token}}
+}
+
+headers {
+  X-Client: admin-web
+}
+
+tests {
+  test("stats overview returns MVP counters", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().data.total_checkins).to.be.greaterThan(0);
+  });
+}

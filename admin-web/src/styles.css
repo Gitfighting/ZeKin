@@ -1,0 +1,184 @@
+:root {
+  color: #e6edf3;
+  background: #0d1117;
+  font-family: Inter, "Microsoft YaHei", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #0d1117;
+}
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  border-right: 1px solid #30363d;
+  background: #161b22;
+  padding: 20px 16px;
+}
+
+.brand {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+nav {
+  display: grid;
+  gap: 4px;
+}
+
+nav a {
+  border-radius: 6px;
+  color: #8b949e;
+  padding: 10px 12px;
+}
+
+nav a.active,
+nav a:hover {
+  background: #1c2128;
+  color: #e6edf3;
+  border-left: 2px solid #f78166;
+}
+
+.topbar {
+  height: 64px;
+  border-bottom: 1px solid #30363d;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: #161b22;
+}
+
+input {
+  width: 360px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  background: #0d1117;
+  color: #e6edf3;
+  padding: 0 12px;
+}
+
+.content {
+  max-width: 1280px;
+  padding: 24px;
+}
+
+.page-title,
+.metrics,
+.panel-grid {
+  display: flex;
+  gap: 16px;
+}
+
+.page-title {
+  align-items: center;
+  justify-content: space-between;
+}
+
+h1 {
+  font-size: 20px;
+}
+
+h2 {
+  font-size: 16px;
+}
+
+button {
+  height: 32px;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #238636;
+  color: white;
+  padding: 0 16px;
+}
+
+.metric,
+.panel {
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  background: #161b22;
+  padding: 16px;
+}
+
+.metric {
+  flex: 1;
+}
+
+.metric span {
+  display: block;
+  color: #8b949e;
+  font-size: 12px;
+}
+
+.metric strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 28px;
+}
+
+.success {
+  color: #3fb950;
+}
+
+.warning {
+  color: #d29922;
+}
+
+.error {
+  color: #f85149;
+}
+
+.primary {
+  color: #2f81f7;
+}
+
+.panel-grid .panel {
+  flex: 1;
+}
+
+.chart-placeholder {
+  border: 1px dashed #30363d;
+  border-radius: 6px;
+  color: #8b949e;
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border-top: 1px solid #30363d;
+  font-size: 14px;
+  padding: 12px;
+  text-align: left;
+}
+
+th {
+  color: #8b949e;
+}
+
+.status {
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+.mono {
+  font-family: "JetBrains Mono", Consolas, monospace;
+}

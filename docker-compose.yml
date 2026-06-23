@@ -1,0 +1,47 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: zekin
+      MYSQL_USER: zekin
+      MYSQL_PASSWORD: zekin
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    command: sh -c "pip install -r requirements.txt && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      DATABASE_URL: mysql+pymysql://zekin:zekin@mysql:3306/zekin
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: dev-secret-change-me
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mysql
+      - redis
+
+  admin-web:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./admin-web:/app
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:

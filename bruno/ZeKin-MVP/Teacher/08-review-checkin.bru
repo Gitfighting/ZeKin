@@ -1,0 +1,35 @@
+meta {
+  name: 08 Review Checkin
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/teacher/reviews
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacher_token}}
+}
+
+headers {
+  Content-Type: application/json
+  X-Client: teacher-miniapp
+}
+
+body:json {
+  {
+    "checkin_id": {{checkin_id}},
+    "action": "approved",
+    "comment": "记录完整，通过。"
+  }
+}
+
+tests {
+  test("teacher can approve checkin", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().data.action).to.equal("approved");
+  });
+}

@@ -1,0 +1,17 @@
+<view class="page">
+  <view class="title">提交打卡</view>
+  <view class="card">
+    <view class="chip active">查寝</view>
+    <view class="chip">上课</view>
+    <view class="chip">实习</view>
+  </view>
+  <view class="card">
+    <textarea placeholder="请输入今日情况，最多 280 字" maxlength="280" />
+    <view class="muted">0/280</view>
+  </view>
+  <view class="card">
+    <button>上传照片</button>
+    <view class="muted">当前位置：等待获取</view>
+  </view>
+  <button class="primary-button">提交打卡</button>
+</view>

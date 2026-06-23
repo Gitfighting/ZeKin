@@ -1,0 +1,25 @@
+meta {
+  name: 06 My Checkins
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/checkins/my
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{student_token}}
+}
+
+headers {
+  X-Client: student-miniapp
+}
+
+tests {
+  test("student can list own checkins", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().data.items.length).to.be.greaterThan(0);
+  });
+}

@@ -1,0 +1,12 @@
+<view class="page">
+  <view class="title">班级审核</view>
+  <view class="card">
+    <view class="chip active">待审核 12</view>
+    <view class="chip">已通过 30</view>
+    <view class="chip">已拒绝 2</view>
+  </view>
+  <view class="card" bindtap="goDetail">
+    <view>王同学 · 软件一班</view>
+    <view class="muted">查寝 · 今天 09:30 · 今天按时完成查寝打卡...</view>
+  </view>
+</view>

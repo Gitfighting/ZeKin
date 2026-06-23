@@ -1,0 +1,25 @@
+meta {
+  name: 07 Teacher Checkins
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/teacher/checkins
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacher_token}}
+}
+
+headers {
+  X-Client: teacher-miniapp
+}
+
+tests {
+  test("teacher can list class checkins", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().data.items.length).to.be.greaterThan(0);
+  });
+}

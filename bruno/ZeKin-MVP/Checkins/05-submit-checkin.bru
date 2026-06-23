@@ -1,0 +1,39 @@
+meta {
+  name: 05 Submit Checkin
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/checkins
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{student_token}}
+}
+
+headers {
+  Content-Type: application/json
+  X-Client: student-miniapp
+}
+
+body:json {
+  {
+    "type": "dorm",
+    "content": "今天按时完成查寝打卡，宿舍情况正常。",
+    "photo_url": "https://example.com/photo.jpg",
+    "lat": 30.2741,
+    "lng": 120.1551
+  }
+}
+
+tests {
+  test("student can submit checkin", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().data.status).to.equal("pending");
+  });
+
+  bru.setEnvVar("checkin_id", res.getBody().data.id);
+}

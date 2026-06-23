@@ -1,0 +1,5 @@
+input {
+  border-bottom: 1rpx solid #e5e7eb;
+  margin-bottom: 24rpx;
+  padding: 18rpx 0;
+}
