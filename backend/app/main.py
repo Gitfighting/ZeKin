@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 
-app = FastAPI(title="AI Sizheng Platform API", version="0.1.0")
+from app.core.config import get_settings
+
+settings = get_settings()
+app = FastAPI(title=settings.app_name, version="0.1.0")
 
 
 @app.get("/health")

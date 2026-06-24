@@ -1,23 +1,39 @@
 from functools import lru_cache
+from pathlib import Path
 
-from pydantic import AnyHttpUrl, Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ENV_FILE = PROJECT_ROOT.parent / ".env"
+
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     app_name: str = "AI_SIZHENG_PLATFORM"
     app_env: str = "local"
-    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/ai_sizheng"
+    database_url: str = "sqlite:///./ai_sizheng.db"
     redis_url: str = "redis://localhost:6379/0"
     jwt_secret_key: str = "change-me-in-local-env"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 720
-    backend_cors_origins: list[AnyHttpUrl] = Field(default_factory=list)
+    backend_cors_origins: list[str] = Field(default_factory=list)
     file_storage_root: str = "./storage"
     wechat_provider_mode: str = "log"
     face_provider_mode: str = "disabled"
+
+    @field_validator("backend_cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value: str | list[str]) -> list[str]:
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
 
 
 @lru_cache
