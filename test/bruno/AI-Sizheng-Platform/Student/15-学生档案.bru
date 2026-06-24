@@ -1,0 +1,14 @@
+meta {
+  name: 学生档案
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{baseUrl}}/api/student/profile
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{studentToken}}
+}

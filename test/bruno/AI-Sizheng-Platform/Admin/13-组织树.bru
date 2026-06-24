@@ -1,0 +1,14 @@
+meta {
+  name: 组织树
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/api/admin/org/tree
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}

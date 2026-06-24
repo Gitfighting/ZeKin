@@ -1,0 +1,14 @@
+meta {
+  name: 结束任务
+  type: http
+  seq: 17
+}
+
+post {
+  url: {{baseUrl}}/api/teacher/tasks/{{taskId}}/end
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacherToken}}
+}

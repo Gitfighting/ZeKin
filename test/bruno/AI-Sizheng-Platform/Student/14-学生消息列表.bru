@@ -1,0 +1,14 @@
+meta {
+  name: 学生消息列表
+  type: http
+  seq: 14
+}
+
+get {
+  url: {{baseUrl}}/api/student/messages
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{studentToken}}
+}

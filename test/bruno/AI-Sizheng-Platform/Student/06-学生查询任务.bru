@@ -1,0 +1,14 @@
+meta {
+  name: 学生查询任务
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/student/tasks
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{studentToken}}
+}

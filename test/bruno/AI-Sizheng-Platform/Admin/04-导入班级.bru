@@ -1,0 +1,26 @@
+meta {
+  name: 导入班级
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/admin/groups/import
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "groups": [
+      {
+        "name": "软件2602",
+        "group_type": "class"
+      }
+    ]
+  }
+}
