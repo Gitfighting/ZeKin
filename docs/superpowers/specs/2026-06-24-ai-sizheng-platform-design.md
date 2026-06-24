@@ -20,6 +20,7 @@
 4. [三端第一阶段落地范围](2026-06-24-ai-sizheng-platform/04-client-scope.md)
 5. [后端 API 与前端目录结构](2026-06-24-ai-sizheng-platform/05-api-and-structure.md)
 6. [测试、Bruno 验收与里程碑](2026-06-24-ai-sizheng-platform/06-testing-and-milestones.md)
+7. [前端统一视觉规范](2026-06-24-ai-sizheng-platform/07-frontend-style-guide.md)
 
 ## 第一阶段主链路
 
@@ -47,6 +48,7 @@ flowchart LR
 - 教师任务创建、任务详情、班级查看、异常处理。
 - 学生激活登录、任务列表、打卡提交、异常申诉、消息、我的档案。
 - PostgreSQL 数据持久化、任务规则快照、真实定位校验、Bruno API 验收集合。
+- 参考蓝色校园插画风格，统一学生端、教师端和管理员端的视觉语言。
 
 第一阶段暂缓：
 
