@@ -5,6 +5,24 @@
 			"style": {
 				"navigationBarTitleText": "uni-app"
 			}
+		},
+		{
+			"path": "pages/teacher/home",
+			"style": {
+				"navigationBarTitleText": "教师首页"
+			}
+		},
+		{
+			"path": "pages/teacher/tasks",
+			"style": {
+				"navigationBarTitleText": "任务列表"
+			}
+		},
+		{
+			"path": "pages/teacher/task-create",
+			"style": {
+				"navigationBarTitleText": "创建任务"
+			}
 		}
 	],
 	"globalStyle": {
