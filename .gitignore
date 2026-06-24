@@ -1,34 +1,44 @@
-# Local environment
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage/
+htmlcov/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+.vitest/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment and local storage
 .env
 .env.*
 !.env.example
+storage/
 
-# Generated diagram exports
-*.png
-*.pdf
-*.svg.tmp
-
-# Office temp files
-~$*.docx
-
-# OS / IDE
+# OS and editor files
 .DS_Store
 Thumbs.db
+desktop.ini
+*.swp
+*.swo
 .idea/
 .vscode/
-node_modules/
-build/
-dist/
-.pytest_cache/
-__pycache__/
-*.py[cod]
-logs/
-*.log
-admin-web/dist/
-admin-web/node_modules/
-backend/logs/
-backend/.pytest_cache/
-project.private.config.json
-project.config.json
 
-.omx/
+# Local worktree and temporary artifacts
+tmp/
+temp/
+*.tmp
+*.temp
+.cache/
+.omx/state/
+.omx/logs/

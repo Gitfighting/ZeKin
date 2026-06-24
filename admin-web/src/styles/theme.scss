@@ -1,0 +1,20 @@
+:root {
+  --sz-primary: #1677ff;
+  --sz-primary-light: #eaf4ff;
+  --sz-primary-deep: #0066e6;
+  --sz-success: #20c55a;
+  --sz-warning: #ff9f1a;
+  --sz-danger: #f04438;
+  --sz-text: #101828;
+  --sz-muted: #667085;
+  --sz-border: #d8e8ff;
+  --sz-page-bg: #f6faff;
+  --sz-card: #ffffff;
+}
+
+body {
+  margin: 0;
+  color: var(--sz-text);
+  background: var(--sz-page-bg);
+  font-family: Inter, "Microsoft YaHei", system-ui, sans-serif;
+}

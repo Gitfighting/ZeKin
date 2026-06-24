@@ -2,7 +2,6 @@ from collections.abc import Generator
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app.core.config import get_settings
 
@@ -12,15 +11,8 @@ class Base(DeclarativeBase):
 
 
 settings = get_settings()
-
-engine_kwargs = {"future": True}
-if settings.database_url.startswith("sqlite"):
-    engine_kwargs["connect_args"] = {"check_same_thread": False}
-    if settings.database_url == "sqlite:///:memory:":
-        engine_kwargs["poolclass"] = StaticPool
-
-engine = create_engine(settings.database_url, **engine_kwargs)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+engine = create_engine(settings.database_url, pool_pre_ping=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -29,4 +21,3 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
-
