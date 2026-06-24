@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.modules.auth.models import StudentProfile
 from app.modules.exceptions.models import CheckinException
+from app.modules.messages.models import Message
 from app.modules.records.models import CheckinRecord
 from app.modules.tasks.models import CheckinTask
 
@@ -47,6 +48,10 @@ class RecordRepository:
 
     def list_records_for_student(self, student_profile_id: int) -> list[CheckinRecord]:
         statement = select(CheckinRecord).where(CheckinRecord.student_profile_id == student_profile_id).order_by(CheckinRecord.id)
+        return list(self.db.scalars(statement))
+
+    def list_messages_for_user(self, user_id: int) -> list[Message]:
+        statement = select(Message).where(Message.user_id == user_id).order_by(Message.id.desc())
         return list(self.db.scalars(statement))
 
     def get_record(self, record_id: int) -> CheckinRecord | None:

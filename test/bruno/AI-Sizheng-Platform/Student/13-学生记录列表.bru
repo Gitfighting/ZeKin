@@ -1,0 +1,14 @@
+meta {
+  name: 学生记录列表
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/api/student/records
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{studentToken}}
+}

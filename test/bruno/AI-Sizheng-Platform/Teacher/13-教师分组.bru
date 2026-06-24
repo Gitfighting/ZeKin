@@ -1,0 +1,14 @@
+meta {
+  name: 教师分组
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/api/teacher/groups
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacherToken}}
+}

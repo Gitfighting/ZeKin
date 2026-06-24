@@ -1,0 +1,16 @@
+meta {
+  name: 发送验证码
+  type: http
+  seq: 0
+}
+
+post {
+  url: {{baseUrl}}/api/auth/send-code
+  body: json
+}
+
+body:json {
+  {
+    "phone": "13800000001"
+  }
+}

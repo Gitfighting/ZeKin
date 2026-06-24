@@ -1,0 +1,14 @@
+meta {
+  name: 成长概览
+  type: http
+  seq: 16
+}
+
+get {
+  url: {{baseUrl}}/api/student/growth-summary
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{studentToken}}
+}

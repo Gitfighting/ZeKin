@@ -1,0 +1,14 @@
+meta {
+  name: 发布任务
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/api/teacher/tasks/{{taskId}}/publish
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacherToken}}
+}

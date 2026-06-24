@@ -1,0 +1,14 @@
+meta {
+  name: 异常监管列表
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{baseUrl}}/api/admin/exceptions
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}

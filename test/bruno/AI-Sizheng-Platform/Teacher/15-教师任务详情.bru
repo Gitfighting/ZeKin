@@ -1,0 +1,14 @@
+meta {
+  name: 教师任务详情
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{baseUrl}}/api/teacher/tasks/{{taskId}}
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacherToken}}
+}

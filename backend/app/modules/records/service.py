@@ -4,8 +4,9 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
-from app.modules.auth.models import User
+from app.modules.auth.models import StudentProfile, User
 from app.modules.exceptions.models import CheckinException, ReviewLog
+from app.modules.messages.models import Message
 from app.modules.records.evaluators import EvaluationResult, LocationRuleEvaluator, TimeRuleEvaluator
 from app.modules.records.models import Appeal, CheckinRecord
 from app.modules.records.repository import RecordRepository
@@ -122,11 +123,29 @@ class RecordService:
         )
         record.status = "appeal_pending"
         self.repository.add(appeal)
+        self.repository.add(
+            Message(
+                user_id=current_user.id,
+                title="申诉已提交",
+                content=f"记录 {record.id} 的申诉已提交，等待教师审核。",
+            )
+        )
         self.repository.commit()
         return {"appeal_id": appeal.id, "status": appeal.status}
 
     def list_messages(self, current_user: User) -> dict:
-        return {"items": [], "total": 0}
+        messages = self.repository.list_messages_for_user(current_user.id)
+        items = [
+            {
+                "id": message.id,
+                "title": message.title,
+                "content": message.content,
+                "read_status": message.read_status,
+                "created_at": message.created_at.isoformat() if message.created_at else None,
+            }
+            for message in messages
+        ]
+        return {"items": items, "total": len(items)}
 
     def profile(self, current_user: User) -> dict:
         profile = self._require_student_profile(current_user.id)
@@ -164,6 +183,11 @@ class RecordService:
         exception = self.repository.get_exception(exception_id)
         if exception is None:
             raise ValueError("异常不存在")
+        task = self.repository.get_task(exception.task_id)
+        if task is None:
+            raise ValueError("任务不存在")
+        if task.teacher_user_id != current_user.id:
+            raise PermissionError("无权审核该异常")
         record = self.repository.get_record(exception.record_id)
         if record is None:
             raise ValueError("记录不存在")
@@ -187,6 +211,15 @@ class RecordService:
                 comment=payload["comment"],
             )
         )
+        student_profile = self.db.get(StudentProfile, exception.student_profile_id)
+        if student_profile is not None and student_profile.user_id is not None:
+            self.repository.add(
+                Message(
+                    user_id=student_profile.user_id,
+                    title="审核结果",
+                    content=f"记录 {record.id} 的审核结果为 {record.status}：{payload['comment']}",
+                )
+            )
         self.repository.commit()
         return {"reviewed": True, "record_status": record.status}
 

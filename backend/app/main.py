@@ -17,7 +17,6 @@ settings = get_settings()
 
 
 def initialize_database() -> None:
-    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as session:
         seed_reference_data(session)
@@ -36,7 +35,6 @@ app.include_router(teacher_router)
 app.include_router(exceptions_router)
 app.include_router(student_router)
 app.include_router(statistics_router)
-initialize_database()
 
 
 @app.get("/health")

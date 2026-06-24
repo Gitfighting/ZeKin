@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.modules.auth.models import StudentProfile
 from app.modules.exceptions.models import CheckinException
-from app.modules.groups.models import GroupMember, GroupTeacher
+from app.modules.groups.models import Group, GroupMember, GroupTeacher
 from app.modules.records.models import CheckinRecord
 from app.modules.tasks.models import CheckinTask, CheckinTaskGroup
 
@@ -49,6 +49,15 @@ class TaskRepository:
 
     def list_group_ids_for_teacher_profile(self, teacher_profile_id: int) -> list[int]:
         statement = select(GroupTeacher.group_id).where(GroupTeacher.teacher_profile_id == teacher_profile_id)
+        return list(self.db.scalars(statement))
+
+    def list_groups_for_teacher_profile(self, teacher_profile_id: int) -> list[Group]:
+        statement = (
+            select(Group)
+            .join(GroupTeacher, GroupTeacher.group_id == Group.id)
+            .where(GroupTeacher.teacher_profile_id == teacher_profile_id)
+            .order_by(Group.id)
+        )
         return list(self.db.scalars(statement))
 
     def list_records_for_student(self, student_profile_id: int) -> list[CheckinRecord]:

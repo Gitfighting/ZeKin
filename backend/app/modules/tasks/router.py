@@ -29,10 +29,7 @@ def dashboard(current_user: User = Depends(require_teacher), service: TaskServic
 
 @router.get("/groups")
 def groups(current_user: User = Depends(require_teacher), service: TaskService = Depends(get_task_service)):
-    profile = current_user.teacher_profile
-    total = 0 if profile is None else 1
-    data = {"items": [] if profile is None else [{"id": 1, "name": "软件2601"}], "total": total}
-    return success_response(data)
+    return success_response(service.list_teacher_groups(current_user))
 
 
 @router.get("/tasks")
@@ -46,31 +43,41 @@ def create_task(
     current_user: User = Depends(require_teacher),
     service: TaskService = Depends(get_task_service),
 ):
-    return success_response(service.create_task(teacher_user=current_user, payload=payload))
+    try:
+        result = service.create_task(teacher_user=current_user, payload=payload)
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    return success_response(result)
 
 
 @router.get("/tasks/{task_id}")
-def get_task(task_id: int, _: User = Depends(require_teacher), service: TaskService = Depends(get_task_service)):
+def get_task(task_id: int, current_user: User = Depends(require_teacher), service: TaskService = Depends(get_task_service)):
     try:
-        result = service.get_task_detail(task_id)
+        result = service.get_task_detail(task_id, current_user)
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return success_response(result)
 
 
 @router.post("/tasks/{task_id}/publish")
-def publish_task(task_id: int, _: User = Depends(require_teacher), service: TaskService = Depends(get_task_service)):
+def publish_task(task_id: int, current_user: User = Depends(require_teacher), service: TaskService = Depends(get_task_service)):
     try:
-        result = service.publish_task(task_id)
+        result = service.publish_task(task_id=task_id, teacher_user=current_user)
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return success_response(result)
 
 
 @router.post("/tasks/{task_id}/end")
-def end_task(task_id: int, _: User = Depends(require_teacher), service: TaskService = Depends(get_task_service)):
+def end_task(task_id: int, current_user: User = Depends(require_teacher), service: TaskService = Depends(get_task_service)):
     try:
-        result = service.end_task(task_id)
+        result = service.end_task(task_id=task_id, teacher_user=current_user)
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return success_response(result)

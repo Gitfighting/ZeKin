@@ -1,0 +1,14 @@
+meta {
+  name: 规则模板列表
+  type: http
+  seq: 18
+}
+
+get {
+  url: {{baseUrl}}/api/admin/rule-templates
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}

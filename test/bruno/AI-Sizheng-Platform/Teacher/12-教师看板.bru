@@ -1,0 +1,14 @@
+meta {
+  name: 教师看板
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/api/teacher/dashboard
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacherToken}}
+}

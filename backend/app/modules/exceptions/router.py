@@ -41,6 +41,8 @@ def review_exception(
 ):
     try:
         result = service.review_exception(current_user=current_user, exception_id=exception_id, payload=payload.model_dump())
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return success_response(result)
