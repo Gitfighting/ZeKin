@@ -1,0 +1,30 @@
+meta {
+  name: 学生提交打卡
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/student/tasks/{{taskId}}/checkin
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{studentToken}}
+}
+
+body:json {
+  {
+    "longitude": 120.000001,
+    "latitude": 30.000001,
+    "dynamic_code": "",
+    "submit_payload": {
+      "remark": "已在宿舍"
+    }
+  }
+}
+
+script:post-response {
+  bru.setVar("recordId", res.body.data.record_id)
+}

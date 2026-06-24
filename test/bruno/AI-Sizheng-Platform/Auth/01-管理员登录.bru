@@ -1,0 +1,22 @@
+meta {
+  name: 管理员登录
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+}
+
+body:json {
+  {
+    "account": "admin",
+    "password": "admin123456",
+    "user_type": "admin"
+  }
+}
+
+script:post-response {
+  bru.setVar("adminToken", res.body.data.access_token)
+}

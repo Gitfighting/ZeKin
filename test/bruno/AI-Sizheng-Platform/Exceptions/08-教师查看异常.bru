@@ -1,0 +1,19 @@
+meta {
+  name: 教师查看异常
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/teacher/exceptions
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacherToken}}
+}
+
+script:post-response {
+  const first = res.body.data.items[0]
+  if (first) bru.setVar("exceptionId", first.id)
+}

@@ -1,0 +1,24 @@
+meta {
+  name: 学生首次激活
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/auth/student/activate
+  body: json
+}
+
+body:json {
+  {
+    "name": "张三",
+    "student_no": "20260001",
+    "phone": "13800000001",
+    "code": "000000",
+    "password": "student123456"
+  }
+}
+
+script:post-response {
+  bru.setVar("studentToken", res.body.data.access_token)
+}

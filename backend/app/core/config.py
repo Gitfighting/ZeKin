@@ -1,3 +1,4 @@
+import sys
 from functools import lru_cache
 from pathlib import Path
 
@@ -9,6 +10,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ENV_FILE = PROJECT_ROOT.parent / ".env"
 
 
+def _default_database_url() -> str:
+    if "pytest" in sys.modules:
+        return "sqlite+pysqlite:///:memory:"
+    return "sqlite:///./ai_sizheng.db"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=ENV_FILE,
@@ -18,7 +25,7 @@ class Settings(BaseSettings):
 
     app_name: str = "AI_SIZHENG_PLATFORM"
     app_env: str = "local"
-    database_url: str = "sqlite:///./ai_sizheng.db"
+    database_url: str = Field(default_factory=_default_database_url)
     redis_url: str = "redis://localhost:6379/0"
     jwt_secret_key: str = "change-me-in-local-env"
     jwt_algorithm: str = "HS256"

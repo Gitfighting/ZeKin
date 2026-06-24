@@ -1,0 +1,14 @@
+meta {
+  name: 管理员查看监管统计
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/admin/statistics
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
