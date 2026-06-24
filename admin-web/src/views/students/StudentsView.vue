@@ -22,6 +22,11 @@ const search = reactive({
 const importVisible = ref(false)
 const drawerVisible = ref(false)
 const editingStudent = ref<StudentRow | null>(null)
+const importForm = reactive({
+  fileName: 'students-2026.xlsx',
+  mode: 'merge' as 'merge' | 'overwrite',
+  lastSubmittedMode: '',
+})
 
 const rows = ref<StudentRow[]>([
   { id: 1, name: '李晨', studentNo: '20240101', className: '软工 1 班', status: '已启用', counselor: '张老师' },
@@ -50,6 +55,11 @@ const filteredRows = computed(() =>
 const openEditor = (row: StudentRow) => {
   editingStudent.value = { ...row }
   drawerVisible.value = true
+}
+
+const confirmImport = () => {
+  importForm.lastSubmittedMode = importForm.mode
+  importVisible.value = false
 }
 </script>
 
@@ -93,18 +103,25 @@ const openEditor = (row: StudentRow) => {
     <el-dialog v-model="importVisible" title="导入学生">
       <el-form label-position="top">
         <el-form-item label="导入文件">
-          <el-input value="students-2026.xlsx" readonly />
+          <el-input v-model="importForm.fileName" readonly />
         </el-form-item>
         <el-form-item label="处理方式">
-          <el-radio-group model-value="merge">
+          <el-radio-group v-model="importForm.mode">
             <el-radio value="merge">保留现有并增量导入</el-radio>
             <el-radio value="overwrite">覆盖同学号记录</el-radio>
           </el-radio-group>
         </el-form-item>
+        <el-alert
+          v-if="importForm.lastSubmittedMode"
+          type="success"
+          show-icon
+          :closable="false"
+          :title="`已记录导入方式：${importForm.lastSubmittedMode === 'overwrite' ? '覆盖同学号记录' : '增量导入'}`"
+        />
       </el-form>
       <template #footer>
         <el-button @click="importVisible = false">取消</el-button>
-        <el-button type="primary" @click="importVisible = false">开始导入</el-button>
+        <el-button type="primary" @click="confirmImport">开始导入</el-button>
       </template>
     </el-dialog>
 

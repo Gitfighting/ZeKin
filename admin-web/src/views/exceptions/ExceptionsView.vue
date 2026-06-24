@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { computed, reactive } from 'vue'
 
 import DataTable, { type DataColumn } from '../../components/DataTable/DataTable.vue'
 
@@ -27,6 +27,14 @@ const rows: ExceptionRow[] = [
   { id: 1, student: '李晨', exceptionType: '定位缺失', status: '待复核', reviewStatus: '申诉待处理' },
   { id: 2, student: '王宁', exceptionType: '人脸不一致', status: '已驳回', reviewStatus: '已完成' },
 ]
+
+const filteredRows = computed(() =>
+  rows.filter((row) => {
+    const typeMatched = !filters.exceptionType || row.exceptionType === filters.exceptionType
+    const statusMatched = !filters.status || row.status === filters.status
+    return typeMatched && statusMatched
+  }),
+)
 </script>
 
 <template>
@@ -52,7 +60,7 @@ const rows: ExceptionRow[] = [
     </el-card>
 
     <el-card>
-      <DataTable :columns="columns" :rows="rows">
+      <DataTable :columns="columns" :rows="filteredRows">
         <template #reviewStatus="{ row }">
           <el-tag :type="row.reviewStatus.includes('待') ? 'warning' : 'success'">
             {{ row.reviewStatus }}

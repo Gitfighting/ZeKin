@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { computed, reactive } from 'vue'
 
 import DataTable, { type DataColumn } from '../../components/DataTable/DataTable.vue'
 
@@ -31,6 +31,16 @@ const rows: TaskRow[] = [
   { id: 1, teacher: '张明', type: '晨读签到', status: '进行中', date: '2026-06-24', completionRate: '93%' },
   { id: 2, teacher: '刘倩', type: '晚自习签到', status: '已结束', date: '2026-06-24', completionRate: '88%' },
 ]
+
+const filteredRows = computed(() =>
+  rows.filter((row) => {
+    const teacherMatched = !filters.teacher || row.teacher.includes(filters.teacher)
+    const typeMatched = !filters.type || row.type === filters.type
+    const statusMatched = !filters.status || row.status === filters.status
+    const dateMatched = !filters.date || row.date === filters.date
+    return teacherMatched && typeMatched && statusMatched && dateMatched
+  }),
+)
 </script>
 
 <template>
@@ -58,7 +68,7 @@ const rows: TaskRow[] = [
     </el-card>
 
     <el-card>
-      <DataTable :columns="columns" :rows="rows">
+      <DataTable :columns="columns" :rows="filteredRows">
         <template #completionRate="{ row }">
           <div class="completion-cell">
             <el-progress :percentage="Number.parseInt(row.completionRate, 10)" :stroke-width="10" />

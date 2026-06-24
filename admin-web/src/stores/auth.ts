@@ -10,14 +10,33 @@ export interface AdminUser {
   role: string
 }
 
+const readStoredUser = (): AdminUser | null => {
+  const raw = localStorage.getItem(USER_KEY)
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<AdminUser>
+    if (
+      typeof parsed.id === 'number' &&
+      typeof parsed.displayName === 'string' &&
+      typeof parsed.role === 'string'
+    ) {
+      return {
+        id: parsed.id,
+        displayName: parsed.displayName,
+        role: parsed.role,
+      }
+    }
+  } catch {
+    localStorage.removeItem(USER_KEY)
+  }
+
+  return null
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem(TOKEN_KEY) ?? '')
-  const user = ref<AdminUser | null>(
-    (() => {
-      const raw = localStorage.getItem(USER_KEY)
-      return raw ? (JSON.parse(raw) as AdminUser) : null
-    })(),
-  )
+  const user = ref<AdminUser | null>(readStoredUser())
 
   const isAuthenticated = computed(() => Boolean(token.value))
 
