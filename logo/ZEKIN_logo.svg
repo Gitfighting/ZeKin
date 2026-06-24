@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="1200" viewBox="0 0 800 1200" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="white"/>
+
+  <circle cx="400" cy="380" r="220" fill="none" stroke="#2F6BFF" stroke-width="4"/>
+  <circle cx="400" cy="380" r="205" fill="none" stroke="#DCE8FF" stroke-width="2"/>
+
+  <line x1="400" y1="190" x2="400" y2="220" stroke="#2F6BFF" stroke-width="4"/>
+  <line x1="400" y1="540" x2="400" y2="570" stroke="#2F6BFF" stroke-width="4"/>
+  <line x1="210" y1="380" x2="240" y2="380" stroke="#2F6BFF" stroke-width="4"/>
+  <line x1="560" y1="380" x2="590" y2="380" stroke="#2F6BFF" stroke-width="4"/>
+
+  <circle cx="400" cy="245" r="12" fill="#FFAA00"/>
+  <circle cx="425" cy="395" r="12" fill="#FFAA00"/>
+
+  <path d="M330 305 L500 305 L430 380 L330 480 L470 480"
+        fill="none" stroke="#2F6BFF" stroke-width="8"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <path d="M450 455 L490 405 L545 470"
+        fill="none" stroke="#25C28A" stroke-width="6"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <text x="400" y="700" text-anchor="middle"
+        font-size="54" font-family="Microsoft YaHei, PingFang SC, sans-serif"
+        fill="#183A70">知勤</text>
+
+  <text x="400" y="800" text-anchor="middle"
+        font-size="28" letter-spacing="10"
+        font-family="Arial, sans-serif"
+        fill="#2F6BFF">ZEKIN</text>
+</svg>
