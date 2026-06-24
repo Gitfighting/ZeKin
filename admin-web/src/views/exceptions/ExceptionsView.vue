@@ -1,15 +1,8 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 
+import { getExceptions, type ExceptionRow } from '../../api/admin'
 import DataTable, { type DataColumn } from '../../components/DataTable/DataTable.vue'
-
-interface ExceptionRow extends Record<string, unknown> {
-  id: number
-  student: string
-  exceptionType: string
-  status: string
-  reviewStatus: string
-}
 
 const filters = reactive({
   exceptionType: '',
@@ -23,18 +16,25 @@ const columns: DataColumn<ExceptionRow>[] = [
   { key: 'reviewStatus', label: '审核状态', minWidth: 150 },
 ]
 
-const rows: ExceptionRow[] = [
-  { id: 1, student: '李晨', exceptionType: '定位缺失', status: '待复核', reviewStatus: '申诉待处理' },
-  { id: 2, student: '王宁', exceptionType: '人脸不一致', status: '已驳回', reviewStatus: '已完成' },
-]
+const rows = ref<ExceptionRow[]>([])
+const loading = ref(false)
 
 const filteredRows = computed(() =>
-  rows.filter((row) => {
+  rows.value.filter((row) => {
     const typeMatched = !filters.exceptionType || row.exceptionType === filters.exceptionType
     const statusMatched = !filters.status || row.status === filters.status
     return typeMatched && statusMatched
   }),
 )
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    rows.value = (await getExceptions()).items
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <template>
@@ -60,7 +60,7 @@ const filteredRows = computed(() =>
     </el-card>
 
     <el-card>
-      <DataTable :columns="columns" :rows="filteredRows">
+      <DataTable :columns="columns" :rows="filteredRows" :loading="loading">
         <template #reviewStatus="{ row }">
           <el-tag :type="row.reviewStatus.includes('待') ? 'warning' : 'success'">
             {{ row.reviewStatus }}

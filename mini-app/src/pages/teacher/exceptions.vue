@@ -62,7 +62,7 @@ async function loadExceptions() {
 }
 
 async function review(id: number, action: 'approve' | 'reject' | 'need_more') {
-  const comment = commentDrafts[id]?.trim()
+  const comment = commentDrafts[id]?.trim() ?? ''
   const nextStatus: Record<typeof action, TeacherExceptionStatus> = {
     approve: 'approved',
     reject: 'rejected',
@@ -71,7 +71,7 @@ async function review(id: number, action: 'approve' | 'reject' | 'need_more') {
 
   try {
     if (typeof uni !== 'undefined' && typeof uni.request === 'function') {
-      await reviewTeacherException(id, { action, comment })
+      await reviewTeacherException(id, { decision: action, comment })
     }
 
     exceptions.value = exceptions.value.map((item) =>

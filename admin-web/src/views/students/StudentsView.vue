@@ -1,17 +1,9 @@
 <script setup lang="ts">
 import { Search } from '@element-plus/icons-vue'
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 
+import { getStudents, type StudentRow } from '../../api/admin'
 import DataTable, { type DataColumn } from '../../components/DataTable/DataTable.vue'
-
-interface StudentRow extends Record<string, unknown> {
-  id: number
-  name: string
-  studentNo: string
-  className: string
-  status: '已启用' | '待激活'
-  counselor: string
-}
 
 const search = reactive({
   name: '',
@@ -28,11 +20,8 @@ const importForm = reactive({
   lastSubmittedMode: '',
 })
 
-const rows = ref<StudentRow[]>([
-  { id: 1, name: '李晨', studentNo: '20240101', className: '软工 1 班', status: '已启用', counselor: '张老师' },
-  { id: 2, name: '王宁', studentNo: '20240102', className: '软工 2 班', status: '待激活', counselor: '陈老师' },
-  { id: 3, name: '周岚', studentNo: '20240103', className: '思政 1 班', status: '已启用', counselor: '赵老师' },
-])
+const loading = ref(false)
+const rows = ref<StudentRow[]>([])
 
 const columns: DataColumn<StudentRow>[] = [
   { key: 'name', label: '姓名', minWidth: 120 },
@@ -61,6 +50,15 @@ const confirmImport = () => {
   importForm.lastSubmittedMode = importForm.mode
   importVisible.value = false
 }
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    rows.value = (await getStudents()).items
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <template>
@@ -85,7 +83,7 @@ const confirmImport = () => {
     </el-card>
 
     <el-card>
-      <DataTable :columns="columns" :rows="filteredRows">
+      <DataTable :columns="columns" :rows="filteredRows" :loading="loading">
         <template #status="{ row }">
           <el-tag :type="row.status === '已启用' ? 'success' : 'warning'">
             {{ row.status }}

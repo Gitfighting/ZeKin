@@ -1,8 +1,13 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it } from 'vitest'
-import { defineComponent, h, type PropType } from 'vue'
+import { describe, expect, it, vi } from 'vitest'
+import { defineComponent, h, nextTick, type PropType } from 'vue'
 
 import TaskMonitorView from './TaskMonitorView.vue'
+import { getTasks } from '../../api/admin'
+
+vi.mock('../../api/admin', () => ({
+  getTasks: vi.fn(),
+}))
 
 interface RenderedTaskRow {
   teacher: string
@@ -51,6 +56,32 @@ const InputStub = defineComponent({
 
 describe('TaskMonitorView', () => {
   it('filters task rows by teacher keyword', async () => {
+    vi.mocked(getTasks).mockResolvedValue({
+      total: 2,
+      items: [
+        {
+          id: 1,
+          title: '晨读签到',
+          teacher: '张明',
+          type: '晨读签到',
+          status: '进行中',
+          date: '2026-06-24',
+          completionRate: '93%',
+          groupNames: ['软工 1 班'],
+        },
+        {
+          id: 2,
+          title: '晚自习签到',
+          teacher: '刘倩',
+          type: '晚自习签到',
+          status: '已结束',
+          date: '2026-06-24',
+          completionRate: '88%',
+          groupNames: ['思政 1 班'],
+        },
+      ],
+    })
+
     const wrapper = mount(TaskMonitorView, {
       global: {
         stubs: {
@@ -68,6 +99,8 @@ describe('TaskMonitorView', () => {
         },
       },
     })
+    await vi.waitFor(() => expect(getTasks).toHaveBeenCalled())
+    await nextTick()
 
     expect(wrapper.text()).toContain('张明')
     expect(wrapper.text()).toContain('刘倩')

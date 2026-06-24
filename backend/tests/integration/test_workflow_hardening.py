@@ -58,7 +58,9 @@ def _import_and_activate_student(client: TestClient, admin_token: str) -> str:
     return activate.json()["data"]["access_token"]
 
 
-def _create_task(client: TestClient, teacher_token: str, group_ids: list[int] | None = None) -> int:
+def _create_task(
+    client: TestClient, teacher_token: str, group_ids: list[int] | None = None
+) -> int:
     response = client.post(
         "/api/teacher/tasks",
         headers={"Authorization": f"Bearer {teacher_token}"},
@@ -122,7 +124,10 @@ def test_initialize_database_does_not_delete_existing_data() -> None:
     initialize_database()
 
     with SessionLocal() as session:
-        assert session.query(StudentProfile).filter_by(student_no="KEEP001").one_or_none() is not None
+        assert (
+            session.query(StudentProfile).filter_by(student_no="KEEP001").one_or_none()
+            is not None
+        )
 
 
 def test_teacher_groups_come_from_database_memberships() -> None:
@@ -130,13 +135,21 @@ def test_teacher_groups_come_from_database_memberships() -> None:
     client = _client()
     teacher2_token = _login(client, "teacher2", "teacher123456", "teacher")
 
-    response = client.get("/api/teacher/groups", headers={"Authorization": f"Bearer {teacher2_token}"})
+    response = client.get(
+        "/api/teacher/groups", headers={"Authorization": f"Bearer {teacher2_token}"}
+    )
 
     assert response.status_code == 200
-    assert response.json()["data"] == {
-        "items": [{"id": group_id, "name": "软件2602", "group_type": "class"}],
-        "total": 1,
-    }
+    data = response.json()["data"]
+    assert data["total"] == 1
+    item = data["items"][0]
+    assert item["id"] == group_id
+    assert item["name"] == "软件2602"
+    assert item["group_type"] == "class"
+    assert item["student_count"] == 0
+    assert item["studentCount"] == 0
+    assert item["recent_task_count"] == 0
+    assert item["recentTaskCount"] == 0
 
 
 def test_appeal_and_review_create_student_messages(monkeypatch) -> None:
@@ -168,11 +181,17 @@ def test_appeal_and_review_create_student_messages(monkeypatch) -> None:
         json={"reason": "定位偏移，实际在宿舍楼内", "attachment_ids": []},
     )
     assert appeal.status_code == 200
-    messages = client.get("/api/student/messages", headers={"Authorization": f"Bearer {student_token}"})
+    messages = client.get(
+        "/api/student/messages", headers={"Authorization": f"Bearer {student_token}"}
+    )
     assert messages.status_code == 200
-    assert any("申诉已提交" in item["title"] for item in messages.json()["data"]["items"])
+    assert any(
+        "申诉已提交" in item["title"] for item in messages.json()["data"]["items"]
+    )
 
-    exceptions = client.get("/api/teacher/exceptions", headers={"Authorization": f"Bearer {teacher_token}"})
+    exceptions = client.get(
+        "/api/teacher/exceptions", headers={"Authorization": f"Bearer {teacher_token}"}
+    )
     exception_id = exceptions.json()["data"]["items"][0]["id"]
     review = client.post(
         f"/api/teacher/exceptions/{exception_id}/review",
@@ -180,8 +199,13 @@ def test_appeal_and_review_create_student_messages(monkeypatch) -> None:
         json={"decision": "approve", "comment": "申诉通过"},
     )
     assert review.status_code == 200
-    reviewed_messages = client.get("/api/student/messages", headers={"Authorization": f"Bearer {student_token}"})
-    assert any("审核结果" in item["title"] for item in reviewed_messages.json()["data"]["items"])
+    reviewed_messages = client.get(
+        "/api/student/messages", headers={"Authorization": f"Bearer {student_token}"}
+    )
+    assert any(
+        "审核结果" in item["title"]
+        for item in reviewed_messages.json()["data"]["items"]
+    )
 
 
 def test_teacher_cannot_publish_end_or_review_out_of_scope_task(monkeypatch) -> None:
@@ -197,14 +221,20 @@ def test_teacher_cannot_publish_end_or_review_out_of_scope_task(monkeypatch) -> 
     teacher2_token = _login(client, "teacher2", "teacher123456", "teacher")
     task_id = _create_task(client, teacher_token)
 
-    assert client.post(
-        f"/api/teacher/tasks/{task_id}/publish",
-        headers={"Authorization": f"Bearer {teacher2_token}"},
-    ).status_code == 403
-    assert client.post(
-        f"/api/teacher/tasks/{task_id}/end",
-        headers={"Authorization": f"Bearer {teacher2_token}"},
-    ).status_code == 403
+    assert (
+        client.post(
+            f"/api/teacher/tasks/{task_id}/publish",
+            headers={"Authorization": f"Bearer {teacher2_token}"},
+        ).status_code
+        == 403
+    )
+    assert (
+        client.post(
+            f"/api/teacher/tasks/{task_id}/end",
+            headers={"Authorization": f"Bearer {teacher2_token}"},
+        ).status_code
+        == 403
+    )
 
     checkin = client.post(
         f"/api/student/tasks/{task_id}/checkin",
@@ -217,7 +247,9 @@ def test_teacher_cannot_publish_end_or_review_out_of_scope_task(monkeypatch) -> 
         },
     )
     assert checkin.status_code == 200
-    exceptions = client.get("/api/teacher/exceptions", headers={"Authorization": f"Bearer {teacher_token}"})
+    exceptions = client.get(
+        "/api/teacher/exceptions", headers={"Authorization": f"Bearer {teacher_token}"}
+    )
     exception_id = exceptions.json()["data"]["items"][0]["id"]
 
     review = client.post(

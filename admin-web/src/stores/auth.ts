@@ -1,6 +1,8 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
+import { loginAdmin } from '../api/admin'
+
 const TOKEN_KEY = 'access_token'
 const USER_KEY = 'admin_user'
 
@@ -40,11 +42,13 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => Boolean(token.value))
 
-  const login = (account: string) => {
-    token.value = 'mock-admin-token'
+  const login = async (account: string, password: string) => {
+    const session = await loginAdmin(account, password)
+
+    token.value = session.access_token
     user.value = {
-      id: 1,
-      displayName: account || '系统管理员',
+      id: session.user.id,
+      displayName: session.user.display_name || account || '系统管理员',
       role: '校级管理员',
     }
     localStorage.setItem(TOKEN_KEY, token.value)

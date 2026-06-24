@@ -4,6 +4,7 @@ import { onMounted, ref } from 'vue'
 import { getDashboard, type DashboardStats } from '../../api/admin'
 
 const stats = ref<DashboardStats>({
+  studentCount: 0,
   taskCount: 28,
   completionRate: 92,
   exceptionCount: 11,

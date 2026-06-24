@@ -1,16 +1,8 @@
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 
+import { getTasks, type TaskRow } from '../../api/admin'
 import DataTable, { type DataColumn } from '../../components/DataTable/DataTable.vue'
-
-interface TaskRow extends Record<string, unknown> {
-  id: number
-  teacher: string
-  type: string
-  status: string
-  date: string
-  completionRate: string
-}
 
 const filters = reactive({
   teacher: '',
@@ -27,13 +19,11 @@ const columns: DataColumn<TaskRow>[] = [
   { key: 'completionRate', label: '完成率', minWidth: 120 },
 ]
 
-const rows: TaskRow[] = [
-  { id: 1, teacher: '张明', type: '晨读签到', status: '进行中', date: '2026-06-24', completionRate: '93%' },
-  { id: 2, teacher: '刘倩', type: '晚自习签到', status: '已结束', date: '2026-06-24', completionRate: '88%' },
-]
+const rows = ref<TaskRow[]>([])
+const loading = ref(false)
 
 const filteredRows = computed(() =>
-  rows.filter((row) => {
+  rows.value.filter((row) => {
     const teacherMatched = !filters.teacher || row.teacher.includes(filters.teacher)
     const typeMatched = !filters.type || row.type === filters.type
     const statusMatched = !filters.status || row.status === filters.status
@@ -41,6 +31,15 @@ const filteredRows = computed(() =>
     return teacherMatched && typeMatched && statusMatched && dateMatched
   }),
 )
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    rows.value = (await getTasks()).items
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <template>
@@ -68,7 +67,7 @@ const filteredRows = computed(() =>
     </el-card>
 
     <el-card>
-      <DataTable :columns="columns" :rows="filteredRows">
+      <DataTable :columns="columns" :rows="filteredRows" :loading="loading">
         <template #completionRate="{ row }">
           <div class="completion-cell">
             <el-progress :percentage="Number.parseInt(row.completionRate, 10)" :stroke-width="10" />

@@ -35,22 +35,24 @@ async function handleSubmit() {
       reason: reason.value,
       images: images.value,
     })
+    uni.showToast({
+      title: '申诉已提交',
+      icon: 'success',
+    })
+
+    setTimeout(() => {
+      uni.navigateBack({
+        delta: 1,
+      })
+    }, 500)
   } catch {
-    // Local demo fallback.
+    uni.showToast({
+      title: '提交失败，请稍后重试',
+      icon: 'none',
+    })
   } finally {
     submitting.value = false
   }
-
-  uni.showToast({
-    title: '申诉已提交',
-    icon: 'success',
-  })
-
-  setTimeout(() => {
-    uni.navigateBack({
-      delta: 1,
-    })
-  }, 500)
 }
 
 onLoad((options) => {

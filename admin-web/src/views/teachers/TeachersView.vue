@@ -1,24 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
+import { getTeachers, type TeacherRow } from '../../api/admin'
 import DataTable, { type DataColumn } from '../../components/DataTable/DataTable.vue'
-
-interface TeacherRow extends Record<string, unknown> {
-  id: number
-  name: string
-  department: string
-  phone: string
-  groups: string[]
-}
 
 const createVisible = ref(false)
 const groupDrawerVisible = ref(false)
 const currentTeacher = ref<TeacherRow | null>(null)
+const loading = ref(false)
 
-const rows = ref<TeacherRow[]>([
-  { id: 1, name: '张明', department: '信息工程学院', phone: '13800001111', groups: ['软工 1 班', '软工 2 班'] },
-  { id: 2, name: '刘倩', department: '马克思主义学院', phone: '13800002222', groups: ['思政 1 班'] },
-])
+const rows = ref<TeacherRow[]>([])
 
 const columns: DataColumn<TeacherRow>[] = [
   { key: 'name', label: '姓名', minWidth: 120 },
@@ -36,6 +27,15 @@ const openGroups = (row: TeacherRow) => {
   currentTeacher.value = { ...row }
   groupDrawerVisible.value = true
 }
+
+onMounted(async () => {
+  loading.value = true
+  try {
+    rows.value = (await getTeachers()).items
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <template>
@@ -49,7 +49,7 @@ const openGroups = (row: TeacherRow) => {
     </div>
 
     <el-card>
-      <DataTable :columns="columns" :rows="rows">
+      <DataTable :columns="columns" :rows="rows" :loading="loading">
         <template #groups="{ row }">
           <div class="teacher-groups">
             <span>{{ row.groups.join(' / ') }}</span>

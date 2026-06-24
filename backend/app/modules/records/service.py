@@ -7,7 +7,11 @@ from sqlalchemy.orm import Session
 from app.modules.auth.models import StudentProfile, User
 from app.modules.exceptions.models import CheckinException, ReviewLog
 from app.modules.messages.models import Message
-from app.modules.records.evaluators import EvaluationResult, LocationRuleEvaluator, TimeRuleEvaluator
+from app.modules.records.evaluators import (
+    EvaluationResult,
+    LocationRuleEvaluator,
+    TimeRuleEvaluator,
+)
 from app.modules.records.models import Appeal, CheckinRecord
 from app.modules.records.repository import RecordRepository
 from app.modules.records.schemas import AppealRequest, CheckinRequest
@@ -33,18 +37,25 @@ class RecordService:
 
     def list_student_tasks(self, current_user: User) -> dict:
         profile = self._require_student_profile(current_user.id)
-        items = [self._serialize_task(task) for task in self.repository.list_tasks_for_student(profile.id)]
+        items = [
+            self._serialize_task(task)
+            for task in self.repository.list_tasks_for_student(profile.id)
+        ]
         return {"items": items, "total": len(items)}
 
     def get_student_task(self, current_user: User, task_id: int) -> dict:
         profile = self._require_student_profile(current_user.id)
-        tasks = {task.id: task for task in self.repository.list_tasks_for_student(profile.id)}
+        tasks = {
+            task.id: task for task in self.repository.list_tasks_for_student(profile.id)
+        }
         task = tasks.get(task_id)
         if task is None:
             raise ValueError("任务不存在")
         return self._serialize_task(task)
 
-    def submit_checkin(self, *, current_user: User, task_id: int, payload: CheckinRequest) -> dict:
+    def submit_checkin(
+        self, *, current_user: User, task_id: int, payload: CheckinRequest
+    ) -> dict:
         profile = self._require_student_profile(current_user.id)
         task = self.repository.get_task(task_id)
         if task is None:
@@ -84,7 +95,9 @@ class RecordService:
                 student_profile_id=profile.id,
                 exception_types_jsonb=result.exception_types,
                 messages_jsonb=result.messages,
-                status=RecordStatus.PENDING_REVIEW.value if result.need_review else RecordStatus.EXCEPTION.value,
+                status=RecordStatus.PENDING_REVIEW.value
+                if result.need_review
+                else RecordStatus.EXCEPTION.value,
             )
             self.repository.add(exception)
         self.repository.commit()
@@ -109,7 +122,9 @@ class RecordService:
         ]
         return {"items": items, "total": len(items)}
 
-    def submit_appeal(self, *, current_user: User, record_id: int, payload: AppealRequest) -> dict:
+    def submit_appeal(
+        self, *, current_user: User, record_id: int, payload: AppealRequest
+    ) -> dict:
         profile = self._require_student_profile(current_user.id)
         record = self.repository.get_record(record_id)
         if record is None:
@@ -141,7 +156,9 @@ class RecordService:
                 "title": message.title,
                 "content": message.content,
                 "read_status": message.read_status,
-                "created_at": message.created_at.isoformat() if message.created_at else None,
+                "created_at": message.created_at.isoformat()
+                if message.created_at
+                else None,
             }
             for message in messages
         ]
@@ -162,24 +179,21 @@ class RecordService:
     def growth_summary(self, current_user: User) -> dict:
         profile = self._require_student_profile(current_user.id)
         records = self.repository.list_records_for_student(profile.id)
-        normal_count = sum(1 for record in records if record.status == RecordStatus.NORMAL.value)
+        normal_count = sum(
+            1 for record in records if record.status == RecordStatus.NORMAL.value
+        )
         return {"normal_count": normal_count, "total_records": len(records)}
 
     def list_teacher_exceptions(self, current_user: User) -> dict:
         items = [
-            {
-                "id": item.id,
-                "record_id": item.record_id,
-                "task_id": item.task_id,
-                "status": item.status,
-                "exception_types": item.exception_types_jsonb,
-                "messages": item.messages_jsonb,
-            }
+            self._serialize_teacher_exception(item)
             for item in self.repository.list_exceptions_for_teacher(current_user.id)
         ]
         return {"items": items, "total": len(items)}
 
-    def review_exception(self, *, current_user: User, exception_id: int, payload: dict) -> dict:
+    def review_exception(
+        self, *, current_user: User, exception_id: int, payload: dict
+    ) -> dict:
         exception = self.repository.get_exception(exception_id)
         if exception is None:
             raise ValueError("异常不存在")
@@ -241,7 +255,9 @@ class RecordService:
 
         return EvaluationResult(
             passed=passed,
-            status=RecordStatus.NORMAL.value if passed else RecordStatus.EXCEPTION.value,
+            status=RecordStatus.NORMAL.value
+            if passed
+            else RecordStatus.EXCEPTION.value,
             exception_types=exception_types,
             messages=messages,
             need_review=need_review,
@@ -264,4 +280,44 @@ class RecordService:
             "starts_at": task.starts_at.isoformat(),
             "ends_at": task.ends_at.isoformat(),
             "rules_snapshot": deepcopy(task.rules_snapshot_jsonb),
+        }
+
+    def _serialize_teacher_exception(self, item: CheckinException) -> dict:
+        student = self.repository.get_student_profile(item.student_profile_id)
+        task = self.repository.get_task(item.task_id)
+        record = self.repository.get_record(item.record_id)
+        groups = self.repository.list_groups_for_task(item.task_id)
+        if not groups and student is not None:
+            groups = self.repository.list_groups_for_student(student.id)
+        group_name = " / ".join(group.name for group in groups)
+        reason = " / ".join(item.messages_jsonb) if item.messages_jsonb else "异常"
+        submitted_at = record.submitted_at.isoformat() if record else None
+        teacher_status = (
+            "pending"
+            if item.status == RecordStatus.PENDING_REVIEW.value
+            else item.status
+        )
+        return {
+            "id": item.id,
+            "record_id": item.record_id,
+            "recordId": item.record_id,
+            "task_id": item.task_id,
+            "taskId": item.task_id,
+            "student_id": item.student_profile_id,
+            "studentId": item.student_profile_id,
+            "student_name": student.name if student else None,
+            "studentName": student.name if student else "",
+            "student_no": student.student_no if student else None,
+            "studentNo": student.student_no if student else "",
+            "task_title": task.title if task else None,
+            "taskTitle": task.title if task else "",
+            "group_name": group_name,
+            "groupName": group_name,
+            "submitted_at": submitted_at,
+            "submittedAt": submitted_at,
+            "reason": reason,
+            "status": teacher_status,
+            "exception_types": item.exception_types_jsonb,
+            "exceptionTypes": item.exception_types_jsonb,
+            "messages": item.messages_jsonb,
         }

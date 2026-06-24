@@ -4,7 +4,7 @@ import { ref } from 'vue'
 
 import DynamicForm from '@/components/DynamicForm.vue'
 import LocationPicker from '@/components/LocationPicker.vue'
-import { demoStudentTasks, demoCheckinResults, submitCheckin, type StudentTask } from '@/services/student'
+import { demoStudentTasks, getStudentTaskDetail, submitCheckin, type StudentTask } from '@/services/student'
 import type { LocationResult } from '@/services/location'
 
 const task = ref<StudentTask>(demoStudentTasks[0])
@@ -20,7 +20,21 @@ function applyTask(nextTask: StudentTask) {
 
 async function loadTask(id?: string) {
   const matched = demoStudentTasks.find((item) => item.id === id) ?? demoStudentTasks[0]
-  applyTask(matched)
+
+  if (!id || typeof uni === 'undefined' || typeof uni.request !== 'function') {
+    applyTask(matched)
+    return
+  }
+
+  try {
+    applyTask(await getStudentTaskDetail(id))
+  } catch {
+    applyTask(matched)
+    uni.showToast({
+      title: '任务加载失败',
+      icon: 'none',
+    })
+  }
 }
 
 async function handleSubmit() {
@@ -43,24 +57,24 @@ async function handleSubmit() {
   submitting.value = true
 
   try {
-    await submitCheckin({
+    const result = await submitCheckin({
       taskId: task.value.id,
       longitude: location.value.longitude,
       latitude: location.value.latitude,
       verificationCode: verificationCode.value,
       formData: { ...dynamicForm.value },
     })
+    uni.navigateTo({
+      url: `/pages/student/result?state=${result.state}`,
+    })
   } catch {
-    // Demo fallback keeps the closed loop usable when backend contracts are absent.
+    uni.showToast({
+      title: '提交失败，请稍后重试',
+      icon: 'none',
+    })
   } finally {
     submitting.value = false
   }
-
-  const state = task.value.status === 'exception' ? 'exception' : 'pending_review'
-  const demoResult = demoCheckinResults[state]
-  uni.navigateTo({
-    url: `/pages/student/result?state=${demoResult.state}`,
-  })
 }
 
 onLoad((options) => {

@@ -14,7 +14,7 @@ const form = reactive({
 })
 
 const handleSubmit = async () => {
-  authStore.login(form.account || '系统管理员')
+  await authStore.login(form.account || 'admin', form.password)
   await router.push({ name: 'dashboard' })
 }
 </script>
