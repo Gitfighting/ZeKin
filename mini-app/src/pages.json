@@ -1,16 +1,70 @@
 {
-	"pages": [ //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+	"pages": [
 		{
-			"path": "pages/index/index",
+			"path": "pages/auth/login",
 			"style": {
-				"navigationBarTitleText": "uni-app"
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/auth/activate",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/student/home",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/student/tasks",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/student/messages",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/student/profile",
+			"style": {
+				"navigationStyle": "custom"
 			}
 		}
 	],
+	"tabBar": {
+		"color": "#667085",
+		"selectedColor": "#1677FF",
+		"backgroundColor": "#FFFFFF",
+		"borderStyle": "white",
+		"list": [
+			{
+				"pagePath": "pages/student/home",
+				"text": "首页"
+			},
+			{
+				"pagePath": "pages/student/tasks",
+				"text": "打卡任务"
+			},
+			{
+				"pagePath": "pages/student/messages",
+				"text": "消息"
+			},
+			{
+				"pagePath": "pages/student/profile",
+				"text": "我的"
+			}
+		]
+	},
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
-		"navigationBarTitleText": "uni-app",
-		"navigationBarBackgroundColor": "#F8F8F8",
-		"backgroundColor": "#F8F8F8"
+		"navigationBarTitleText": "智慧考勤",
+		"navigationBarBackgroundColor": "#F3F8FF",
+		"backgroundColor": "#F3F8FF"
 	}
 }
