@@ -1,9 +1,11 @@
-import { describe, expect, it } from 'vitest'
+// @vitest-environment jsdom
 import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
+
 import LoginPage from './login.vue'
 
 describe('login page', () => {
-  it('shows the student auth entry copy', () => {
+  it('renders the student login shell copy', () => {
     const wrapper = mount(LoginPage)
 
     expect(wrapper.text()).toContain('智慧考勤')
