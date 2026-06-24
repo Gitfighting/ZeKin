@@ -35,6 +35,7 @@ desktop.ini
 .vscode/
 
 # Local worktree and temporary artifacts
+.worktrees/
 tmp/
 temp/
 *.tmp
