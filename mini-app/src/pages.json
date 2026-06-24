@@ -23,6 +23,36 @@
 			"style": {
 				"navigationBarTitleText": "创建任务"
 			}
+		},
+		{
+			"path": "pages/teacher/task-detail",
+			"style": {
+				"navigationBarTitleText": "任务详情"
+			}
+		},
+		{
+			"path": "pages/teacher/exceptions",
+			"style": {
+				"navigationBarTitleText": "异常审核"
+			}
+		},
+		{
+			"path": "pages/teacher/groups",
+			"style": {
+				"navigationBarTitleText": "班级管理"
+			}
+		},
+		{
+			"path": "pages/teacher/group-detail",
+			"style": {
+				"navigationBarTitleText": "班级详情"
+			}
+		},
+		{
+			"path": "pages/teacher/profile",
+			"style": {
+				"navigationBarTitleText": "我的"
+			}
 		}
 	],
 	"globalStyle": {
