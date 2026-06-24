@@ -25,6 +25,24 @@
 			}
 		},
 		{
+			"path": "pages/student/task-detail",
+			"style": {
+				"navigationBarTitleText": "任务详情"
+			}
+		},
+		{
+			"path": "pages/student/checkin-submit",
+			"style": {
+				"navigationBarTitleText": "提交打卡"
+			}
+		},
+		{
+			"path": "pages/student/result",
+			"style": {
+				"navigationBarTitleText": "打卡结果"
+			}
+		},
+		{
 			"path": "pages/student/messages",
 			"style": {
 				"navigationStyle": "custom"
@@ -34,6 +52,18 @@
 			"path": "pages/student/profile",
 			"style": {
 				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/student/records",
+			"style": {
+				"navigationBarTitleText": "打卡记录"
+			}
+		},
+		{
+			"path": "pages/student/appeal",
+			"style": {
+				"navigationBarTitleText": "异常申诉"
 			}
 		}
 	],
