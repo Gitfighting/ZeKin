@@ -42,5 +42,6 @@ temp/
 *.tmp
 *.temp
 .cache/
+.playwright-mcp/
 .omx/state/
 .omx/logs/
