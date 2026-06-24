@@ -24,6 +24,7 @@ pnpm-debug.log*
 .env.*
 !.env.example
 storage/
+backend/*.db
 
 # OS and editor files
 .DS_Store
