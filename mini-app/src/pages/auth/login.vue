@@ -2,13 +2,32 @@
 import { reactive, ref } from 'vue'
 
 import { login, persistAuthSession, type LoginPayload } from '@/services/auth'
+import type { UserType } from '@/services/types'
 
 const form = reactive<LoginPayload>({
   account: '',
   password: '',
+  userType: 'student',
 })
 
 const submitting = ref(false)
+const loginRoles: Array<{ label: string; value: UserType }> = [
+  { label: '学生', value: 'student' },
+  { label: '教师', value: 'teacher' },
+]
+
+function enterHome(userType: UserType) {
+  if (userType === 'teacher') {
+    uni.reLaunch({
+      url: '/pages/teacher/home',
+    })
+    return
+  }
+
+  uni.switchTab({
+    url: '/pages/student/home',
+  })
+}
 
 function goActivate() {
   uni.navigateTo({
@@ -28,27 +47,26 @@ async function handleLogin() {
   submitting.value = true
 
   try {
-    await login(form)
+    const session = await login(form)
+    enterHome(session.user.userType)
   } catch {
+    const fallbackUserType = form.userType
     persistAuthSession({
-      accessToken: 'demo-student-token',
+      accessToken: `demo-${fallbackUserType}-token`,
       user: {
         id: 1,
-        userType: 'student',
-        displayName: '张同学',
-        className: '软件 2401',
-        studentNo: '2024010823',
-        phone: '13800001024',
+        userType: fallbackUserType,
+        displayName: fallbackUserType === 'teacher' ? '李老师' : '张同学',
+        className: fallbackUserType === 'student' ? '软件 2401' : undefined,
+        studentNo: fallbackUserType === 'student' ? '2024010823' : undefined,
+        phone: fallbackUserType === 'student' ? '13800001024' : undefined,
         activated: true,
       },
     })
+    enterHome(fallbackUserType)
   } finally {
     submitting.value = false
   }
-
-  uni.switchTab({
-    url: '/pages/student/home',
-  })
 }
 </script>
 
@@ -71,12 +89,24 @@ async function handleLogin() {
       </view>
 
       <view class="auth-form">
+        <view class="auth-role" aria-label="选择登录身份">
+          <view
+            v-for="role in loginRoles"
+            :key="role.value"
+            class="auth-role__item"
+            :class="{ 'auth-role__item--active': form.userType === role.value }"
+            @click="form.userType = role.value"
+          >
+            <text>{{ role.label }}</text>
+          </view>
+        </view>
+
         <view class="auth-form__field">
-          <text class="auth-form__label">学号/手机号</text>
+          <text class="auth-form__label">{{ form.userType === 'teacher' ? '教师账号/手机号' : '学号/手机号' }}</text>
           <input
             v-model="form.account"
             class="auth-form__input"
-            placeholder="请输入学号或手机号"
+            :placeholder="form.userType === 'teacher' ? '请输入教师账号或手机号' : '请输入学号或手机号'"
             placeholder-class="auth-form__placeholder"
           />
         </view>
@@ -178,6 +208,31 @@ async function handleLogin() {
   display: flex;
   flex-direction: column;
   gap: 24rpx;
+}
+
+.auth-role {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.auth-role__item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 72rpx;
+  border-radius: 18rpx;
+  background: #f8fbff;
+  border: 2rpx solid rgba($primary, 0.08);
+  color: $text-secondary;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.auth-role__item--active {
+  background: rgba($primary, 0.1);
+  border-color: rgba($primary, 0.35);
+  color: $primary;
 }
 
 .auth-form__field {

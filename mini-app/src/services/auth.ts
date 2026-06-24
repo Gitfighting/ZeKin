@@ -22,6 +22,7 @@ export interface AuthSession {
 export interface LoginPayload {
   account: string
   password: string
+  userType: UserType
 }
 
 export interface ActivateStudentPayload {
@@ -103,6 +104,7 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
       account: payload.account,
       username: payload.account,
       password: payload.password,
+      user_type: payload.userType,
     },
   })
 
