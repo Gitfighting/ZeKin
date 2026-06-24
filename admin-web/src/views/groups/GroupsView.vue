@@ -1,13 +1,72 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+
+import DataTable, { type DataColumn } from '../../components/DataTable/DataTable.vue'
+
+type GroupTab = '行政班' | '教学组' | '专项分组'
+
+interface MemberRow extends Record<string, unknown> {
+  id: number
+  name: string
+  role: string
+  attendance: string
+}
+
+interface TeacherRow extends Record<string, unknown> {
+  id: number
+  name: string
+  responsibility: string
+}
+
+const activeTab = ref<GroupTab>('行政班')
+
+const memberColumns: DataColumn<MemberRow>[] = [
+  { key: 'name', label: '成员姓名' },
+  { key: 'role', label: '角色' },
+  { key: 'attendance', label: '最近出勤' },
+]
+
+const teacherColumns: DataColumn<TeacherRow>[] = [
+  { key: 'name', label: '教师姓名' },
+  { key: 'responsibility', label: '负责范围' },
+]
+
+const members: MemberRow[] = [
+  { id: 1, name: '李晨', role: '班长', attendance: '96%' },
+  { id: 2, name: '王宁', role: '学生', attendance: '89%' },
+]
+
+const teachers: TeacherRow[] = [
+  { id: 1, name: '张明', responsibility: '晨读与晚签' },
+  { id: 2, name: '陈雪', responsibility: '定位异常复核' },
+]
+</script>
+
 <template>
   <section class="admin-page">
     <div class="page-header">
       <div>
         <h1>班级与分组</h1>
-        <p>分组类型、成员与教师视图将在下一步接入。</p>
+        <p>按组织场景切换分组类型，查看成员与教师配置。</p>
       </div>
+      <el-button type="primary">新增分组</el-button>
     </div>
+
     <el-card>
-      <el-empty description="班级与分组页面建设中" />
+      <el-tabs v-model="activeTab">
+        <el-tab-pane label="行政班" name="行政班" />
+        <el-tab-pane label="教学组" name="教学组" />
+        <el-tab-pane label="专项分组" name="专项分组" />
+      </el-tabs>
     </el-card>
+
+    <div class="two-column">
+      <el-card :header="`${activeTab}成员`">
+        <DataTable :columns="memberColumns" :rows="members" />
+      </el-card>
+      <el-card :header="`${activeTab}负责教师`">
+        <DataTable :columns="teacherColumns" :rows="teachers" />
+      </el-card>
+    </div>
   </section>
 </template>
