@@ -7,6 +7,8 @@
 *.png
 *.pdf
 *.svg.tmp
+!Img/
+!Img/**
 
 # Office temp files
 ~$*.docx
