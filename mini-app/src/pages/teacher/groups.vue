@@ -2,13 +2,10 @@
 import { onMounted, ref } from 'vue'
 
 import TeacherTabBar from './components/TeacherTabBar.vue'
+import { logInfo, showError } from '@/services/feedback'
 import { getTeacherGroups, type TeacherGroup } from '@/services/teacher'
 
-const groups = ref<TeacherGroup[]>([
-  { id: 1, name: '思政一班', studentCount: 42, recentTaskCount: 8, courseName: '马克思主义原理' },
-  { id: 2, name: '思政二班', studentCount: 39, recentTaskCount: 7, courseName: '思想道德与法治' },
-  { id: 3, name: '思政三班', studentCount: 45, recentTaskCount: 6, courseName: '中国近现代史纲要' },
-])
+const groups = ref<TeacherGroup[]>([])
 
 async function loadGroups() {
   if (typeof uni === 'undefined' || typeof uni.request !== 'function') {
@@ -17,8 +14,10 @@ async function loadGroups() {
 
   try {
     groups.value = await getTeacherGroups()
-  } catch {
-    // Keep fallback data visible.
+    logInfo('教师班级列表加载成功', { count: groups.value.length })
+  } catch (error) {
+    groups.value = []
+    showError(error, '班级列表加载失败')
   }
 }
 
@@ -51,6 +50,9 @@ onMounted(loadGroups)
           <text>{{ group.studentCount }} 名学生</text>
           <text>近 7 日 {{ group.recentTaskCount }} 个任务</text>
         </view>
+      </view>
+      <view v-if="groups.length === 0" class="group-card empty-card">
+        <text>暂无班级数据</text>
       </view>
     </view>
 
@@ -109,5 +111,11 @@ onMounted(loadGroups)
 .group-link {
   font-size: 22rpx;
   color: $primary;
+}
+
+.empty-card {
+  color: $text-secondary;
+  font-size: 26rpx;
+  text-align: center;
 }
 </style>

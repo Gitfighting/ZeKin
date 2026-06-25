@@ -3,28 +3,61 @@ import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 
 import StatusTag from '@/components/StatusTag.vue'
+import { clearLoginState } from '@/services/auth'
+import { logInfo, showError } from '@/services/feedback'
 import {
-  demoGrowthSummary,
-  demoStudentProfile,
   getGrowthSummary,
   getStudentProfile,
   type GrowthSummary,
   type StudentProfile,
 } from '@/services/student'
 
-const profile = ref<StudentProfile>(demoStudentProfile)
-const growth = ref<GrowthSummary>(demoGrowthSummary)
+const profile = ref<StudentProfile | null>(null)
+const growth = ref<GrowthSummary>({
+  checkedInDays: 0,
+  normalCount: 0,
+  appealSuccessRate: '0%',
+  streakDays: 0,
+})
 
-const activationStatus = computed(() => (profile.value.activationState === 'activated' ? 'normal' : 'pending'))
+const activationStatus = computed(() => (profile.value?.activationState === 'activated' ? 'normal' : 'pending'))
+
+function finishLogout() {
+  clearLoginState()
+  logInfo('学生退出登录成功')
+  uni.reLaunch({ url: '/pages/auth/login' })
+}
+
+function handleLogout() {
+  uni.showModal({
+    title: '退出登录',
+    content: '确认退出当前账号？',
+    confirmText: '退出',
+    success: (result: { confirm?: boolean }) => {
+      if (result.confirm) {
+        finishLogout()
+      }
+    },
+  })
+}
 
 onShow(async () => {
   try {
     const [profileResponse, growthResponse] = await Promise.all([getStudentProfile(), getGrowthSummary()])
     profile.value = profileResponse
     growth.value = growthResponse
-  } catch {
-    profile.value = demoStudentProfile
-    growth.value = demoGrowthSummary
+    logInfo('学生个人中心加载成功', {
+      studentNo: profileResponse.studentNo,
+    })
+  } catch (error) {
+    profile.value = null
+    growth.value = {
+      checkedInDays: 0,
+      normalCount: 0,
+      appealSuccessRate: '0%',
+      streakDays: 0,
+    }
+    showError(error, '个人信息加载失败')
   }
 })
 </script>
@@ -33,10 +66,15 @@ onShow(async () => {
   <scroll-view scroll-y class="profile-page">
     <view class="profile-page__hero">
       <text class="profile-page__title">我的</text>
-      <text class="profile-page__subtitle">{{ profile.realName }} · {{ profile.className }}</text>
+      <text class="profile-page__subtitle">{{ profile ? `${profile.realName} · ${profile.className}` : '暂无个人信息' }}</text>
     </view>
 
-    <view class="profile-page__card">
+    <view v-if="!profile" class="profile-page__card">
+      <text class="profile-page__section-title">暂无个人信息</text>
+      <text class="profile-page__value">请检查登录状态、网络或后端服务。</text>
+    </view>
+
+    <view v-else class="profile-page__card">
       <view class="profile-page__row">
         <text class="profile-page__label">激活状态</text>
         <StatusTag :status="activationStatus" />
@@ -79,7 +117,11 @@ onShow(async () => {
 
     <view class="profile-page__card profile-page__privacy">
       <text class="profile-page__section-title">隐私设置</text>
-      <text class="profile-page__value">{{ profile.privacyEntryText }}</text>
+      <text class="profile-page__value">{{ profile?.privacyEntryText || '暂无隐私设置说明' }}</text>
+    </view>
+
+    <view class="profile-page__card profile-page__actions">
+      <button class="profile-page__logout" @click="handleLogout">退出登录</button>
     </view>
   </scroll-view>
 </template>
@@ -177,6 +219,20 @@ onShow(async () => {
 }
 
 .profile-page__privacy {
+  margin-bottom: 0;
+}
+
+.profile-page__actions {
   margin-bottom: 40rpx;
+}
+
+.profile-page__logout {
+  width: 100%;
+  border: 0;
+  border-radius: 999rpx;
+  background: #fff1f0;
+  color: #d92d20;
+  font-size: 28rpx;
+  font-weight: 700;
 }
 </style>

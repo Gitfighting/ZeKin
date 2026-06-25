@@ -27,8 +27,17 @@ class AuthService:
         self.repository = AuthRepository(db)
         self.settings = get_settings()
 
-    def authenticate(self, *, account: str, password: str, user_type: UserType) -> LoginResponse:
-        user = self.repository.get_user_by_account(account=account, user_type=user_type.value)
+    def authenticate(
+        self,
+        *,
+        account: str,
+        password: str,
+        user_type: UserType | None,
+    ) -> LoginResponse:
+        user = self.repository.get_user_by_account(
+            account=account,
+            user_type=user_type.value if user_type is not None else None,
+        )
         if user is None or not pwd_context.verify(password, user.password_hash):
             raise AuthError("账号或密码错误")
         return self._build_login_response(user)

@@ -3,7 +3,8 @@ import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 
 import TaskCard from '@/components/TaskCard.vue'
-import { demoStudentTasks, getStudentTasks, type StudentTask } from '@/services/student'
+import { logInfo, showError } from '@/services/feedback'
+import { getStudentTasks, type StudentTask } from '@/services/student'
 
 type FilterKey = 'all' | 'in-progress' | 'pending' | 'exception'
 
@@ -15,7 +16,7 @@ const filters: { key: FilterKey; label: string }[] = [
 ]
 
 const activeFilter = ref<FilterKey>('all')
-const tasks = ref<StudentTask[]>(demoStudentTasks)
+const tasks = ref<StudentTask[]>([])
 
 const visibleTasks = computed(() => {
   if (activeFilter.value === 'all') {
@@ -33,8 +34,10 @@ function openTask(task: StudentTask) {
 onShow(async () => {
   try {
     tasks.value = await getStudentTasks()
-  } catch {
-    tasks.value = demoStudentTasks
+    logInfo('学生任务列表加载成功', { count: tasks.value.length })
+  } catch (error) {
+    tasks.value = []
+    showError(error, '任务列表加载失败')
   }
 })
 </script>
@@ -60,6 +63,9 @@ onShow(async () => {
 
     <view class="tasks-page__list">
       <TaskCard v-for="task in visibleTasks" :key="task.id" :task="task" @action="openTask" @click="openTask" />
+      <view v-if="visibleTasks.length === 0" class="tasks-page__empty">
+        <text>暂无任务数据</text>
+      </view>
     </view>
   </scroll-view>
 </template>
@@ -127,5 +133,14 @@ onShow(async () => {
   flex-direction: column;
   gap: 18rpx;
   padding: 24rpx;
+}
+
+.tasks-page__empty {
+  padding: 32rpx;
+  border-radius: 24rpx;
+  background: $card-bg;
+  color: $text-secondary;
+  font-size: 26rpx;
+  text-align: center;
 }
 </style>

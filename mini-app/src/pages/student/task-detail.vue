@@ -4,27 +4,52 @@ import { computed, ref } from 'vue'
 
 import RuleSummary from '@/components/RuleSummary.vue'
 import StatusTag from '@/components/StatusTag.vue'
-import { demoStudentTasks, getStudentTaskDetail, type StudentTask } from '@/services/student'
+import { logInfo, showError } from '@/services/feedback'
+import { getStudentTaskDetail, type StudentTask } from '@/services/student'
 
-const task = ref<StudentTask>(demoStudentTasks[0])
+const task = ref<StudentTask | null>(null)
 
-const hasException = computed(() => task.value.status === 'exception')
+const hasException = computed(() => task.value?.status === 'exception')
+
+function previousPageRoute(): string {
+  if (typeof getCurrentPages !== 'function') {
+    return ''
+  }
+  const pages = getCurrentPages()
+  return pages.length > 1 ? pages[pages.length - 2]?.route ?? '' : ''
+}
+
+function handleBack() {
+  const previousRoute = previousPageRoute()
+  if (previousRoute && !previousRoute.includes('pages/auth/login')) {
+    uni.navigateBack({ delta: 1 })
+    return
+  }
+
+  uni.switchTab({ url: '/pages/student/tasks' })
+}
 
 async function loadTask(id?: string) {
-  const fallbackTask = demoStudentTasks.find((item) => item.id === id) ?? demoStudentTasks[0]
-
   try {
     if (!id) {
-      task.value = fallbackTask
+      task.value = null
+      uni.showToast({ title: '缺少任务编号', icon: 'none' })
       return
     }
     task.value = await getStudentTaskDetail(id)
-  } catch {
-    task.value = fallbackTask
+    logInfo('学生任务详情加载成功', { taskId: id })
+  } catch (error) {
+    task.value = null
+    showError(error, '任务详情加载失败')
   }
 }
 
 function handlePrimaryAction() {
+  if (!task.value) {
+    uni.showToast({ title: '任务尚未加载', icon: 'none' })
+    return
+  }
+
   if (hasException.value) {
     uni.navigateTo({
       url: '/pages/student/appeal?recordId=record-3',
@@ -44,6 +69,18 @@ onLoad((options) => {
 
 <template>
   <scroll-view scroll-y class="detail-page">
+    <view class="detail-page__nav">
+      <button class="detail-page__back" aria-label="返回" @click="handleBack"></button>
+      <text class="detail-page__nav-title">任务详情</text>
+      <view class="detail-page__nav-spacer"></view>
+    </view>
+
+    <view v-if="!task" class="detail-page__card">
+      <text class="detail-page__section-title">暂无任务详情</text>
+      <text class="detail-page__status-text">请返回任务列表重新进入，或检查后端服务是否正常。</text>
+    </view>
+
+    <template v-else>
     <view class="detail-page__card">
       <view class="detail-page__header">
         <view class="detail-page__title-group">
@@ -94,6 +131,7 @@ onLoad((options) => {
         {{ hasException ? '去申诉' : task.actionText }}
       </button>
     </view>
+    </template>
   </scroll-view>
 </template>
 
@@ -102,8 +140,51 @@ onLoad((options) => {
 
 .detail-page {
   min-height: 100vh;
-  padding: 24rpx;
+  padding: 0 24rpx 24rpx;
   background: $page-bg;
+}
+
+.detail-page__nav {
+  display: grid;
+  grid-template-columns: 72rpx 1fr 72rpx;
+  align-items: center;
+  height: 112rpx;
+  margin: 0 -24rpx 24rpx;
+  padding: 0 24rpx;
+  background: $page-bg;
+}
+
+.detail-page__back {
+  position: relative;
+  width: 64rpx;
+  height: 64rpx;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 18rpx;
+    left: 22rpx;
+    width: 22rpx;
+    height: 22rpx;
+    border-left: 4rpx solid $text-primary;
+    border-bottom: 4rpx solid $text-primary;
+    transform: rotate(45deg);
+  }
+}
+
+.detail-page__nav-title {
+  color: $text-primary;
+  font-size: 34rpx;
+  font-weight: 700;
+  text-align: center;
+}
+
+.detail-page__nav-spacer {
+  width: 72rpx;
 }
 
 .detail-page__card {

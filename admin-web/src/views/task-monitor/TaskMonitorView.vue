@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 
 import { getTasks, type TaskRow } from '../../api/admin'
 import DataTable, { type DataColumn } from '../../components/DataTable/DataTable.vue'
+import { logInfo, showError } from '../../utils/feedback'
 
 const filters = reactive({
   teacher: '',
@@ -32,14 +33,23 @@ const filteredRows = computed(() =>
   }),
 )
 
-onMounted(async () => {
+const typeOptions = computed(() => [...new Set(rows.value.map((row) => row.type).filter(Boolean))])
+const statusOptions = computed(() => [...new Set(rows.value.map((row) => row.status).filter(Boolean))])
+
+async function loadTasks() {
   loading.value = true
   try {
     rows.value = (await getTasks()).items
+    logInfo('任务监管列表加载成功', { count: rows.value.length })
+  } catch (error) {
+    rows.value = []
+    showError(error, '任务监管列表加载失败')
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadTasks)
 </script>
 
 <template>
@@ -55,12 +65,10 @@ onMounted(async () => {
       <div class="toolbar-grid">
         <el-input v-model="filters.teacher" placeholder="教师" />
         <el-select v-model="filters.type" placeholder="任务类型" clearable>
-          <el-option label="晨读签到" value="晨读签到" />
-          <el-option label="晚自习签到" value="晚自习签到" />
+          <el-option v-for="type in typeOptions" :key="type" :label="type" :value="type" />
         </el-select>
         <el-select v-model="filters.status" placeholder="状态" clearable>
-          <el-option label="进行中" value="进行中" />
-          <el-option label="已结束" value="已结束" />
+          <el-option v-for="status in statusOptions" :key="status" :label="status" :value="status" />
         </el-select>
         <el-date-picker v-model="filters.date" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" />
       </div>

@@ -7,39 +7,26 @@ import {
   publishTeacherTask,
   type TeacherTaskDetail,
 } from '@/services/teacher'
+import { logInfo, showError, showSuccess } from '@/services/feedback'
 
 const detail = ref<TeacherTaskDetail>({
   task: {
-    id: 101,
-    title: '思政一班晨检',
-    status: 'in_progress',
-    groupName: '思政一班',
-    templateName: '晨检模板',
+    id: 0,
+    title: '',
+    status: 'not_started',
+    groupName: '',
+    templateName: '',
     taskType: 'attendance',
-    startsAt: '08:00',
-    endsAt: '08:20',
-    completionRate: 87,
-    pendingReviewCount: 2,
-    exceptionCount: 3,
-    description: '早课前完成课堂签到。',
-    published: true,
+    startsAt: '',
+    endsAt: '',
+    completionRate: 0,
+    pendingReviewCount: 0,
+    exceptionCount: 0,
+    description: '',
+    published: false,
   },
-  students: [
-    { id: 1, name: '李明', status: 'submitted', submittedAt: '08:05' },
-    { id: 2, name: '张悦', status: 'pending_review', submittedAt: '08:09' },
-    { id: 3, name: '王辰', status: 'missing' },
-  ],
-  exceptions: [
-    {
-      id: 1,
-      studentName: '张悦',
-      taskTitle: '思政一班晨检',
-      groupName: '思政一班',
-      submittedAt: '08:09',
-      reason: '定位偏移，申请人工确认',
-      status: 'pending',
-    },
-  ],
+  students: [],
+  exceptions: [],
 })
 
 const completionLabel = computed(() => `${detail.value.task.completionRate}%`)
@@ -66,8 +53,14 @@ async function loadDetail() {
 
   try {
     detail.value = await getTeacherTaskDetail(id)
-  } catch {
-    // Keep fallback data visible.
+    logInfo('教师任务详情加载成功', { taskId: id })
+  } catch (error) {
+    detail.value = {
+      ...detail.value,
+      students: [],
+      exceptions: [],
+    }
+    showError(error, '任务详情加载失败')
   }
 }
 
@@ -78,9 +71,10 @@ async function publishTask() {
 
   try {
     detail.value = await publishTeacherTask(detail.value.task.id)
-    uni.showToast({ title: '已发布', icon: 'success' })
-  } catch {
-    uni.showToast({ title: '发布失败', icon: 'none' })
+    logInfo('教师任务发布成功', { taskId: detail.value.task.id })
+    showSuccess('已发布')
+  } catch (error) {
+    showError(error, '发布失败')
   }
 }
 
@@ -91,9 +85,10 @@ async function endTask() {
 
   try {
     detail.value = await endTeacherTask(detail.value.task.id)
-    uni.showToast({ title: '已结束', icon: 'success' })
-  } catch {
-    uni.showToast({ title: '结束失败', icon: 'none' })
+    logInfo('教师任务结束成功', { taskId: detail.value.task.id })
+    showSuccess('已结束')
+  } catch (error) {
+    showError(error, '结束失败')
   }
 }
 
@@ -142,6 +137,7 @@ onMounted(loadDetail)
         </view>
         <text class="row-status">{{ student.status }}</text>
       </view>
+      <text v-if="detail.students.length === 0" class="empty-line">暂无学生打卡数据</text>
     </view>
 
     <view class="section-card">
@@ -156,6 +152,7 @@ onMounted(loadDetail)
         </view>
         <text class="row-status">{{ item.status }}</text>
       </view>
+      <text v-if="detail.exceptions.length === 0" class="empty-line">暂无异常记录</text>
     </view>
   </view>
 </template>
@@ -267,5 +264,12 @@ onMounted(loadDetail)
 .section-link {
   font-size: 22rpx;
   color: $primary;
+}
+
+.empty-line {
+  display: block;
+  padding: 24rpx 0 4rpx;
+  color: $text-secondary;
+  font-size: 24rpx;
 }
 </style>

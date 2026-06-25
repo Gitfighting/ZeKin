@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 
-import { activateStudent, persistAuthSession, type ActivateStudentPayload } from '@/services/auth'
+import { activateStudent, type ActivateStudentPayload } from '@/services/auth'
+import { logInfo, showError } from '@/services/feedback'
 
 const form = reactive<ActivateStudentPayload>({
+  name: '',
   studentNo: '',
   phone: '',
+  code: '',
   password: '',
   confirmPassword: '',
 })
@@ -19,7 +22,7 @@ function goLogin() {
 }
 
 async function handleActivate() {
-  if (!form.studentNo || !form.phone || !form.password || !form.confirmPassword) {
+  if (!form.name || !form.studentNo || !form.phone || !form.code || !form.password || !form.confirmPassword) {
     uni.showToast({
       title: '请完整填写激活信息',
       icon: 'none',
@@ -38,27 +41,19 @@ async function handleActivate() {
   submitting.value = true
 
   try {
-    await activateStudent(form)
-  } catch {
-    persistAuthSession({
-      accessToken: 'demo-student-token',
-      user: {
-        id: 1,
-        userType: 'student',
-        displayName: '张同学',
-        className: '软件 2401',
-        studentNo: form.studentNo,
-        phone: form.phone,
-        activated: true,
-      },
+    const session = await activateStudent(form)
+    logInfo('学生账号激活成功', {
+      studentNo: form.studentNo,
+      userId: session.user.id,
     })
+    uni.switchTab({
+      url: '/pages/student/home',
+    })
+  } catch (error) {
+    showError(error, '激活失败，请核对学号和手机号')
   } finally {
     submitting.value = false
   }
-
-  uni.switchTab({
-    url: '/pages/student/home',
-  })
 }
 </script>
 
@@ -82,12 +77,20 @@ async function handleActivate() {
 
       <view class="auth-form">
         <view class="auth-form__field">
+          <text class="auth-form__label">姓名</text>
+          <input v-model="form.name" class="auth-form__input" placeholder="请输入姓名" />
+        </view>
+        <view class="auth-form__field">
           <text class="auth-form__label">学号</text>
           <input v-model="form.studentNo" class="auth-form__input" placeholder="请输入学号" />
         </view>
         <view class="auth-form__field">
           <text class="auth-form__label">手机号</text>
           <input v-model="form.phone" class="auth-form__input" type="number" placeholder="请输入预留手机号" />
+        </view>
+        <view class="auth-form__field">
+          <text class="auth-form__label">验证码</text>
+          <input v-model="form.code" class="auth-form__input" type="number" placeholder="测试验证码 000000" />
         </view>
         <view class="auth-form__field">
           <text class="auth-form__label">设置密码</text>

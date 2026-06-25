@@ -6,7 +6,7 @@ from app.shared.enums import UserType
 class LoginRequest(BaseModel):
     account: str
     password: str
-    user_type: UserType
+    user_type: UserType | None = None
 
 
 class LoginUser(BaseModel):

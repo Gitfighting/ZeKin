@@ -2,13 +2,14 @@
 import { onMounted, ref } from 'vue'
 
 import TeacherTabBar from './components/TeacherTabBar.vue'
+import { logInfo, showError } from '@/services/feedback'
 import { getTeacherDashboard, type TeacherDashboard } from '@/services/teacher'
 
 const dashboard = ref<TeacherDashboard>({
-  todayTasks: 3,
-  exceptions: 6,
-  pendingReviews: 4,
-  quickCreateCount: 2,
+  todayTasks: 0,
+  exceptions: 0,
+  pendingReviews: 0,
+  quickCreateCount: 0,
 })
 
 const shortcuts = [
@@ -24,8 +25,15 @@ async function loadDashboard() {
 
   try {
     dashboard.value = await getTeacherDashboard()
-  } catch {
-    // Keep the shell useful even when the backend lane is not ready.
+    logInfo('教师工作台加载成功', dashboard.value)
+  } catch (error) {
+    dashboard.value = {
+      todayTasks: 0,
+      exceptions: 0,
+      pendingReviews: 0,
+      quickCreateCount: 0,
+    }
+    showError(error, '教师工作台加载失败')
   }
 }
 
@@ -89,12 +97,12 @@ onMounted(loadDashboard)
     <view class="section compact-grid">
       <view class="info-panel">
         <text class="info-title">本日提醒</text>
-        <text class="info-line">1 个班级还没创建晨检</text>
-        <text class="info-line">4 条异常等你复核</text>
+        <text class="info-line">待审核异常：{{ dashboard.pendingReviews }} 条</text>
+        <text class="info-line">今日任务：{{ dashboard.todayTasks }} 个</text>
       </view>
       <view class="info-panel">
         <text class="info-title">发布建议</text>
-        <text class="info-line">优先用课堂考勤模板</text>
+        <text class="info-line">优先选择真实分组后发布</text>
         <text class="info-line">高级规则默认折叠</text>
       </view>
     </view>

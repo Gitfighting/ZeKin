@@ -2,28 +2,37 @@
 import { onMounted, ref } from 'vue'
 
 import { getDashboard, type DashboardStats } from '../../api/admin'
+import { logInfo, showError } from '../../utils/feedback'
 
-const stats = ref<DashboardStats>({
+const emptyStats = (): DashboardStats => ({
   studentCount: 0,
-  taskCount: 28,
-  completionRate: 92,
-  exceptionCount: 11,
-  pendingAppealCount: 4,
+  taskCount: 0,
+  completionRate: 0,
+  exceptionCount: 0,
+  pendingAppealCount: 0,
 })
 
-const highlights = [
-  { label: '教师侧待提醒任务', value: '7', hint: '晚间任务未确认' },
-  { label: '学生侧异常聚类', value: '3 组', hint: '集中在定位缺失' },
-  { label: '组织规则变更', value: '2 项', hint: '本周更新模板' },
-]
+const stats = ref<DashboardStats>(emptyStats())
+const loading = ref(false)
+const alerts = ref<Array<{ content: string; timestamp: string; type: 'primary' | 'warning' | 'success' }>>([])
+const highlights = ref<Array<{ label: string; value: string; hint: string }>>([])
 
-onMounted(async () => {
+async function loadDashboard() {
+  loading.value = true
   try {
     stats.value = await getDashboard()
-  } catch {
-    // Fallback to local dashboard summary for offline-first shell verification.
+    logInfo('管理端工作台加载成功', stats.value)
+  } catch (error) {
+    stats.value = emptyStats()
+    alerts.value = []
+    highlights.value = []
+    showError(error, '工作台数据加载失败')
+  } finally {
+    loading.value = false
   }
-})
+}
+
+onMounted(loadDashboard)
 </script>
 
 <template>
@@ -33,7 +42,7 @@ onMounted(async () => {
         <h1>工作台</h1>
         <p>集中查看任务推进、异常波动与组织治理状态。</p>
       </div>
-      <el-button type="primary">刷新概览</el-button>
+      <el-button type="primary" :loading="loading" @click="loadDashboard">刷新概览</el-button>
     </div>
 
     <div class="stat-grid">
@@ -53,15 +62,22 @@ onMounted(async () => {
 
     <div class="two-column">
       <el-card header="监管提醒">
-        <el-timeline>
-          <el-timeline-item timestamp="08:30" type="primary">早签到规则已按学院下发</el-timeline-item>
-          <el-timeline-item timestamp="11:20" type="warning">自动判定中出现 5 条定位例外</el-timeline-item>
-          <el-timeline-item timestamp="14:00" type="success">任务模板“晨读打卡”完成率超过 95%</el-timeline-item>
+        <el-empty v-if="alerts.length === 0" description="暂无监管提醒" :image-size="72" />
+        <el-timeline v-else>
+          <el-timeline-item
+            v-for="alert in alerts"
+            :key="`${alert.timestamp}-${alert.content}`"
+            :timestamp="alert.timestamp"
+            :type="alert.type"
+          >
+            {{ alert.content }}
+          </el-timeline-item>
         </el-timeline>
       </el-card>
 
       <el-card header="重点指标">
-        <div class="highlight-list">
+        <el-empty v-if="highlights.length === 0" description="暂无重点指标" :image-size="72" />
+        <div v-else class="highlight-list">
           <div v-for="item in highlights" :key="item.label" class="highlight-list__item">
             <div>
               <p>{{ item.label }}</p>

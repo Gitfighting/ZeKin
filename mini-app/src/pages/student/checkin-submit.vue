@@ -4,40 +4,46 @@ import { ref } from 'vue'
 
 import DynamicForm from '@/components/DynamicForm.vue'
 import LocationPicker from '@/components/LocationPicker.vue'
-import { demoStudentTasks, getStudentTaskDetail, submitCheckin, type StudentTask } from '@/services/student'
+import { logInfo, showError } from '@/services/feedback'
+import { getStudentTaskDetail, submitCheckin, type StudentTask } from '@/services/student'
 import type { LocationResult } from '@/services/location'
 
-const task = ref<StudentTask>(demoStudentTasks[0])
+const task = ref<StudentTask | null>(null)
 const location = ref<LocationResult | null>(null)
 const verificationCode = ref('')
 const dynamicForm = ref<Record<string, string>>({})
 const submitting = ref(false)
 
-function applyTask(nextTask: StudentTask) {
+function applyTask(nextTask: StudentTask | null) {
   task.value = nextTask
   dynamicForm.value = {}
 }
 
 async function loadTask(id?: string) {
-  const matched = demoStudentTasks.find((item) => item.id === id) ?? demoStudentTasks[0]
-
   if (!id || typeof uni === 'undefined' || typeof uni.request !== 'function') {
-    applyTask(matched)
+    applyTask(null)
+    uni.showToast({ title: '缺少任务编号', icon: 'none' })
     return
   }
 
   try {
     applyTask(await getStudentTaskDetail(id))
-  } catch {
-    applyTask(matched)
-    uni.showToast({
-      title: '任务加载失败',
-      icon: 'none',
-    })
+    logInfo('学生打卡任务加载成功', { taskId: id })
+  } catch (error) {
+    applyTask(null)
+    showError(error, '任务加载失败')
   }
 }
 
 async function handleSubmit() {
+  if (!task.value) {
+    uni.showToast({
+      title: '任务尚未加载',
+      icon: 'none',
+    })
+    return
+  }
+
   if (!location.value) {
     uni.showToast({
       title: '请先获取当前位置',
@@ -64,14 +70,16 @@ async function handleSubmit() {
       verificationCode: verificationCode.value,
       formData: { ...dynamicForm.value },
     })
+    logInfo('学生打卡提交成功', {
+      taskId: task.value.id,
+      state: result.state,
+    })
+    uni.setStorageSync('latest_checkin_result', result)
     uni.navigateTo({
       url: `/pages/student/result?state=${result.state}`,
     })
-  } catch {
-    uni.showToast({
-      title: '提交失败，请稍后重试',
-      icon: 'none',
-    })
+  } catch (error) {
+    showError(error, '提交失败，请稍后重试')
   } finally {
     submitting.value = false
   }
@@ -84,6 +92,12 @@ onLoad((options) => {
 
 <template>
   <scroll-view scroll-y class="submit-page">
+    <view v-if="!task" class="submit-page__card">
+      <text class="submit-page__title">暂无任务数据</text>
+      <text class="submit-page__subtitle">请从任务列表重新进入，或检查网络和后端服务。</text>
+    </view>
+
+    <template v-else>
     <view class="submit-page__card">
       <text class="submit-page__title">{{ task.title }}</text>
       <text class="submit-page__subtitle">{{ task.timeWindow }} · {{ task.locationName }}</text>
@@ -118,6 +132,7 @@ onLoad((options) => {
         提交打卡
       </button>
     </view>
+    </template>
   </scroll-view>
 </template>
 

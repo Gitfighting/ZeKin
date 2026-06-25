@@ -3,7 +3,8 @@ import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 
 import StatusTag from '@/components/StatusTag.vue'
-import { demoStudentRecords, getStudentRecords, type ResultState, type StudentRecord } from '@/services/student'
+import { logInfo, showError } from '@/services/feedback'
+import { getStudentRecords, type ResultState, type StudentRecord } from '@/services/student'
 
 type FilterKey = 'all' | ResultState
 
@@ -15,7 +16,7 @@ const filters: { key: FilterKey; label: string }[] = [
 ]
 
 const activeFilter = ref<FilterKey>('all')
-const records = ref<StudentRecord[]>(demoStudentRecords)
+const records = ref<StudentRecord[]>([])
 
 const statusToneMap: Record<ResultState, 'normal' | 'pending' | 'exception'> = {
   normal: 'normal',
@@ -39,8 +40,10 @@ function openAppeal(record: StudentRecord) {
 onShow(async () => {
   try {
     records.value = await getStudentRecords(activeFilter.value)
-  } catch {
-    records.value = demoStudentRecords
+    logInfo('学生打卡记录加载成功', { count: records.value.length })
+  } catch (error) {
+    records.value = []
+    showError(error, '打卡记录加载失败')
   }
 })
 </script>
@@ -78,6 +81,9 @@ onShow(async () => {
         >
           发起申诉
         </button>
+      </view>
+      <view v-if="visibleRecords.length === 0" class="records-page__empty">
+        <text>暂无打卡记录</text>
       </view>
     </view>
   </scroll-view>
@@ -167,5 +173,14 @@ onShow(async () => {
   background: $primary;
   font-size: 26rpx;
   font-weight: 600;
+}
+
+.records-page__empty {
+  padding: 32rpx;
+  border-radius: 24rpx;
+  background: $card-bg;
+  color: $text-secondary;
+  font-size: 26rpx;
+  text-align: center;
 }
 </style>

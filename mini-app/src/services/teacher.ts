@@ -3,7 +3,7 @@ import type { ApiResponse, TaskStatus } from './types'
 
 export type TeacherTaskStatus = TaskStatus | 'pending_review'
 export type TeacherExceptionStatus = 'pending' | 'approved' | 'rejected' | 'need_more'
-export type TeacherTaskTemplate = '晨检模板' | '课堂考勤模板' | '晚点名模板' | '外出签到模板'
+export type TeacherTaskTemplate = string
 export type TeacherTaskType = 'attendance' | 'photo' | 'location' | 'custom'
 
 export interface TeacherDashboard {
@@ -275,10 +275,7 @@ function normalizeExceptionStatus(status?: string): TeacherExceptionStatus {
 
 function templateFromRules(rules: Record<string, unknown>): TeacherTaskTemplate {
   const templateName = readString(rules.templateName)
-  if (['晨检模板', '课堂考勤模板', '晚点名模板', '外出签到模板'].includes(templateName)) {
-    return templateName as TeacherTaskTemplate
-  }
-  return '晚点名模板'
+  return templateName
 }
 
 function taskTypeFromBackend(raw: BackendTeacherTask, rules: Record<string, unknown>): TeacherTaskType {

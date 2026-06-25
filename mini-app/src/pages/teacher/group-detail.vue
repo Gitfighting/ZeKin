@@ -5,50 +5,19 @@ import type { TeacherGroupDetail } from '@/services/teacher'
 
 const detail = ref<TeacherGroupDetail>({
   group: {
-    id: 1,
-    name: '思政一班',
-    studentCount: 42,
-    recentTaskCount: 8,
-    courseName: '马克思主义原理',
+    id: 0,
+    name: '班级详情',
+    studentCount: 0,
+    recentTaskCount: 0,
+    courseName: '',
   },
   stats: {
-    attendanceRate: 91,
-    exceptionRate: 7,
-    pendingReviewCount: 3,
+    attendanceRate: 0,
+    exceptionRate: 0,
+    pendingReviewCount: 0,
   },
-  students: [
-    { id: 1, name: '李明', status: 'submitted' },
-    { id: 2, name: '张悦', status: 'pending_review' },
-    { id: 3, name: '王辰', status: 'missing' },
-  ],
-  tasks: [
-    {
-      id: 101,
-      title: '思政一班晨检',
-      status: 'in_progress',
-      groupName: '思政一班',
-      templateName: '晨检模板',
-      taskType: 'attendance',
-      startsAt: '08:00',
-      endsAt: '08:20',
-      completionRate: 87,
-      pendingReviewCount: 2,
-      exceptionCount: 3,
-    },
-    {
-      id: 104,
-      title: '晚点名',
-      status: 'ended',
-      groupName: '思政一班',
-      templateName: '晚点名模板',
-      taskType: 'photo',
-      startsAt: '21:00',
-      endsAt: '21:30',
-      completionRate: 98,
-      pendingReviewCount: 0,
-      exceptionCount: 1,
-    },
-  ],
+  students: [],
+  tasks: [],
 })
 
 const quickStats = computed(() => [
@@ -85,6 +54,7 @@ function openTask(id: number) {
         <text class="row-title">{{ student.name }}</text>
         <text class="row-status">{{ student.status }}</text>
       </view>
+      <text v-if="detail.students.length === 0" class="empty-line">暂无学生详情数据</text>
     </view>
 
     <view class="section-card">
@@ -96,6 +66,7 @@ function openTask(id: number) {
         </view>
         <text class="row-status">{{ task.status }}</text>
       </view>
+      <text v-if="detail.tasks.length === 0" class="empty-line">暂无班级任务数据</text>
     </view>
   </view>
 </template>
@@ -191,5 +162,12 @@ function openTask(id: number) {
 .row-status {
   font-size: 22rpx;
   color: $primary;
+}
+
+.empty-line {
+  display: block;
+  padding: 20rpx 0 0;
+  color: $text-secondary;
+  font-size: 24rpx;
 }
 </style>

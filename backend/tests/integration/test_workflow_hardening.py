@@ -130,6 +130,23 @@ def test_initialize_database_does_not_delete_existing_data() -> None:
         )
 
 
+def test_roleless_login_resolves_mini_app_users_but_not_admins() -> None:
+    client = _client()
+
+    teacher_login = client.post(
+        "/api/auth/login",
+        json={"account": "teacher", "password": "teacher123456"},
+    )
+    assert teacher_login.status_code == 200
+    assert teacher_login.json()["data"]["user"]["user_type"] == "teacher"
+
+    admin_login = client.post(
+        "/api/auth/login",
+        json={"account": "admin", "password": "admin123456"},
+    )
+    assert admin_login.status_code == 400
+
+
 def test_teacher_groups_come_from_database_memberships() -> None:
     _, group_id = _add_second_teacher_and_group()
     client = _client()

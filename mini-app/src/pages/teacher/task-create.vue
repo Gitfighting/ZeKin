@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 
+import { logInfo, showError, showSuccess } from '@/services/feedback'
 import {
   createTeacherTask,
   getTeacherGroups,
@@ -21,29 +22,23 @@ const taskTypes: Array<{ label: string; value: TeacherTaskType }> = [
   { label: '自定义', value: 'custom' },
 ]
 
-const templates: TeacherTaskTemplate[] = ['晨检模板', '课堂考勤模板', '晚点名模板', '外出签到模板']
+const templates = ref<TeacherTaskTemplate[]>([])
 
 const form = reactive<CreateTeacherTaskPayload>({
-  title: '思政课堂签到',
-  description: '默认要求学生在上课前 10 分钟完成签到。',
-  groupIds: [1],
+  title: '',
+  description: '',
+  groupIds: [],
   taskType: 'attendance',
-  templateName: '课堂考勤模板',
-  startsAt: '2026-06-24 08:00',
-  endsAt: '2026-06-24 08:20',
+  templateName: '',
+  startsAt: '',
+  endsAt: '',
   advancedRules: {
-    allowLateMinutes: 10,
+    allowLateMinutes: 0,
     needPhoto: false,
     allowAppeal: true,
     autoEnd: true,
   },
 })
-
-const fallbackGroups: TeacherGroup[] = [
-  { id: 1, name: '思政一班', studentCount: 42, recentTaskCount: 8, courseName: '马克思主义原理' },
-  { id: 2, name: '思政二班', studentCount: 39, recentTaskCount: 7, courseName: '思想道德与法治' },
-  { id: 3, name: '思政三班', studentCount: 45, recentTaskCount: 6, courseName: '中国近现代史纲要' },
-]
 
 const selectedGroups = computed(() =>
   groups.value.filter((group) => form.groupIds.includes(group.id)),
@@ -54,7 +49,7 @@ const ruleSummary = computed(() => {
 
   return [
     `${selectedGroups.value.length} 个分组`,
-    `模板 ${form.templateName}`,
+    form.templateName ? `模板 ${form.templateName}` : '未选择模板',
     `迟到宽限 ${rules.allowLateMinutes ?? 0} 分钟`,
     rules.needPhoto ? '需照片佐证' : '无需照片',
     rules.allowAppeal ? '允许申诉' : '不允许申诉',
@@ -63,19 +58,30 @@ const ruleSummary = computed(() => {
 })
 
 const readyToPublish = computed(
-  () => form.title.trim().length > 0 && form.groupIds.length > 0 && !submitting.value,
+  () =>
+    form.title.trim().length > 0 &&
+    form.startsAt.trim().length > 0 &&
+    form.endsAt.trim().length > 0 &&
+    form.groupIds.length > 0 &&
+    !submitting.value,
 )
 
 async function loadGroups() {
   if (typeof uni === 'undefined' || typeof uni.request !== 'function') {
-    groups.value = fallbackGroups
+    groups.value = []
     return
   }
 
   try {
     groups.value = await getTeacherGroups()
-  } catch {
-    groups.value = fallbackGroups
+    if (!groups.value.some((group) => form.groupIds.includes(group.id))) {
+      form.groupIds = groups.value[0] ? [groups.value[0].id] : []
+    }
+    logInfo('创建任务分组加载成功', { count: groups.value.length })
+  } catch (error) {
+    groups.value = []
+    form.groupIds = []
+    showError(error, '分组加载失败')
   }
 }
 
@@ -100,12 +106,11 @@ async function submitTask() {
     }
 
     const createdTask = await createTeacherTask(form)
-    uni.showToast({ title: '已发布', icon: 'success' })
+    logInfo('教师任务创建成功', { taskId: createdTask.id })
+    showSuccess('已发布')
     uni.redirectTo({ url: `/pages/teacher/task-detail?id=${createdTask.id}` })
-  } catch {
-    if (typeof uni !== 'undefined') {
-      uni.showToast({ title: '发布失败', icon: 'none' })
-    }
+  } catch (error) {
+    showError(error, '发布失败')
   } finally {
     submitting.value = false
   }
@@ -127,12 +132,12 @@ onMounted(loadGroups)
     <view class="top-bar">
       <text class="top-back" @click="goBack">< 返回</text>
       <text class="top-title">创建任务</text>
-      <text class="top-action">{{ form.templateName }}</text>
+      <text class="top-action">{{ form.templateName || '自定义' }}</text>
     </view>
 
     <view class="hero-card">
-      <text class="hero-title">模板优先，先把任务发出去。</text>
-      <text class="hero-subtitle">先选模板和分组，再展开规则细节，避免教师在手机端被太多开关打断。</text>
+      <text class="hero-title">填写任务信息后发布。</text>
+      <text class="hero-subtitle">选择真实分组并填写时间，接口失败时不会使用本地样例代替。</text>
     </view>
 
     <view class="section-card">
@@ -169,6 +174,7 @@ onMounted(loadGroups)
           <text class="chip-title">{{ group.name }}</text>
           <text class="chip-subtitle">{{ group.studentCount }} 人 · 最近 {{ group.recentTaskCount }} 次</text>
         </view>
+        <text v-if="groups.length === 0" class="empty-line">暂无可选分组，请先确认教师已绑定班级。</text>
       </view>
     </view>
 
@@ -192,8 +198,9 @@ onMounted(loadGroups)
           @click="form.templateName = template"
         >
           <text class="template-title">{{ template }}</text>
-          <text class="template-subtitle">默认规则已预填，可直接发布。</text>
+          <text class="template-subtitle">来自后端规则模板。</text>
         </view>
+        <text v-if="templates.length === 0" class="empty-line">暂无可用模板，可直接使用自定义规则发布。</text>
       </view>
     </view>
 
@@ -440,5 +447,11 @@ onMounted(loadGroups)
 
 .publish-button.disabled {
   opacity: 0.45;
+}
+
+.empty-line {
+  color: $text-secondary;
+  font-size: 24rpx;
+  line-height: 1.6;
 }
 </style>

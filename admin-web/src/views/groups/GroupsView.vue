@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 
 import { getGroups, type GroupRow } from '../../api/admin'
 import DataTable, { type DataColumn } from '../../components/DataTable/DataTable.vue'
+import { logInfo, showError, showWarning } from '../../utils/feedback'
 
 type GroupTab = '行政班' | '教学组' | '专项分组'
 
@@ -23,14 +24,20 @@ const visibleGroups = computed(() => {
   return rows.value.filter((row) => row.groupType !== 'class')
 })
 
-onMounted(async () => {
+async function loadGroups() {
   loading.value = true
   try {
     rows.value = (await getGroups()).items
+    logInfo('班级与分组列表加载成功', { count: rows.value.length })
+  } catch (error) {
+    rows.value = []
+    showError(error, '班级与分组列表加载失败')
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadGroups)
 </script>
 
 <template>
@@ -40,7 +47,7 @@ onMounted(async () => {
         <h1>班级与分组</h1>
         <p>按组织场景切换分组类型，查看成员与教师配置。</p>
       </div>
-      <el-button type="primary">新增分组</el-button>
+      <el-button type="primary" @click="showWarning('新增分组接口暂未接入')">新增分组</el-button>
     </div>
 
     <el-card>

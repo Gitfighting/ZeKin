@@ -2,14 +2,21 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.modules.auth.models import StudentProfile, User
+from app.shared.enums import UserType
 
 
 class AuthRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def get_user_by_account(self, *, account: str, user_type: str) -> User | None:
-        statement = select(User).where(User.account == account, User.user_type == user_type)
+    def get_user_by_account(self, *, account: str, user_type: str | None) -> User | None:
+        statement = select(User).where(User.account == account)
+        if user_type is None:
+            statement = statement.where(
+                User.user_type.in_([UserType.STUDENT.value, UserType.TEACHER.value])
+            )
+        else:
+            statement = statement.where(User.user_type == user_type)
         return self.db.scalar(statement)
 
     def get_user_by_id(self, user_id: int) -> User | None:

@@ -51,6 +51,14 @@
     /* 小程序特有相关 */
     "mp-weixin" : {
         "appid" : "",
+        "permission" : {
+            "scope.userLocation" : {
+                "desc" : "用于获取当前位置完成打卡范围校验"
+            }
+        },
+        "requiredPrivateInfos" : [
+            "getLocation"
+        ],
         "setting" : {
             "urlCheck" : false
         },

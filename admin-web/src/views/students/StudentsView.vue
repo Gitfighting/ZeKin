@@ -4,6 +4,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 
 import { getStudents, type StudentRow } from '../../api/admin'
 import DataTable, { type DataColumn } from '../../components/DataTable/DataTable.vue'
+import { logInfo, showError, showWarning } from '../../utils/feedback'
 
 const search = reactive({
   name: '',
@@ -15,9 +16,8 @@ const importVisible = ref(false)
 const drawerVisible = ref(false)
 const editingStudent = ref<StudentRow | null>(null)
 const importForm = reactive({
-  fileName: 'students-2026.xlsx',
+  fileName: '',
   mode: 'merge' as 'merge' | 'overwrite',
-  lastSubmittedMode: '',
 })
 
 const loading = ref(false)
@@ -47,18 +47,23 @@ const openEditor = (row: StudentRow) => {
 }
 
 const confirmImport = () => {
-  importForm.lastSubmittedMode = importForm.mode
-  importVisible.value = false
+  showWarning('批量导入文件解析接口暂未接入')
 }
 
-onMounted(async () => {
+async function loadStudents() {
   loading.value = true
   try {
     rows.value = (await getStudents()).items
+    logInfo('学生列表加载成功', { count: rows.value.length })
+  } catch (error) {
+    rows.value = []
+    showError(error, '学生列表加载失败')
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadStudents)
 </script>
 
 <template>
@@ -70,7 +75,7 @@ onMounted(async () => {
       </div>
       <el-space>
         <el-button @click="importVisible = true">批量导入</el-button>
-        <el-button type="primary">新增学生</el-button>
+        <el-button type="primary" @click="showWarning('新增学生接口暂未接入')">新增学生</el-button>
       </el-space>
     </div>
 
@@ -101,7 +106,7 @@ onMounted(async () => {
     <el-dialog v-model="importVisible" title="导入学生">
       <el-form label-position="top">
         <el-form-item label="导入文件">
-          <el-input v-model="importForm.fileName" readonly />
+          <el-input v-model="importForm.fileName" readonly placeholder="文件选择功能暂未接入" />
         </el-form-item>
         <el-form-item label="处理方式">
           <el-radio-group v-model="importForm.mode">
@@ -109,13 +114,6 @@ onMounted(async () => {
             <el-radio value="overwrite">覆盖同学号记录</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-alert
-          v-if="importForm.lastSubmittedMode"
-          type="success"
-          show-icon
-          :closable="false"
-          :title="`已记录导入方式：${importForm.lastSubmittedMode === 'overwrite' ? '覆盖同学号记录' : '增量导入'}`"
-        />
       </el-form>
       <template #footer>
         <el-button @click="importVisible = false">取消</el-button>

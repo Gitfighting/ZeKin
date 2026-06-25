@@ -3,9 +3,10 @@ import { onShow } from '@dcloudio/uni-app'
 import { ref } from 'vue'
 
 import StatusTag from '@/components/StatusTag.vue'
-import { demoStudentMessages, getStudentMessages, type MessageItem } from '@/services/student'
+import { logInfo, showError } from '@/services/feedback'
+import { getStudentMessages, type MessageItem } from '@/services/student'
 
-const messages = ref<MessageItem[]>(demoStudentMessages)
+const messages = ref<MessageItem[]>([])
 
 const tagStatusMap: Record<MessageItem['type'], 'normal' | 'in-progress' | 'pending'> = {
   reminder: 'pending',
@@ -22,8 +23,10 @@ const labelMap: Record<MessageItem['type'], string> = {
 onShow(async () => {
   try {
     messages.value = await getStudentMessages()
-  } catch {
-    messages.value = demoStudentMessages
+    logInfo('学生消息加载成功', { count: messages.value.length })
+  } catch (error) {
+    messages.value = []
+    showError(error, '消息加载失败')
   }
 })
 </script>
@@ -44,6 +47,9 @@ onShow(async () => {
         <text class="messages-page__card-type">{{ labelMap[item.type] }}</text>
         <text class="messages-page__card-content">{{ item.content }}</text>
         <text class="messages-page__card-time">{{ item.time }}</text>
+      </view>
+      <view v-if="messages.length === 0" class="messages-page__empty">
+        <text>暂无消息</text>
       </view>
     </view>
   </scroll-view>
@@ -120,5 +126,14 @@ onShow(async () => {
   color: $text-primary;
   font-size: 28rpx;
   line-height: 1.6;
+}
+
+.messages-page__empty {
+  padding: 32rpx;
+  border-radius: 24rpx;
+  background: $card-bg;
+  color: $text-secondary;
+  font-size: 26rpx;
+  text-align: center;
 }
 </style>

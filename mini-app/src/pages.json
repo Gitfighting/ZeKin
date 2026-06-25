@@ -7,12 +7,6 @@
 			}
 		},
 		{
-			"path": "pages/auth/activate",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
-		{
 			"path": "pages/student/home",
 			"style": {
 				"navigationStyle": "custom"
@@ -27,7 +21,7 @@
 		{
 			"path": "pages/student/task-detail",
 			"style": {
-				"navigationBarTitleText": "任务详情"
+				"navigationStyle": "custom"
 			}
 		},
 		{

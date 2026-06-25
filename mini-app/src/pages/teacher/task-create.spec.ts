@@ -12,4 +12,12 @@ describe('teacher task create page', () => {
     expect(wrapper.text()).toContain('选择模板')
     expect(wrapper.text()).toContain('确认发布')
   })
+
+  it('does not preselect local demo task data before backend groups load', () => {
+    const wrapper = mount(TaskCreatePage)
+
+    expect(wrapper.text()).not.toContain('课堂考勤模板')
+    expect(wrapper.text()).not.toContain('2026-06-24')
+    expect(wrapper.text()).toContain('暂无可选分组')
+  })
 })

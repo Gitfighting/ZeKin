@@ -223,6 +223,8 @@ def test_admin_relationship_fields_include_student_teacher_group_task_and_except
     assert teachers_response.status_code == 200
     teacher = teachers_response.json()["data"]["items"][0]
     assert teacher["name"] == "李老师"
+    assert teacher["account"] == "teacher"
+    assert teacher["teacher_no"] == "T2026001"
     assert teacher["group_ids"] == [1]
     assert teacher["groups"] == ["软件2601"]
     assert teacher["student_count"] == 3

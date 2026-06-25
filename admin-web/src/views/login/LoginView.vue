@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Lock, User } from '@element-plus/icons-vue'
-import { reactive } from 'vue'
+import { ElMessage } from 'element-plus'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAuthStore } from '../../stores/auth'
+import { logInfo, showError } from '../../utils/feedback'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -13,9 +15,27 @@ const form = reactive({
   password: '',
 })
 
+const submitting = ref(false)
+
 const handleSubmit = async () => {
-  await authStore.login(form.account || 'admin', form.password)
-  await router.push({ name: 'dashboard' })
+  const account = form.account.trim()
+  const password = form.password.trim()
+
+  if (!account || !password) {
+    ElMessage.error('请输入账号和密码')
+    return
+  }
+
+  submitting.value = true
+  try {
+    await authStore.login(account, password)
+    logInfo('管理员登录成功', { account })
+    await router.push({ name: 'dashboard' })
+  } catch (error) {
+    showError(error, '登录失败，请检查账号或密码')
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -49,7 +69,13 @@ const handleSubmit = async () => {
             </template>
           </el-input>
         </el-form-item>
-        <el-button type="primary" size="large" class="login-view__submit" @click="handleSubmit">
+        <el-button
+          type="primary"
+          size="large"
+          class="login-view__submit"
+          :loading="submitting"
+          @click="handleSubmit"
+        >
           登录
         </el-button>
       </el-form>

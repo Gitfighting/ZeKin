@@ -37,6 +37,7 @@ export interface StudentRow extends Record<string, unknown> {
 
 export interface TeacherRow extends Record<string, unknown> {
   id: number
+  account: string
   name: string
   teacherNo: string
   department: string
@@ -50,6 +51,20 @@ export interface GroupRow extends Record<string, unknown> {
   groupType: string
   studentCount: number
   teacherCount: number
+}
+
+export interface CheckinTypeRow extends Record<string, unknown> {
+  id: number
+  name: string
+  description: string
+}
+
+export interface RuleTemplateRow extends Record<string, unknown> {
+  id: number
+  name: string
+  typeId: number
+  ruleCount: number
+  rulesSnapshot: Record<string, unknown>
 }
 
 export interface TaskRow extends Record<string, unknown> {
@@ -162,6 +177,7 @@ export const getTeachers = async (params?: Record<string, unknown>) => {
   const response = await http.get('/admin/teachers', { params })
   const data = unwrap<ListResponse<{
     id: number
+    account?: string
     teacher_no: string
     name: string
     phone?: string
@@ -172,6 +188,7 @@ export const getTeachers = async (params?: Record<string, unknown>) => {
     total: data.total,
     items: data.items.map<TeacherRow>((item) => ({
       id: item.id,
+      account: item.account ?? item.teacher_no,
       name: item.name,
       teacherNo: item.teacher_no,
       department: item.department ?? '',
@@ -204,12 +221,42 @@ export const getGroups = async (params?: Record<string, unknown>) => {
 
 export const getCheckinTypes = async () => {
   const response = await http.get('/admin/checkin-types')
-  return unwrap(response)
+  const data = unwrap<ListResponse<{
+    id: number
+    name: string
+    description?: string
+  }>>(response)
+  return {
+    total: data.total,
+    items: data.items.map<CheckinTypeRow>((item) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description ?? '',
+    })),
+  }
 }
 
 export const getRuleTemplates = async () => {
   const response = await http.get('/admin/rule-templates')
-  return unwrap(response)
+  const data = unwrap<ListResponse<{
+    id: number
+    name: string
+    type_id: number
+    rules_snapshot?: Record<string, unknown>
+  }>>(response)
+  return {
+    total: data.total,
+    items: data.items.map<RuleTemplateRow>((item) => {
+      const rulesSnapshot = item.rules_snapshot ?? {}
+      return {
+        id: item.id,
+        name: item.name,
+        typeId: item.type_id,
+        ruleCount: Object.keys(rulesSnapshot).length,
+        rulesSnapshot,
+      }
+    }),
+  }
 }
 
 export const getTasks = async (params?: Record<string, unknown>) => {

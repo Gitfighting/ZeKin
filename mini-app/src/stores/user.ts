@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import {
   activateStudent,
   clearAuthSession,
+  clearLoginState,
   login as loginService,
   persistAuthSession,
   readStoredSession,
@@ -61,8 +62,7 @@ export const useUserStore = defineStore('user', {
     logout() {
       this.session = null
       this.profile = null
-      clearAuthSession()
-      uni.removeStorageSync(PROFILE_KEY)
+      clearLoginState()
     },
   },
 })

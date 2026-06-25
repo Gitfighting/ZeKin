@@ -22,14 +22,16 @@ export interface AuthSession {
 export interface LoginPayload {
   account: string
   password: string
-  userType: UserType
+  userType?: UserType
 }
 
 export interface ActivateStudentPayload {
+  name: string
   studentNo: string
   phone: string
+  code: string
   password: string
-  confirmPassword: string
+  confirmPassword?: string
 }
 
 interface LegacyLoginResponse {
@@ -96,16 +98,26 @@ export function clearAuthSession() {
   uni.removeStorageSync(USER_KEY)
 }
 
+export function clearLoginState() {
+  clearAuthSession()
+  uni.removeStorageSync('student_profile')
+  uni.removeStorageSync('user_profile')
+}
+
 export async function login(payload: LoginPayload): Promise<AuthSession> {
+  const data: Record<string, string> = {
+    account: payload.account,
+    username: payload.account,
+    password: payload.password,
+  }
+  if (payload.userType) {
+    data.user_type = payload.userType
+  }
+
   const response = await request<ApiResponse<LoginResponse | LegacyLoginResponse>>({
     url: '/auth/login',
     method: 'POST',
-    data: {
-      account: payload.account,
-      username: payload.account,
-      password: payload.password,
-      user_type: payload.userType,
-    },
+    data,
   })
 
   const session = normalizeSession(unwrap(response))
@@ -115,13 +127,14 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
 
 export async function activateStudent(payload: ActivateStudentPayload): Promise<AuthSession> {
   const response = await request<ApiResponse<LoginResponse | LegacyLoginResponse>>({
-    url: '/auth/activate',
+    url: '/auth/student/activate',
     method: 'POST',
     data: {
+      name: payload.name,
       student_no: payload.studentNo,
       phone: payload.phone,
+      code: payload.code,
       password: payload.password,
-      confirm_password: payload.confirmPassword,
     },
   })
 

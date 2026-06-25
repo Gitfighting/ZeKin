@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getDashboard, getGroups, getStudents, getTasks } from './admin'
+import { getDashboard, getGroups, getStudents, getTasks, getTeachers } from './admin'
 import { http } from './http'
 
 vi.mock('./http', () => ({
@@ -81,6 +81,38 @@ describe('admin api mapping', () => {
     })
     await expect(getTasks()).resolves.toMatchObject({
       items: [{ title: '晚间查寝', teacher: '李老师', groupNames: ['软件2601'] }],
+    })
+  })
+
+  it('maps teacher login accounts for admin teacher management', async () => {
+    vi.mocked(http.get).mockResolvedValueOnce({
+      data: {
+        data: {
+          items: [
+            {
+              id: 1,
+              account: 'teacher',
+              teacher_no: 'T2026001',
+              name: '李老师',
+              phone: '13800000002',
+              department: '软件学院',
+              groups: ['软件2601'],
+            },
+          ],
+          total: 1,
+        },
+      },
+    })
+
+    await expect(getTeachers()).resolves.toMatchObject({
+      items: [
+        {
+          account: 'teacher',
+          teacherNo: 'T2026001',
+          name: '李老师',
+          groups: ['软件2601'],
+        },
+      ],
     })
   })
 })

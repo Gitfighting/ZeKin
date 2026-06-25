@@ -7,39 +7,10 @@ import {
   type TeacherException,
   type TeacherExceptionStatus,
 } from '@/services/teacher'
+import { logInfo, showError, showSuccess } from '@/services/feedback'
 
 const activeTab = ref<'pending' | 'reviewed'>('pending')
-const exceptions = ref<TeacherException[]>([
-  {
-    id: 1,
-    studentName: '张悦',
-    taskTitle: '思政一班晨检',
-    groupName: '思政一班',
-    submittedAt: '08:09',
-    reason: '定位偏移，申请人工确认',
-    status: 'pending',
-  },
-  {
-    id: 2,
-    studentName: '陈雪',
-    taskTitle: '课堂签到',
-    groupName: '思政二班',
-    submittedAt: '09:58',
-    reason: '图片模糊，需要补充',
-    status: 'need_more',
-    comment: '请重新上传清晰照片',
-  },
-  {
-    id: 3,
-    studentName: '何源',
-    taskTitle: '晚点名',
-    groupName: '思政三班',
-    submittedAt: '21:14',
-    reason: '已线下请假',
-    status: 'approved',
-    comment: '辅导员确认通过',
-  },
-])
+const exceptions = ref<TeacherException[]>([])
 
 const commentDrafts = reactive<Record<number, string>>({})
 
@@ -56,8 +27,10 @@ async function loadExceptions() {
 
   try {
     exceptions.value = await getTeacherExceptions()
-  } catch {
-    // Keep fallback data.
+    logInfo('教师异常列表加载成功', { count: exceptions.value.length })
+  } catch (error) {
+    exceptions.value = []
+    showError(error, '异常列表加载失败')
   }
 }
 
@@ -79,12 +52,11 @@ async function review(id: number, action: 'approve' | 'reject' | 'need_more') {
     )
 
     if (typeof uni !== 'undefined') {
-      uni.showToast({ title: '已处理', icon: 'success' })
+      logInfo('教师异常审核成功', { id, action })
+      showSuccess('已处理')
     }
-  } catch {
-    if (typeof uni !== 'undefined') {
-      uni.showToast({ title: '提交失败', icon: 'none' })
-    }
+  } catch (error) {
+    showError(error, '提交失败')
   }
 }
 
@@ -120,6 +92,9 @@ onMounted(loadExceptions)
           <view class="solid-button" @click="review(item.id, 'approve')">通过</view>
         </view>
         <text v-if="item.comment" class="comment-line">当前意见：{{ item.comment }}</text>
+      </view>
+      <view v-if="visibleExceptions.length === 0" class="empty-card">
+        <text>暂无异常记录</text>
       </view>
     </view>
   </view>
@@ -226,5 +201,14 @@ onMounted(loadExceptions)
 .solid-button {
   background: $primary;
   color: #fff;
+}
+
+.empty-card {
+  padding: 28rpx;
+  border-radius: 20rpx;
+  background: $card-bg;
+  color: $text-secondary;
+  font-size: 26rpx;
+  text-align: center;
 }
 </style>

@@ -2,9 +2,11 @@
 import { onMounted, reactive, ref } from 'vue'
 
 import TeacherTabBar from './components/TeacherTabBar.vue'
+import { clearLoginState } from '@/services/auth'
+import { logInfo, showError } from '@/services/feedback'
 import { getTeacherGroups, type TeacherGroup } from '@/services/teacher'
 
-const teacherName = ref('张老师')
+const teacherName = ref('教师')
 const teacherRole = ref('思政教师 / 班主任')
 const groups = ref<TeacherGroup[]>([])
 const messageSettings = reactive({
@@ -28,21 +30,36 @@ async function loadProfile() {
   }
 
   if (typeof uni === 'undefined' || typeof uni.request !== 'function') {
-    groups.value = [
-      { id: 1, name: '思政一班', studentCount: 42, recentTaskCount: 8 },
-      { id: 2, name: '思政二班', studentCount: 39, recentTaskCount: 7 },
-    ]
+    groups.value = []
     return
   }
 
   try {
     groups.value = await getTeacherGroups()
-  } catch {
-    groups.value = [
-      { id: 1, name: '思政一班', studentCount: 42, recentTaskCount: 8 },
-      { id: 2, name: '思政二班', studentCount: 39, recentTaskCount: 7 },
-    ]
+    logInfo('教师个人页班级加载成功', { count: groups.value.length })
+  } catch (error) {
+    groups.value = []
+    showError(error, '教师班级信息加载失败')
   }
+}
+
+function finishLogout() {
+  clearLoginState()
+  logInfo('教师退出登录成功')
+  uni.reLaunch({ url: '/pages/auth/login' })
+}
+
+function handleLogout() {
+  uni.showModal({
+    title: '退出登录',
+    content: '确认退出当前账号？',
+    confirmText: '退出',
+    success: (result: { confirm?: boolean }) => {
+      if (result.confirm) {
+        finishLogout()
+      }
+    },
+  })
 }
 
 onMounted(loadProfile)
@@ -64,6 +81,7 @@ onMounted(loadProfile)
           <text class="row-subtitle">{{ group.studentCount }} 人 · 近 7 日 {{ group.recentTaskCount }} 个任务</text>
         </view>
       </view>
+      <text v-if="groups.length === 0" class="empty-line">暂无管理班级</text>
     </view>
 
     <view class="section-card">
@@ -84,6 +102,10 @@ onMounted(loadProfile)
           @change="messageSettings.dailyDigest = $event.detail.value"
         />
       </view>
+    </view>
+
+    <view class="section-card">
+      <view class="logout-button" @click="handleLogout">退出登录</view>
     </view>
 
     <TeacherTabBar active="profile" />
@@ -161,5 +183,22 @@ onMounted(loadProfile)
 
 .row-subtitle {
   color: $text-secondary;
+}
+
+.empty-line {
+  display: block;
+  padding: 20rpx 0 0;
+  color: $text-secondary;
+  font-size: 24rpx;
+}
+
+.logout-button {
+  padding: 20rpx 0;
+  border-radius: 18rpx;
+  background: #fff1f0;
+  color: #d92d20;
+  font-size: 28rpx;
+  font-weight: 700;
+  text-align: center;
 }
 </style>

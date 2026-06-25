@@ -2,17 +2,46 @@
 import { onLoad } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 
-import { demoCheckinResults, type CheckinResult, type ResultState } from '@/services/student'
+import type { CheckinResult, ResultState } from '@/services/student'
 
 const state = ref<ResultState>('pending_review')
+const result = ref<CheckinResult>({
+  id: '',
+  taskId: '',
+  state: 'pending_review',
+  title: '提交完成',
+  subtitle: '结果已提交，请返回记录页查看最新状态。',
+  tips: ['如果页面未显示最新结果，请刷新打卡记录。'],
+  submittedAt: '',
+  locationLabel: '',
+})
 
-const result = computed<CheckinResult>(() => demoCheckinResults[state.value])
 const toneClass = computed(() => `result-page__status--${result.value.state}`)
 
 onLoad((options) => {
   const nextState = options?.state as ResultState | undefined
-  if (nextState && demoCheckinResults[nextState]) {
+  if (nextState && ['normal', 'exception', 'pending_review'].includes(nextState)) {
     state.value = nextState
+  }
+
+  const storedResult = typeof uni !== 'undefined'
+    ? (uni.getStorageSync('latest_checkin_result') as CheckinResult | undefined)
+    : undefined
+
+  if (storedResult?.state === state.value) {
+    result.value = storedResult
+    return
+  }
+
+  result.value = {
+    id: '',
+    taskId: '',
+    state: state.value,
+    title: state.value === 'normal' ? '打卡成功' : state.value === 'exception' ? '已记录为异常' : '提交完成，等待复核',
+    subtitle: '请以打卡记录页和教师审核结果为准。',
+    tips: ['打卡记录页会同步展示后续审核状态。'],
+    submittedAt: '',
+    locationLabel: '',
   }
 })
 </script>

@@ -3,15 +3,28 @@ import { onShow } from '@dcloudio/uni-app'
 import { ref } from 'vue'
 
 import TaskCard from '@/components/TaskCard.vue'
+import { logInfo, showError } from '@/services/feedback'
 import {
-  demoStudentDashboard,
   getStudentDashboard,
   type QuickEntry,
   type StudentDashboard,
   type StudentTask,
 } from '@/services/student'
 
-const dashboard = ref<StudentDashboard>(demoStudentDashboard)
+const dashboard = ref<StudentDashboard>({
+  greeting: '同学，你好',
+  pendingCount: 0,
+  upcomingDeadline: '暂无待办任务',
+  exceptionCount: 0,
+  alerts: [],
+  quickEntries: [
+    { label: '今日任务', path: '/pages/student/tasks' },
+    { label: '打卡记录', path: '/pages/student/records' },
+    { label: '异常申诉', path: '/pages/student/appeal' },
+    { label: '个人中心', path: '/pages/student/profile' },
+  ],
+  focusTasks: [],
+})
 
 function openQuickEntry(entry: QuickEntry) {
   if (entry.path.includes('/pages/student/home') || entry.path.includes('/pages/student/tasks') || entry.path.includes('/pages/student/messages') || entry.path.includes('/pages/student/profile')) {
@@ -35,8 +48,20 @@ function openTask(task: StudentTask) {
 onShow(async () => {
   try {
     dashboard.value = await getStudentDashboard()
-  } catch {
-    dashboard.value = demoStudentDashboard
+    logInfo('学生首页数据加载成功', {
+      pendingCount: dashboard.value.pendingCount,
+      exceptionCount: dashboard.value.exceptionCount,
+    })
+  } catch (error) {
+    dashboard.value = {
+      ...dashboard.value,
+      pendingCount: 0,
+      upcomingDeadline: '加载失败',
+      exceptionCount: 0,
+      alerts: [],
+      focusTasks: [],
+    }
+    showError(error, '首页数据加载失败')
   }
 })
 </script>
@@ -89,6 +114,7 @@ onShow(async () => {
         <text v-for="item in dashboard.alerts" :key="item" class="student-page__alert-item">
           {{ item }}
         </text>
+        <text v-if="dashboard.alerts.length === 0" class="student-page__empty">暂无异常提醒</text>
       </view>
     </view>
 
@@ -97,6 +123,7 @@ onShow(async () => {
         <text class="student-page__section-title">即将截止</text>
       </view>
       <TaskCard v-for="task in dashboard.focusTasks" :key="task.id" :task="task" @action="openTask" @click="openTask" />
+      <text v-if="dashboard.focusTasks.length === 0" class="student-page__empty">暂无即将截止任务</text>
     </view>
   </scroll-view>
 </template>
@@ -240,5 +267,11 @@ onShow(async () => {
   color: $text-primary;
   font-size: 26rpx;
   line-height: 1.5;
+}
+
+.student-page__empty {
+  color: $text-secondary;
+  font-size: 26rpx;
+  line-height: 1.6;
 }
 </style>

@@ -8,7 +8,6 @@ describe('admin router auth boundary', () => {
     localStorage.clear()
     setActivePinia(createPinia())
     await router.push('/login')
-    await router.isReady()
   })
 
   it('redirects unauthenticated admin routes to login', async () => {

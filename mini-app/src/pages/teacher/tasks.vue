@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 
 import TeacherTabBar from './components/TeacherTabBar.vue'
+import { logInfo, showError } from '@/services/feedback'
 import {
   getTeacherTasks,
   type TeacherTask,
@@ -18,62 +19,22 @@ const statusTabs: Array<{ label: string; value: TeacherTaskStatus }> = [
 const activeStatus = ref<TeacherTaskStatus>('in_progress')
 const tasks = ref<TeacherTask[]>([])
 
-const fallbackTasks: TeacherTask[] = [
-  {
-    id: 101,
-    title: '思政一班晨检',
-    status: 'in_progress',
-    groupName: '思政一班',
-    templateName: '晨检模板',
-    taskType: 'attendance',
-    startsAt: '08:00',
-    endsAt: '08:20',
-    completionRate: 87,
-    pendingReviewCount: 2,
-    exceptionCount: 3,
-  },
-  {
-    id: 102,
-    title: '思政二班课堂签到',
-    status: 'not_started',
-    groupName: '思政二班',
-    templateName: '课堂考勤模板',
-    taskType: 'attendance',
-    startsAt: '09:50',
-    endsAt: '10:10',
-    completionRate: 0,
-    pendingReviewCount: 0,
-    exceptionCount: 0,
-  },
-  {
-    id: 103,
-    title: '晚点名复核',
-    status: 'pending_review',
-    groupName: '思政三班',
-    templateName: '晚点名模板',
-    taskType: 'photo',
-    startsAt: '21:00',
-    endsAt: '21:30',
-    completionRate: 64,
-    pendingReviewCount: 5,
-    exceptionCount: 5,
-  },
-]
-
 const visibleTasks = computed(() =>
   tasks.value.filter((task) => task.status === activeStatus.value),
 )
 
 async function loadTasks() {
   if (typeof uni === 'undefined' || typeof uni.request !== 'function') {
-    tasks.value = fallbackTasks
+    tasks.value = []
     return
   }
 
   try {
     tasks.value = await getTeacherTasks()
-  } catch {
-    tasks.value = fallbackTasks
+    logInfo('教师任务列表加载成功', { count: tasks.value.length })
+  } catch (error) {
+    tasks.value = []
+    showError(error, '教师任务列表加载失败')
   }
 }
 
@@ -121,7 +82,7 @@ onMounted(loadTasks)
       <view v-for="task in visibleTasks" :key="task.id" class="task-card" @click="openTask(task.id)">
         <view class="task-header">
           <text class="task-title">{{ task.title }}</text>
-          <text class="task-badge">{{ task.templateName }}</text>
+          <text v-if="task.templateName" class="task-badge">{{ task.templateName }}</text>
         </view>
         <text class="task-meta">{{ task.groupName }} · {{ task.startsAt }} - {{ task.endsAt }}</text>
         <view class="task-stats">

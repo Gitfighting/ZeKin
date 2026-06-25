@@ -3,6 +3,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 
 import { getExceptions, type ExceptionRow } from '../../api/admin'
 import DataTable, { type DataColumn } from '../../components/DataTable/DataTable.vue'
+import { logInfo, showError } from '../../utils/feedback'
 
 const filters = reactive({
   exceptionType: '',
@@ -27,14 +28,23 @@ const filteredRows = computed(() =>
   }),
 )
 
-onMounted(async () => {
+const exceptionOptions = computed(() => [...new Set(rows.value.map((row) => row.exceptionType).filter(Boolean))])
+const statusOptions = computed(() => [...new Set(rows.value.map((row) => row.status).filter(Boolean))])
+
+async function loadExceptions() {
   loading.value = true
   try {
     rows.value = (await getExceptions()).items
+    logInfo('异常与申诉列表加载成功', { count: rows.value.length })
+  } catch (error) {
+    rows.value = []
+    showError(error, '异常与申诉列表加载失败')
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadExceptions)
 </script>
 
 <template>
@@ -49,12 +59,10 @@ onMounted(async () => {
     <el-card>
       <div class="toolbar-grid">
         <el-select v-model="filters.exceptionType" placeholder="异常类型" clearable>
-          <el-option label="定位缺失" value="定位缺失" />
-          <el-option label="人脸不一致" value="人脸不一致" />
+          <el-option v-for="type in exceptionOptions" :key="type" :label="type" :value="type" />
         </el-select>
         <el-select v-model="filters.status" placeholder="处理状态" clearable>
-          <el-option label="待复核" value="待复核" />
-          <el-option label="已驳回" value="已驳回" />
+          <el-option v-for="status in statusOptions" :key="status" :label="status" :value="status" />
         </el-select>
       </div>
     </el-card>

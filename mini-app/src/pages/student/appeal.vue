@@ -2,6 +2,7 @@
 import { onLoad } from '@dcloudio/uni-app'
 import { ref } from 'vue'
 
+import { logInfo, showError, showSuccess } from '@/services/feedback'
 import { submitAppeal } from '@/services/student'
 
 const recordId = ref('record-3')
@@ -35,21 +36,16 @@ async function handleSubmit() {
       reason: reason.value,
       images: images.value,
     })
-    uni.showToast({
-      title: '申诉已提交',
-      icon: 'success',
-    })
+    logInfo('学生申诉提交成功', { recordId: recordId.value })
+    showSuccess('申诉已提交')
 
     setTimeout(() => {
       uni.navigateBack({
         delta: 1,
       })
     }, 500)
-  } catch {
-    uni.showToast({
-      title: '提交失败，请稍后重试',
-      icon: 'none',
-    })
+  } catch (error) {
+    showError(error, '提交失败，请稍后重试')
   } finally {
     submitting.value = false
   }

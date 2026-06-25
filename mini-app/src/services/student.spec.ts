@@ -29,7 +29,7 @@ function lastRequest() {
 describe('student service', () => {
   beforeEach(() => {
     vi.stubGlobal('uni', {
-      getStorageSync: vi.fn(),
+      getStorageSync: vi.fn(() => 'test-token'),
       request: vi.fn(),
     })
   })
