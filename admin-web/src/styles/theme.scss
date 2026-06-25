@@ -1,0 +1,128 @@
+:root {
+  --sz-primary: #1677ff;
+  --sz-primary-light: #eaf4ff;
+  --sz-primary-deep: #0066e6;
+  --sz-primary-soft: #f1f7ff;
+  --sz-success: #20c55a;
+  --sz-warning: #ff9f1a;
+  --sz-danger: #f04438;
+  --sz-text: #101828;
+  --sz-muted: #667085;
+  --sz-border: #d8e8ff;
+  --sz-page-bg: #f6faff;
+  --sz-card: #ffffff;
+  --sz-shadow: 0 12px 30px rgba(22, 119, 255, 0.08);
+}
+
+body {
+  margin: 0;
+  color: var(--sz-text);
+  background: var(--sz-page-bg);
+  font-family: Inter, "Microsoft YaHei", system-ui, sans-serif;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.admin-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+
+  h1 {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.2;
+    color: var(--sz-text);
+  }
+
+  p {
+    margin: 6px 0 0;
+    color: var(--sz-muted);
+    font-size: 14px;
+  }
+}
+
+.sz-card {
+  background: var(--sz-card);
+  border: 1px solid rgba(22, 119, 255, 0.09);
+  border-radius: 8px;
+  box-shadow: var(--sz-shadow);
+}
+
+.toolbar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.split-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.two-column {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 960px) {
+  .page-header,
+  .split-layout,
+  .two-column {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+}
+
+.el-card {
+  border-radius: 8px;
+  border-color: rgba(22, 119, 255, 0.1);
+  box-shadow: var(--sz-shadow);
+}
+
+.el-card__header {
+  border-bottom-color: rgba(22, 119, 255, 0.08);
+}
+
+.el-menu {
+  border-right: none;
+}
+
+.el-table {
+  --el-table-header-bg-color: #f7fbff;
+  --el-table-row-hover-bg-color: #f3f8ff;
+}
+
+.el-tabs__item.is-active,
+.el-tabs__item:hover,
+.el-menu-item.is-active,
+.el-menu-item:hover,
+.el-sub-menu__title:hover {
+  color: var(--sz-primary);
+}
+
+.el-menu-item.is-active {
+  background: rgba(22, 119, 255, 0.1);
+}
+
+.el-button--primary,
+.el-switch.is-checked .el-switch__core {
+  --el-color-primary: var(--sz-primary);
+}

@@ -1,57 +1,50 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.database import Base, engine
-from app.core.logging import configure_logging
-from app.middleware.request_logger import RequestLoggerMiddleware
-from app.routers import admin, auth, checkins, stats, teacher
+from app.core.config import get_settings
+from app.core.database import Base, SessionLocal, engine
+from app.modules.admin.router import router as admin_router
+from app.modules.auth.router import router as auth_router
+from app.modules.exceptions.router import router as exceptions_router
+from app.modules.seed import seed_reference_data
+from app.modules.statistics.router import router as statistics_router
+from app.modules.student.router import router as student_router
+from app.modules.tasks.router import router as teacher_router
+import app.modules.all_models  # noqa: F401
+
+settings = get_settings()
+
+
+def initialize_database() -> None:
+    Base.metadata.create_all(bind=engine)
+    with SessionLocal() as session:
+        seed_reference_data(session)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    initialize_database()
     yield
 
 
-configure_logging()
-
-app = FastAPI(title="ZeKin MVP API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}):(5173|4173)$",
+    allow_origins=settings.backend_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(RequestLoggerMiddleware)
-app.include_router(auth.router)
-app.include_router(checkins.router)
-app.include_router(teacher.router)
-app.include_router(stats.router)
-app.include_router(admin.router)
+app.include_router(auth_router)
+app.include_router(admin_router)
+app.include_router(teacher_router)
+app.include_router(exceptions_router)
+app.include_router(student_router)
+app.include_router(statistics_router)
 
 
 @app.get("/health")
-def health():
+def health() -> dict[str, str]:
     return {"status": "ok"}
-
-
-@app.exception_handler(HTTPException)
-async def http_exception_handler(_: Request, exc: HTTPException):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"code": exc.status_code, "message": exc.detail, "data": None},
-    )
-
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(_: Request, exc: RequestValidationError):
-    return JSONResponse(
-        status_code=422,
-        content={"code": 422, "message": "参数校验失败", "data": exc.errors()},
-    )

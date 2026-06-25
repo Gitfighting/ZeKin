@@ -1,0 +1,21 @@
+meta {
+  name: 绑定微信
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/api/auth/bind-wechat
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{studentToken}}
+}
+
+body:json {
+  {
+    "openid": "demo-openid-2026"
+  }
+}

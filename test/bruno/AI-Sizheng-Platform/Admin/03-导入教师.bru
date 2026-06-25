@@ -1,0 +1,28 @@
+meta {
+  name: 导入教师
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/admin/teachers/import
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "teachers": [
+      {
+        "teacher_no": "T2026002",
+        "name": "王老师",
+        "phone": "13800000003",
+        "department": "软件学院"
+      }
+    ]
+  }
+}

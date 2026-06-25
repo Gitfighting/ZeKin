@@ -1,0 +1,14 @@
+meta {
+  name: 教师列表
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{baseUrl}}/api/admin/teachers
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}

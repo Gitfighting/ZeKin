@@ -1,0 +1,22 @@
+meta {
+  name: 教师审核申诉
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/teacher/exceptions/{{exceptionId}}/review
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacherToken}}
+}
+
+body:json {
+  {
+    "decision": "approve",
+    "comment": "申诉通过"
+  }
+}

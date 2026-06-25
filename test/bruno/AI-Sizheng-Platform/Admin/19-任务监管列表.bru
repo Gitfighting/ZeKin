@@ -1,0 +1,14 @@
+meta {
+  name: 任务监管列表
+  type: http
+  seq: 19
+}
+
+get {
+  url: {{baseUrl}}/api/admin/tasks
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}

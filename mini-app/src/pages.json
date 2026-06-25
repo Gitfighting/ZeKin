@@ -1,0 +1,142 @@
+{
+	"pages": [
+		{
+			"path": "pages/auth/login",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/student/home",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/student/tasks",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/student/task-detail",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/student/checkin-submit",
+			"style": {
+				"navigationBarTitleText": "提交打卡"
+			}
+		},
+		{
+			"path": "pages/student/result",
+			"style": {
+				"navigationBarTitleText": "打卡结果"
+			}
+		},
+		{
+			"path": "pages/student/messages",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/student/profile",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/student/records",
+			"style": {
+				"navigationBarTitleText": "打卡记录"
+			}
+		},
+		{
+			"path": "pages/student/appeal",
+			"style": {
+				"navigationBarTitleText": "异常申诉"
+			}
+		},
+		{
+			"path": "pages/teacher/home",
+			"style": {
+				"navigationBarTitleText": "教师首页"
+			}
+		},
+		{
+			"path": "pages/teacher/tasks",
+			"style": {
+				"navigationBarTitleText": "任务列表"
+			}
+		},
+		{
+			"path": "pages/teacher/task-create",
+			"style": {
+				"navigationBarTitleText": "创建任务"
+			}
+		},
+		{
+			"path": "pages/teacher/task-detail",
+			"style": {
+				"navigationBarTitleText": "任务详情"
+			}
+		},
+		{
+			"path": "pages/teacher/exceptions",
+			"style": {
+				"navigationBarTitleText": "异常审核"
+			}
+		},
+		{
+			"path": "pages/teacher/groups",
+			"style": {
+				"navigationBarTitleText": "班级管理"
+			}
+		},
+		{
+			"path": "pages/teacher/group-detail",
+			"style": {
+				"navigationBarTitleText": "班级详情"
+			}
+		},
+		{
+			"path": "pages/teacher/profile",
+			"style": {
+				"navigationBarTitleText": "我的"
+			}
+		}
+	],
+	"tabBar": {
+		"color": "#667085",
+		"selectedColor": "#1677FF",
+		"backgroundColor": "#FFFFFF",
+		"borderStyle": "white",
+		"list": [
+			{
+				"pagePath": "pages/student/home",
+				"text": "首页"
+			},
+			{
+				"pagePath": "pages/student/tasks",
+				"text": "打卡任务"
+			},
+			{
+				"pagePath": "pages/student/messages",
+				"text": "消息"
+			},
+			{
+				"pagePath": "pages/student/profile",
+				"text": "我的"
+			}
+		]
+	},
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "智慧考勤",
+		"navigationBarBackgroundColor": "#F3F8FF",
+		"backgroundColor": "#F3F8FF"
+	}
+}

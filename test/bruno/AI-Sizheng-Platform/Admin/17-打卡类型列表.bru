@@ -1,0 +1,14 @@
+meta {
+  name: 打卡类型列表
+  type: http
+  seq: 17
+}
+
+get {
+  url: {{baseUrl}}/api/admin/checkin-types
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}

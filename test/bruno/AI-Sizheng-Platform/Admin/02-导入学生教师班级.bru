@@ -1,0 +1,32 @@
+meta {
+  name: 导入学生教师班级
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/admin/students/import
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "students": [
+      {
+        "student_no": "20260001",
+        "name": "张三",
+        "phone": "13800000001",
+        "college": "软件学院",
+        "major": "软件工程",
+        "grade": "2026",
+        "class_name": "软件2601",
+        "dormitory": "3号楼301"
+      }
+    ]
+  }
+}

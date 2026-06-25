@@ -1,0 +1,10 @@
+from app.modules.auth import models as auth_models  # noqa: F401
+from app.modules.checkin_types import models as checkin_types_models  # noqa: F401
+from app.modules.exceptions import models as exceptions_models  # noqa: F401
+from app.modules.groups import models as groups_models  # noqa: F401
+from app.modules.identity import models as identity_models  # noqa: F401
+from app.modules.messages import models as messages_models  # noqa: F401
+from app.modules.records import models as records_models  # noqa: F401
+from app.modules.rule_templates import models as rule_templates_models  # noqa: F401
+from app.modules.statistics import models as statistics_models  # noqa: F401
+from app.modules.tasks import models as tasks_models  # noqa: F401

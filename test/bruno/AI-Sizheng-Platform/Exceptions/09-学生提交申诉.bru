@@ -1,0 +1,22 @@
+meta {
+  name: 学生提交申诉
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/student/records/{{recordId}}/appeal
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{studentToken}}
+}
+
+body:json {
+  {
+    "reason": "定位偏移，实际在宿舍楼内",
+    "attachment_ids": []
+  }
+}
