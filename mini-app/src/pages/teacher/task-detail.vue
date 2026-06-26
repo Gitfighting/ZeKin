@@ -123,7 +123,7 @@ onMounted(loadDetail)
         </view>
       </view>
       <view class="action-row">
-        <view class="secondary-button" @click="publishTask">发布任务</view>
+        <view v-if="!detail.task.published" class="secondary-button" @click="publishTask">发布任务</view>
         <view class="primary-button" @click="endTask">结束任务</view>
       </view>
     </view>

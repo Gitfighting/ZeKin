@@ -12,11 +12,15 @@ const task = ref<StudentTask | null>(null)
 const location = ref<LocationResult | null>(null)
 const verificationCode = ref('')
 const dynamicForm = ref<Record<string, string>>({})
+const faceImage = ref('')
+const facePreview = ref('')
 const submitting = ref(false)
 
 function applyTask(nextTask: StudentTask | null) {
   task.value = nextTask
   dynamicForm.value = {}
+  faceImage.value = ''
+  facePreview.value = ''
 }
 
 async function loadTask(id?: string) {
@@ -60,6 +64,14 @@ async function handleSubmit() {
     return
   }
 
+  if (task.value.faceRule.enabled && !faceImage.value) {
+    uni.showToast({
+      title: '请先完成人脸核验',
+      icon: 'none',
+    })
+    return
+  }
+
   submitting.value = true
 
   try {
@@ -69,6 +81,7 @@ async function handleSubmit() {
       latitude: location.value.latitude,
       verificationCode: verificationCode.value,
       formData: { ...dynamicForm.value },
+      faceImage: faceImage.value,
     })
     logInfo('学生打卡提交成功', {
       taskId: task.value.id,
@@ -82,6 +95,41 @@ async function handleSubmit() {
     showError(error, '提交失败，请稍后重试')
   } finally {
     submitting.value = false
+  }
+}
+
+function pathToBase64(path: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    uni.getFileSystemManager().readFile({
+      filePath: path,
+      encoding: 'base64',
+      success: (result) => {
+        resolve(`data:image/jpeg;base64,${result.data}`)
+      },
+      fail: reject,
+    })
+  })
+}
+
+async function captureFace() {
+  try {
+    const result = await uni.chooseImage({
+      count: 1,
+      sizeType: ['compressed'],
+      sourceType: ['camera'],
+    })
+    const path = result.tempFilePaths[0]
+    if (!path) {
+      return
+    }
+    facePreview.value = path
+    faceImage.value = await pathToBase64(path)
+    uni.showToast({
+      title: '人脸照片已采集',
+      icon: 'success',
+    })
+  } catch (error) {
+    showError(error, '人脸采集失败')
   }
 }
 
@@ -105,7 +153,10 @@ onLoad((options) => {
 
     <view class="submit-page__card">
       <text class="submit-page__section-title">位置校验</text>
-      <LocationPicker v-model="location" />
+      <LocationPicker
+        v-model="location"
+        :target="task && task.targetLat && task.targetLng ? { latitude: task.targetLat, longitude: task.targetLng, radius: task.targetRadius ?? 100 } : null"
+      />
     </view>
 
     <view class="submit-page__card">
@@ -125,10 +176,14 @@ onLoad((options) => {
     <view v-if="task.faceRule.enabled" class="submit-page__card">
       <text class="submit-page__section-title">人脸核验</text>
       <text class="submit-page__note">{{ task.faceRule.tip }}</text>
+      <image v-if="facePreview" class="submit-page__face-preview" :src="facePreview" mode="aspectFill" />
+      <button class="submit-page__face-button" @click="captureFace">
+        {{ faceImage ? '重新拍摄' : '拍摄人脸' }}
+      </button>
     </view>
 
     <view class="submit-page__footer">
-      <button class="submit-page__button" type="primary" :loading="submitting" @click="handleSubmit">
+      <button class="submit-page__button" :loading="submitting" @click="handleSubmit">
         提交打卡
       </button>
     </view>
@@ -197,5 +252,18 @@ onLoad((options) => {
   background: $primary;
   font-size: 30rpx;
   font-weight: 600;
+}
+
+.submit-page__face-preview {
+  width: 100%;
+  height: 360rpx;
+  border-radius: 18rpx;
+  background: #eef5ff;
+}
+
+.submit-page__face-button {
+  border-radius: 999rpx;
+  color: $primary;
+  font-size: 28rpx;
 }
 </style>

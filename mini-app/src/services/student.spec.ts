@@ -143,6 +143,33 @@ describe('student service', () => {
     })
   })
 
+  it('includes face image when checkin payload has a captured face', async () => {
+    mockApiResponse({
+      record_id: 8,
+      status: 'normal',
+      need_review: false,
+    })
+
+    await submitCheckin({
+      taskId: '42',
+      longitude: 120.01,
+      latitude: 30.02,
+      verificationCode: 'A123',
+      formData: {
+        remark: 'arrived',
+      },
+      faceImage: 'data:image/jpeg;base64,abc',
+    })
+
+    expect(lastRequest()).toEqual(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          face_image: 'data:image/jpeg;base64,abc',
+        }),
+      }),
+    )
+  })
+
   it('submits appeals to the record-scoped backend endpoint with attachment ids', async () => {
     mockApiResponse({
       appeal_id: 9,

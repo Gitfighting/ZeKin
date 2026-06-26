@@ -8,6 +8,8 @@ from app.core.database import Base, SessionLocal, engine
 from app.modules.admin.router import router as admin_router
 from app.modules.auth.router import router as auth_router
 from app.modules.exceptions.router import router as exceptions_router
+from app.modules.face_recognition.router import router as face_recognition_router
+from app.modules.face_recognition.user_router import router as face_test_router
 from app.modules.seed import seed_reference_data
 from app.modules.statistics.router import router as statistics_router
 from app.modules.student.router import router as student_router
@@ -39,6 +41,8 @@ app.add_middleware(
 )
 app.include_router(auth_router)
 app.include_router(admin_router)
+app.include_router(face_recognition_router)
+app.include_router(face_test_router)
 app.include_router(teacher_router)
 app.include_router(exceptions_router)
 app.include_router(student_router)

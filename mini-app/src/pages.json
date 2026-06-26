@@ -107,6 +107,12 @@
 			"style": {
 				"navigationBarTitleText": "我的"
 			}
+		},
+		{
+			"path": "pages/teacher/face-test",
+			"style": {
+				"navigationBarTitleText": "人脸测试"
+			}
 		}
 	],
 	"tabBar": {

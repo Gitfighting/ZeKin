@@ -107,8 +107,10 @@ class AdminService:
         return {"imported": created}
 
     def list_students(self) -> dict:
+        face_student_ids = self.repository.list_active_face_student_ids()
         items = [
-            self._student_item(profile) for profile in self.repository.list_students()
+            self._student_item(profile, face_student_ids)
+            for profile in self.repository.list_students()
         ]
         return {"items": items, "total": len(items)}
 
@@ -162,7 +164,10 @@ class AdminService:
         ]
         return {"items": items, "total": len(items)}
 
-    def _student_item(self, profile: StudentProfile) -> dict:
+    def _student_item(
+        self, profile: StudentProfile, face_student_ids: set[int] | None = None
+    ) -> dict:
+        face_student_ids = face_student_ids or set()
         groups = self.repository.list_groups_for_student(profile.id)
         teachers = self.repository.list_teachers_for_student(profile.id)
         return {
@@ -178,6 +183,7 @@ class AdminService:
             "activated": profile.activated,
             "status": profile.status,
             "user_id": profile.user_id,
+            "face_registered": profile.id in face_student_ids,
             "group_ids": [group.id for group in groups],
             "group_names": [group.name for group in groups],
             "teacher_ids": [teacher.id for teacher in teachers],

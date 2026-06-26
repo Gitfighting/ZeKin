@@ -46,6 +46,14 @@ function openTask(id: number) {
   uni.navigateTo({ url: `/pages/teacher/task-detail?id=${id}` })
 }
 
+function openFaceTest() {
+  if (typeof uni === 'undefined') {
+    return
+  }
+
+  uni.navigateTo({ url: '/pages/teacher/face-test' })
+}
+
 function createTask() {
   if (typeof uni === 'undefined') {
     return
@@ -64,7 +72,10 @@ onMounted(loadTasks)
         <text class="page-title">任务列表</text>
         <text class="page-subtitle">按状态切换，先处理发布和复核压力最大的任务。</text>
       </view>
-      <view class="create-button" @click="createTask">+ 新建</view>
+      <view class="header-actions">
+        <view class="create-button create-button--secondary" @click="openFaceTest">人脸</view>
+        <view class="create-button" @click="createTask">+ 新建</view>
+      </view>
     </view>
 
     <view class="tab-row">
@@ -132,14 +143,25 @@ onMounted(loadTasks)
   color: $text-secondary;
 }
 
+.header-actions {
+  display: flex;
+  gap: 12rpx;
+}
+
 .create-button {
-  min-width: 132rpx;
   padding: 18rpx 24rpx;
   border-radius: 18rpx;
   background: $primary;
   color: #fff;
   font-size: 24rpx;
   text-align: center;
+  white-space: nowrap;
+}
+
+.create-button--secondary {
+  background: #eef5ff;
+  color: $primary;
+  min-width: 80rpx;
 }
 
 .tab-row {

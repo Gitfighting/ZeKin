@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.modules.auth.models import StudentProfile, TeacherProfile
 from app.modules.checkin_types.models import CheckinType
 from app.modules.exceptions.models import CheckinException
+from app.modules.face_recognition.models import FaceEncoding
 from app.modules.groups.models import Group, GroupMember
 from app.modules.groups.models import GroupTeacher
 from app.modules.records.models import CheckinRecord
@@ -181,3 +182,9 @@ class AdminRepository:
 
     def add_group_member(self, group_member: GroupMember) -> None:
         self.db.add(group_member)
+
+    def list_active_face_student_ids(self) -> set[int]:
+        statement = select(FaceEncoding.student_profile_id).where(
+            FaceEncoding.is_active.is_(True)
+        )
+        return set(self.db.scalars(statement))

@@ -1,6 +1,38 @@
 export interface LocationResult {
   longitude: number
   latitude: number
+  accuracy?: number
+}
+
+export interface LocationTarget {
+  latitude: number
+  longitude: number
+  radius: number
+}
+
+/** 使用 Haversine 公式计算两点距离（米） */
+export function calcDistance(
+  lat1: number, lon1: number,
+  lat2: number, lon2: number,
+): number {
+  const R = 6371000
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.asin(Math.sqrt(a))
+}
+
+/** 判断是否在地理围栏内 */
+export function isInGeofence(
+  userLat: number, userLng: number,
+  targetLat: number, targetLng: number,
+  radius: number,
+): { inside: boolean; distance: number } {
+  const distance = calcDistance(userLat, userLng, targetLat, targetLng)
+  return { inside: distance <= radius, distance }
 }
 
 const LOCATION_SCOPE = 'scope.userLocation'
@@ -99,18 +131,36 @@ async function ensureLocationPermission(): Promise<void> {
 
 export function getCurrentLocation(): Promise<LocationResult> {
   return ensureLocationPermission().then(
-    () =>
-      new Promise((resolve, reject) => {
-        uni.getLocation({
+    () => tryGetLocation(),
+  )
+}
+
+function tryGetLocation(useHighAccuracy = true): Promise<LocationResult> {
+  return new Promise((resolve, reject) => {
+    const options: UniApp.GetLocationOptions = useHighAccuracy
+      ? {
           type: 'gcj02',
-          success: ({ longitude, latitude }) => {
+          isHighAccuracy: true,
+          highAccuracyExpireTime: 5000,
+          success: ({ longitude, latitude, accuracy }) => {
             resolve({
               longitude,
               latitude,
+              accuracy: accuracy ?? undefined,
             })
           },
+          fail: () => {
+            // H5 不支持高精度参数，降级到基础定位
+            tryGetLocation(false).then(resolve, reject)
+          },
+        }
+      : {
+          success: ({ longitude, latitude }) => {
+            resolve({ longitude, latitude })
+          },
           fail: reject,
-        })
-      }),
-  )
+        }
+
+    uni.getLocation(options)
+  })
 }

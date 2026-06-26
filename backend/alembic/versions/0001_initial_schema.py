@@ -144,6 +144,18 @@ def upgrade() -> None:
         *_timestamps(),
     )
     op.create_table(
+        "face_encodings",
+        sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
+        sa.Column("student_profile_id", sa.Integer(), sa.ForeignKey("student_profiles.id"), nullable=False),
+        sa.Column("encoding", sa.LargeBinary(), nullable=False),
+        sa.Column("dimension", sa.Integer(), nullable=False, server_default="128"),
+        sa.Column("model_name", sa.String(length=64), nullable=False, server_default="face_recognition"),
+        sa.Column("source", sa.String(length=64), nullable=False, server_default="admin_upload"),
+        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
+        sa.Column("quality_jsonb", sa.JSON(), nullable=False),
+        *_timestamps(),
+    )
+    op.create_table(
         "checkin_task_groups",
         sa.Column("id", sa.Integer(), primary_key=True, autoincrement=True),
         sa.Column("task_id", sa.Integer(), sa.ForeignKey("checkin_tasks.id"), nullable=False),
@@ -244,6 +256,7 @@ def downgrade() -> None:
         "checkin_records",
         "checkin_task_students",
         "checkin_task_groups",
+        "face_encodings",
         "checkin_tasks",
         "rule_templates",
         "checkin_types",

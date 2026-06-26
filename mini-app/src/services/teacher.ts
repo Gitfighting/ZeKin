@@ -33,6 +33,7 @@ export interface TeacherTask {
   completionRate: number
   pendingReviewCount: number
   exceptionCount: number
+  published: boolean
 }
 
 export interface TeacherTaskStudent {
@@ -254,6 +255,9 @@ function normalizeTaskStatus(status?: string): TeacherTaskStatus {
     case 'ended':
     case 'pending_review':
       return status
+    case 'published':
+    case 'active':
+      return 'in_progress'
     default:
       return 'not_started'
   }
@@ -313,11 +317,14 @@ function mapTeacherTask(raw: BackendTeacherTask): TeacherTask {
   const rules = readObject(raw.rules_snapshot)
   const groupIds = raw.group_ids ?? []
   const groupName = raw.groupName ?? raw.group_name ?? raw.group_names?.join(' / ')
+  const published = Boolean(raw.published ?? raw.status !== 'draft')
 
   return {
     id: raw.id,
     title: readString(raw.title, '打卡任务'),
-    status: normalizeTaskStatus(raw.status),
+    status: published && normalizeTaskStatus(raw.status) === 'not_started'
+      ? 'in_progress'
+      : normalizeTaskStatus(raw.status),
     groupName: groupName ?? (groupIds.length ? `分组 ${groupIds.join('、')}` : '未指定分组'),
     templateName: readString(raw.templateName) ? (raw.templateName as TeacherTaskTemplate) : templateFromRules(rules),
     taskType: taskTypeFromBackend(raw, rules),
@@ -326,6 +333,7 @@ function mapTeacherTask(raw: BackendTeacherTask): TeacherTask {
     completionRate: raw.completionRate ?? raw.completion_rate ?? 0,
     pendingReviewCount: raw.pendingReviewCount ?? raw.pending_review_count ?? 0,
     exceptionCount: raw.exceptionCount ?? raw.exception_count ?? 0,
+    published,
   }
 }
 
@@ -484,6 +492,8 @@ export function createTeacherTask(payload: CreateTeacherTaskPayload) {
     method: 'POST',
     data: {
       title: payload.title,
+      description: payload.description ?? '',
+      template_name: payload.templateName,
       type_id: taskTypeId(payload.taskType),
       group_ids: payload.groupIds,
       starts_at: payload.startsAt,

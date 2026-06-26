@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { Search } from '@element-plus/icons-vue'
+import { Camera, Search, UploadFilled } from '@element-plus/icons-vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 
-import { getStudents, type StudentRow } from '../../api/admin'
+import { getStudents, registerStudentFace, type StudentRow } from '../../api/admin'
 import DataTable, { type DataColumn } from '../../components/DataTable/DataTable.vue'
 import { logInfo, showError, showWarning } from '../../utils/feedback'
 
@@ -15,6 +15,10 @@ const search = reactive({
 const importVisible = ref(false)
 const drawerVisible = ref(false)
 const editingStudent = ref<StudentRow | null>(null)
+const faceDialogVisible = ref(false)
+const faceStudent = ref<StudentRow | null>(null)
+const faceFile = ref<File | null>(null)
+const faceUploading = ref(false)
 const importForm = reactive({
   fileName: '',
   mode: 'merge' as 'merge' | 'overwrite',
@@ -28,7 +32,9 @@ const columns: DataColumn<StudentRow>[] = [
   { key: 'studentNo', label: '学号', minWidth: 150 },
   { key: 'className', label: '班级', minWidth: 150 },
   { key: 'status', label: '激活状态', minWidth: 120 },
+  { key: 'faceRegistered', label: '人脸状态', minWidth: 130 },
   { key: 'counselor', label: '辅导员', minWidth: 120 },
+  { key: 'actions', label: '操作', minWidth: 150 },
 ]
 
 const filteredRows = computed(() =>
@@ -48,6 +54,39 @@ const openEditor = (row: StudentRow) => {
 
 const confirmImport = () => {
   showWarning('批量导入文件解析接口暂未接入')
+}
+
+const openFaceDialog = (row: StudentRow) => {
+  faceStudent.value = row
+  faceFile.value = null
+  faceDialogVisible.value = true
+}
+
+const beforeFaceUpload = (file: File) => {
+  faceFile.value = file
+  return false
+}
+
+async function submitFaceUpload() {
+  if (!faceStudent.value || !faceFile.value) {
+    showWarning('请先选择一张正面人脸照片')
+    return
+  }
+
+  faceUploading.value = true
+  try {
+    await registerStudentFace(faceStudent.value.id, faceFile.value)
+    logInfo('学生人脸录入成功', {
+      studentId: faceStudent.value.id,
+      studentNo: faceStudent.value.studentNo,
+    })
+    faceDialogVisible.value = false
+    await loadStudents()
+  } catch (error) {
+    showError(error, '人脸录入失败')
+  } finally {
+    faceUploading.value = false
+  }
 }
 
 async function loadStudents() {
@@ -94,11 +133,21 @@ onMounted(loadStudents)
             {{ row.status }}
           </el-tag>
         </template>
+        <template #faceRegistered="{ row }">
+          <el-tag :type="row.faceRegistered ? 'success' : 'info'">
+            {{ row.faceRegistered ? '已录入' : '未录入' }}
+          </el-tag>
+        </template>
         <template #counselor="{ row }">
           <div class="table-action">
             <span>{{ row.counselor }}</span>
             <el-button text type="primary" @click="openEditor(row)">编辑</el-button>
           </div>
+        </template>
+        <template #actions="{ row }">
+          <el-button :icon="Camera" text type="primary" @click="openFaceDialog(row)">
+            录入人脸
+          </el-button>
         </template>
       </DataTable>
     </el-card>
@@ -134,6 +183,31 @@ onMounted(loadStudents)
         </el-form-item>
       </el-form>
     </el-drawer>
+
+    <el-dialog v-model="faceDialogVisible" title="录入学生人脸" width="460px">
+      <div v-if="faceStudent" class="face-dialog">
+        <div>
+          <strong>{{ faceStudent.name }}</strong>
+          <span>{{ faceStudent.studentNo }} · {{ faceStudent.className }}</span>
+        </div>
+        <el-upload
+          drag
+          accept="image/*"
+          :auto-upload="false"
+          :limit="1"
+          :before-upload="beforeFaceUpload"
+        >
+          <el-icon class="face-dialog__icon"><UploadFilled /></el-icon>
+          <div class="el-upload__text">拖拽或点击选择正面照片</div>
+        </el-upload>
+      </div>
+      <template #footer>
+        <el-button @click="faceDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="faceUploading" @click="submitFaceUpload">
+          开始录入
+        </el-button>
+      </template>
+    </el-dialog>
   </section>
 </template>
 
@@ -143,5 +217,22 @@ onMounted(loadStudents)
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.face-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.face-dialog span {
+  display: block;
+  margin-top: 4px;
+  color: var(--el-text-color-secondary);
+}
+
+.face-dialog__icon {
+  color: var(--el-color-primary);
+  font-size: 32px;
 }
 </style>

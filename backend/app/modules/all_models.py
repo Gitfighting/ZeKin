@@ -1,6 +1,7 @@
 from app.modules.auth import models as auth_models  # noqa: F401
 from app.modules.checkin_types import models as checkin_types_models  # noqa: F401
 from app.modules.exceptions import models as exceptions_models  # noqa: F401
+from app.modules.face_recognition import models as face_recognition_models  # noqa: F401
 from app.modules.groups import models as groups_models  # noqa: F401
 from app.modules.identity import models as identity_models  # noqa: F401
 from app.modules.messages import models as messages_models  # noqa: F401

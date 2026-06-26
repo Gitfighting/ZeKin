@@ -11,3 +11,9 @@ def reset_database() -> None:
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as session:
         seed_reference_data(session)
+
+
+@pytest.fixture
+def db_session():
+    with SessionLocal() as session:
+        yield session

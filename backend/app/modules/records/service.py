@@ -6,6 +6,13 @@ from sqlalchemy.orm import Session
 
 from app.modules.auth.models import StudentProfile, User
 from app.modules.exceptions.models import CheckinException, ReviewLog
+from app.modules.face_recognition.service import (
+    FaceImageError,
+    FaceRecognitionLibraryMissing,
+    FaceRecognitionService,
+    FaceVerificationInput,
+    decode_image_payload,
+)
 from app.modules.messages.models import Message
 from app.modules.records.evaluators import (
     EvaluationResult,
@@ -16,6 +23,7 @@ from app.modules.records.models import Appeal, CheckinRecord
 from app.modules.records.repository import RecordRepository
 from app.modules.records.schemas import AppealRequest, CheckinRequest
 from app.shared.enums import RecordStatus
+from app.shared.enums import ExceptionType
 
 
 def get_current_time() -> datetime:
@@ -28,6 +36,7 @@ class RecordService:
         self.repository = RecordRepository(db)
         self.time_evaluator = TimeRuleEvaluator()
         self.location_evaluator = LocationRuleEvaluator()
+        self.face_service = FaceRecognitionService(db)
 
     def student_dashboard(self, current_user: User) -> dict:
         profile = self._require_student_profile(current_user.id)
@@ -69,7 +78,12 @@ class RecordService:
             latitude=payload.latitude,
             rule=rules["locationRule"],
         )
-        result = self._merge_results(time_result, location_result)
+        face_result = self._evaluate_face(
+            profile_id=profile.id,
+            rule=rules.get("faceRule", {}),
+            payload=payload,
+        )
+        result = self._merge_results(time_result, location_result, face_result)
 
         record = CheckinRecord(
             task_id=task.id,
@@ -80,7 +94,7 @@ class RecordService:
             latitude=payload.latitude,
             location_result_jsonb=self._result_dict(location_result),
             dynamic_code_result_jsonb={"passed": True, "code": payload.dynamic_code},
-            face_result_jsonb={"passed": True, "provider": "placeholder"},
+            face_result_jsonb=self._result_dict(face_result),
             submit_payload_jsonb=payload.submit_payload,
             evaluation_messages_jsonb=result.messages,
             need_review=result.need_review,
@@ -261,6 +275,72 @@ class RecordService:
             exception_types=exception_types,
             messages=messages,
             need_review=need_review,
+        )
+
+    def _evaluate_face(
+        self, *, profile_id: int, rule: dict, payload: CheckinRequest
+    ) -> EvaluationResult:
+        if not rule.get("enabled"):
+            return EvaluationResult(
+                True,
+                RecordStatus.NORMAL.value,
+                [],
+                [],
+                False,
+            )
+
+        try:
+            image_bytes = decode_image_payload(payload.face_image)
+        except FaceImageError as exc:
+            return EvaluationResult(
+                False,
+                RecordStatus.EXCEPTION.value,
+                [ExceptionType.FACE_FAILED.value],
+                [str(exc)],
+                True,
+            )
+        if image_bytes is None:
+            return EvaluationResult(
+                False,
+                RecordStatus.EXCEPTION.value,
+                [ExceptionType.FACE_FAILED.value],
+                ["请先完成人脸核验"],
+                True,
+            )
+
+        try:
+            result = self.face_service.verify_face(
+                profile_id,
+                FaceVerificationInput(
+                    image_bytes=image_bytes,
+                    tolerance=float(rule.get("tolerance", 0.6)),
+                    detection_model=str(rule.get("detectionModel", "hog")),
+                ),
+            )
+        except FaceRecognitionLibraryMissing as exc:
+            return EvaluationResult(
+                False,
+                RecordStatus.EXCEPTION.value,
+                [ExceptionType.FACE_FAILED.value],
+                [str(exc)],
+                True,
+            )
+
+        if result.passed:
+            return EvaluationResult(
+                True,
+                RecordStatus.NORMAL.value,
+                [],
+                [result.message],
+                False,
+            )
+
+        return EvaluationResult(
+            False,
+            RecordStatus.EXCEPTION.value,
+            [ExceptionType.FACE_FAILED.value],
+            [result.message],
+            True,
         )
 
     def _result_dict(self, result: EvaluationResult) -> dict:

@@ -5,6 +5,7 @@ import { logInfo, showError, showSuccess } from '@/services/feedback'
 import {
   createTeacherTask,
   getTeacherGroups,
+  publishTeacherTask,
   type CreateTeacherTaskPayload,
   type TeacherGroup,
   type TeacherTaskTemplate,
@@ -85,6 +86,35 @@ async function loadGroups() {
   }
 }
 
+function parseDatePart(value: string): string {
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})/)
+  return match ? match[1] : ''
+}
+
+function parseTimePart(value: string): string {
+  const match = value.match(/(\d{2}:\d{2})/)
+  return match ? match[1] : ''
+}
+
+function onDateChange(field: 'startsAt' | 'endsAt', e: any) {
+  const date = e.detail.value
+  const time = parseTimePart(form[field]) || '00:00'
+  form[field] = `${date} ${time}`
+}
+
+function onTimeChange(field: 'startsAt' | 'endsAt', e: any) {
+  const time = e.detail.value
+  const date = parseDatePart(form[field]) || formatDate(new Date())
+  form[field] = `${date} ${time}`
+}
+
+function formatDate(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 function toggleGroup(id: number) {
   const nextGroups = form.groupIds.includes(id)
     ? form.groupIds.filter((groupId) => groupId !== id)
@@ -106,6 +136,7 @@ async function submitTask() {
     }
 
     const createdTask = await createTeacherTask(form)
+    await publishTeacherTask(createdTask.id)
     logInfo('教师任务创建成功', { taskId: createdTask.id })
     showSuccess('已发布')
     uni.redirectTo({ url: `/pages/teacher/task-detail?id=${createdTask.id}` })
@@ -153,11 +184,33 @@ onMounted(loadGroups)
       <view class="field-grid">
         <view class="field-block">
           <text class="field-label">开始时间</text>
-          <input v-model="form.startsAt" class="field-input" />
+          <view class="datetime-row">
+            <picker mode="date" :value="parseDatePart(form.startsAt)" @change="onDateChange('startsAt', $event)">
+              <view class="picker-box">
+                <text class="picker-text">{{ parseDatePart(form.startsAt) || '选择日期' }}</text>
+              </view>
+            </picker>
+            <picker mode="time" :value="parseTimePart(form.startsAt)" @change="onTimeChange('startsAt', $event)">
+              <view class="picker-box picker-time">
+                <text class="picker-text">{{ parseTimePart(form.startsAt) || '--:--' }}</text>
+              </view>
+            </picker>
+          </view>
         </view>
         <view class="field-block">
           <text class="field-label">结束时间</text>
-          <input v-model="form.endsAt" class="field-input" />
+          <view class="datetime-row">
+            <picker mode="date" :value="parseDatePart(form.endsAt)" @change="onDateChange('endsAt', $event)">
+              <view class="picker-box">
+                <text class="picker-text">{{ parseDatePart(form.endsAt) || '选择日期' }}</text>
+              </view>
+            </picker>
+            <picker mode="time" :value="parseTimePart(form.endsAt)" @change="onTimeChange('endsAt', $event)">
+              <view class="picker-box picker-time">
+                <text class="picker-text">{{ parseTimePart(form.endsAt) || '--:--' }}</text>
+              </view>
+            </picker>
+          </view>
         </view>
       </view>
     </view>
@@ -179,7 +232,7 @@ onMounted(loadGroups)
     </view>
 
     <view class="section-card">
-      <text class="section-title">选择模板</text>
+      <text class="section-title">任务类型</text>
       <view class="compact-selector">
         <view
           v-for="type in taskTypes"
@@ -190,17 +243,9 @@ onMounted(loadGroups)
           {{ type.label }}
         </view>
       </view>
-      <view class="template-list">
-        <view
-          v-for="template in templates"
-          :key="template"
-          :class="['template-card', { active: form.templateName === template }]"
-          @click="form.templateName = template"
-        >
-          <text class="template-title">{{ template }}</text>
-          <text class="template-subtitle">来自后端规则模板。</text>
-        </view>
-        <text v-if="templates.length === 0" class="empty-line">暂无可用模板，可直接使用自定义规则发布。</text>
+      <view class="field-block">
+        <text class="field-label">模板名称（可选）</text>
+        <input v-model="form.templateName" class="field-input" placeholder="输入自定义模板名称，如：晚间查寝模板" />
       </view>
     </view>
 
@@ -354,16 +399,48 @@ onMounted(loadGroups)
 .field-input,
 .field-textarea {
   width: 100%;
-  padding: 18rpx 20rpx;
+  padding: 22rpx 24rpx;
   border-radius: 16rpx;
   background: #f7faff;
-  font-size: 24rpx;
+  font-size: 28rpx;
   color: $text-primary;
   box-sizing: border-box;
 }
 
+.field-input {
+  min-height: 80rpx;
+}
+
 .field-textarea {
-  min-height: 150rpx;
+  min-height: 200rpx;
+}
+
+.datetime-row {
+  display: flex;
+  gap: 12rpx;
+}
+
+.picker-box {
+  flex: 1;
+  padding: 22rpx 24rpx;
+  border-radius: 16rpx;
+  background: #f7faff;
+  text-align: center;
+  min-height: 80rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.picker-box.picker-time {
+  flex: 0 0 auto;
+  width: 160rpx;
+}
+
+.picker-text {
+  font-size: 26rpx;
+  color: $text-primary;
 }
 
 .chip-grid,

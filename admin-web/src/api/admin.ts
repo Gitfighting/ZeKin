@@ -33,6 +33,7 @@ export interface StudentRow extends Record<string, unknown> {
   className: string
   status: '已启用' | '待激活'
   counselor: string
+  faceRegistered: boolean
 }
 
 export interface TeacherRow extends Record<string, unknown> {
@@ -159,6 +160,7 @@ export const getStudents = async (params?: Record<string, unknown>) => {
     student_no: string
     class_name: string
     activated: boolean
+    face_registered?: boolean
   }>>(response)
   return {
     total: data.total,
@@ -169,8 +171,18 @@ export const getStudents = async (params?: Record<string, unknown>) => {
       className: item.class_name,
       status: item.activated ? '已启用' : '待激活',
       counselor: '按班级关联教师',
+      faceRegistered: Boolean(item.face_registered),
     })),
   }
+}
+
+export const registerStudentFace = async (studentId: number, file: File) => {
+  const form = new FormData()
+  form.append('photo', file)
+  const response = await http.post(`/admin/students/${studentId}/face`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return unwrap(response)
 }
 
 export const getTeachers = async (params?: Record<string, unknown>) => {

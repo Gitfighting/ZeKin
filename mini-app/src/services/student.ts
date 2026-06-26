@@ -30,6 +30,9 @@ export interface StudentTask {
   timeWindow: string
   locationName: string
   locationHint: string
+  targetLat?: number
+  targetLng?: number
+  targetRadius?: number
   requirements: string[]
   faceRule: {
     enabled: boolean
@@ -58,6 +61,7 @@ export interface CheckinPayload {
   latitude: number
   verificationCode?: string
   formData: Record<string, string>
+  faceImage?: string
   photoUrls?: string[]
 }
 
@@ -341,6 +345,9 @@ function mapStudentTask(raw: BackendStudentTask): StudentTask {
     timeWindow: timeWindow || '按任务要求',
     locationName,
     locationHint: radius ? `需在${radius} 米范围内完成定位` : '',
+    targetLat: readNumber(locationRule.latitude),
+    targetLng: readNumber(locationRule.longitude),
+    targetRadius: radius,
     requirements,
     faceRule: {
       enabled: Boolean(faceRule.enabled),
@@ -494,6 +501,7 @@ export async function submitCheckin(payload: CheckinPayload): Promise<CheckinRes
       longitude: payload.longitude,
       latitude: payload.latitude,
       dynamic_code: payload.verificationCode ?? '',
+      ...(payload.faceImage ? { face_image: payload.faceImage } : {}),
       submit_payload: submitPayload,
     },
   })
