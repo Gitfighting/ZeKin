@@ -1,9 +1,0 @@
-<view class="page">
-  <view class="title">教师登录</view>
-  <view class="card">
-    <input data-field="username" value="{{username}}" placeholder="账号" bindinput="onInput" />
-    <input data-field="password" value="{{password}}" password placeholder="密码" bindinput="onInput" />
-    <button class="primary-button" loading="{{loading}}" bindtap="login">登录</button>
-    <button bindtap="prepareDemo">准备演示账号</button>
-  </view>
-</view>
