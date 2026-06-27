@@ -1,0 +1,2345 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>
+      氛围编程（Vibe Coding）14章完整教程 - AI思政打卡小程序开发指南
+    </title>
+    <style>
+      body {
+        font-family: "Microsoft YaHei", SimSun, sans-serif;
+        line-height: 1.8;
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 40px;
+        color: #333;
+      }
+      h1 {
+        color: #1a1a2e;
+        border-bottom: 4px solid #0077b6;
+        padding-bottom: 15px;
+        font-size: 28px;
+      }
+      h2 {
+        color: #16213e;
+        margin-top: 50px;
+        border-left: 5px solid #0077b6;
+        padding-left: 15px;
+        font-size: 22px;
+      }
+      h3 {
+        color: #0f3460;
+        margin-top: 30px;
+        font-size: 18px;
+      }
+      h4 {
+        color: #1a5276;
+        font-size: 16px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 20px 0;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 12px;
+        text-align: left;
+      }
+      th {
+        background: #0077b6;
+        color: white;
+        font-weight: 600;
+      }
+      tr:nth-child(even) {
+        background: #f8f9fa;
+      }
+      pre {
+        background: #1e1e2e;
+        color: #cdd6f4;
+        padding: 18px;
+        border-radius: 8px;
+        overflow-x: auto;
+        margin: 15px 0;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      code {
+        background: #f0f0f0;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: Consolas, Monaco, monospace;
+        font-size: 14px;
+      }
+      pre code {
+        background: none;
+        padding: 0;
+        color: inherit;
+      }
+      .tip {
+        background: #e3f2fd;
+        border-left: 4px solid #2196f3;
+        padding: 15px 20px;
+        margin: 20px 0;
+        border-radius: 4px;
+      }
+      .tip strong {
+        color: #1565c0;
+      }
+      .warning {
+        background: #fff3e0;
+        border-left: 4px solid #ff9800;
+        padding: 15px 20px;
+        margin: 20px 0;
+        border-radius: 4px;
+      }
+      .warning strong {
+        color: #e65100;
+      }
+      .danger {
+        background: #ffebee;
+        border-left: 4px solid #f44336;
+        padding: 15px 20px;
+        margin: 20px 0;
+        border-radius: 4px;
+      }
+      .danger strong {
+        color: #c62828;
+      }
+      .toc {
+        background: #f5f7fa;
+        padding: 25px 30px;
+        border-radius: 10px;
+        margin: 30px 0;
+      }
+      .toc h3 {
+        margin-top: 0;
+        color: #0077b6;
+      }
+      .toc ul {
+        list-style: none;
+        padding-left: 20px;
+      }
+      .toc li {
+        margin: 8px 0;
+      }
+      .toc a {
+        color: #0077b6;
+        text-decoration: none;
+      }
+      .toc a:hover {
+        text-decoration: underline;
+      }
+      hr {
+        border: none;
+        border-top: 2px solid #e0e0e0;
+        margin: 50px 0;
+      }
+      .chapter-meta {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 20px;
+      }
+      .part-divider {
+        text-align: center;
+        margin: 60px 0;
+      }
+      .part-divider span {
+        background: #0077b6;
+        color: white;
+        padding: 10px 30px;
+        border-radius: 30px;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      ul,
+      ol {
+        padding-left: 25px;
+      }
+      li {
+        margin: 6px 0;
+      }
+      blockquote {
+        border-left: 4px solid #ccc;
+        margin: 15px 0;
+        padding-left: 20px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>氛围编程（Vibe Coding）14章完整教程</h1>
+    <p class="chapter-meta">AI思政打卡小程序开发指南 | 星际学院教程整理</p>
+
+    <div class="toc">
+      <h3>📚 目录</h3>
+      <h4>第一部分：基础准备</h4>
+      <ul>
+        <li><a href="#ch1">第1章 什么是氛围编程</a></li>
+        <li><a href="#ch2">第2章 工具安装与环境搭建</a></li>
+        <li><a href="#ch3">第3章 Claude Code基础操作</a></li>
+        <li><a href="#ch4">第4章 需求分析与提示词工程</a></li>
+      </ul>
+      <h4>第二部分：后端开发</h4>
+      <ul>
+        <li><a href="#ch5">第5章 数据库设计</a></li>
+        <li><a href="#ch6">第6章 后端代码生成</a></li>
+        <li><a href="#ch7">第7章 人脸识别系统</a></li>
+      </ul>
+      <h4>第三部分：前端开发</h4>
+      <ul>
+        <li><a href="#ch8">第8章 前端页面生成</a></li>
+        <li><a href="#ch9">第9章 小程序开发实战</a></li>
+        <li><a href="#ch10">第10章 定位打卡与人脸核验</a></li>
+        <li><a href="#ch11">第11章 UI美化与用户体验</a></li>
+      </ul>
+      <h4>第四部分：上线运维</h4>
+      <ul>
+        <li><a href="#ch12">第12章 联调与上线部署</a></li>
+        <li><a href="#ch13">第13章 AI辅助测试</a></li>
+        <li><a href="#ch14">第14章 部署运维实战</a></li>
+      </ul>
+    </div>
+
+    <hr />
+
+    <div class="part-divider"><span>第一部分：基础准备</span></div>
+
+    <!-- ========================================== -->
+    <!-- 第1章 -->
+    <!-- ========================================== -->
+    <h2 id="ch1">第1章 什么是氛围编程</h2>
+    <p class="chapter-meta">Vibe Coding — 2025年最火的编程新范式</p>
+
+    <h3>1.1 Vibe Coding的定义</h3>
+
+    <p>
+      <strong>氛围编程（Vibe Coding）</strong
+      >是2025年2月由OpenAI联合创始人Andrej
+      Karpathy提出的新概念。核心理念是：程序员不用手写每一行代码，而是用自然语言描述需求，让AI来生成代码。
+    </p>
+
+    <div class="tip">
+      <strong>💡 简单理解：</strong
+      >传统编程就像自己做菜——洗菜、切菜、炒菜全靠自己。氛围编程就像请了一位米其林大厨住在家里，你只需要说"今晚想吃红烧肉、少放盐、多放糖"，大厨就帮你做好了。你不需要会颠勺，但你需要<strong>知道自己想吃什么</strong>，以及<strong>菜端上来能不能吃</strong>。
+    </div>
+
+    <h3>1.2 传统编程 vs 氛围编程</h3>
+
+    <table>
+      <tr>
+        <th>对比维度</th>
+        <th>传统编程</th>
+        <th>氛围编程</th>
+      </tr>
+      <tr>
+        <td><strong>流程</strong></td>
+        <td>理解原理 → 写代码 → 调试 → 测试</td>
+        <td>描述需求 → AI生成 → 审核修改 → 快速出活</td>
+      </tr>
+      <tr>
+        <td><strong>速度</strong></td>
+        <td>慢，但基础扎实</td>
+        <td>快，但需要理解能力</td>
+      </tr>
+      <tr>
+        <td><strong>核心能力</strong></td>
+        <td>记住语法、理解算法、手写代码</td>
+        <td>清晰表达需求、判断代码质量、快速迭代</td>
+      </tr>
+      <tr>
+        <td><strong>适合场景</strong></td>
+        <td>深入学习编程原理、面试准备</td>
+        <td>快速做出产品原型、创业项目、学习项目</td>
+      </tr>
+      <tr>
+        <td><strong>类比</strong></td>
+        <td>自己种地、自己做饭——全靠自己动手</td>
+        <td>当产品经理，指挥AI干活——你负责想，它负责做</td>
+      </tr>
+    </table>
+
+    <div class="warning">
+      <strong>⚠️ 重要提醒：</strong
+      >氛围编程不等于"不会编程"！恰恰相反，氛围编程需要你有更好的<strong>系统思维</strong>和<strong>判断力</strong>。就像一个优秀的将军不需要亲自拿枪射击，但他必须懂得战略、能判断战场形势。
+    </div>
+
+    <h3>1.3 AI编程工具介绍</h3>
+
+    <ul>
+      <li>
+        <strong>Claude Code</strong> —
+        Anthropic公司推出的AI编程助手，装在终端（命令行）里，可以直接读取项目文件、帮你写代码、修改文件、运行命令。
+      </li>
+      <li>
+        <strong>Codex</strong> —
+        OpenAI（ChatGPT的公司）推出的AI编程工具，思路和Claude Code类似。
+      </li>
+    </ul>
+
+    <h3>1.4 氛围编程的三个核心原则</h3>
+
+    <h4>原则一：你是产品经理，AI是程序员</h4>
+    <p>
+      你的角色是<strong>产品经理</strong>——你负责"想"，AI负责"做"。产品经理不需要会写代码，但必须：
+    </p>
+    <ul>
+      <li>
+        <strong>想清楚要做什么</strong>：需求要明确，不能说"帮我做个好看的网站"
+      </li>
+      <li><strong>能判断做得对不对</strong>：AI生成代码后，要能看懂大概逻辑</li>
+      <li><strong>及时反馈和调整</strong>：发现问题就说出来，让AI修改</li>
+    </ul>
+
+    <h4>原则二：提示词是代码</h4>
+    <p>
+      在传统编程中，你写Python代码告诉计算机做什么。在氛围编程中，你写<strong>提示词（Prompt）</strong>告诉AI做什么。提示词写得好，AI输出的代码质量就高。
+    </p>
+
+    <h4>原则三：理解比记忆重要</h4>
+    <p>
+      传统编程需要记住大量语法。氛围编程中，AI帮你处理这些细节。你需要做的是：
+    </p>
+    <ul>
+      <li>
+        <strong>理解概念</strong>：知道什么是数据库、什么是API、什么是前端后端
+      </li>
+      <li>
+        <strong>理解架构</strong>：知道一个项目由哪些部分组成，各部分怎么配合
+      </li>
+      <li><strong>理解原理</strong>：知道为什么用这个方案而不是那个</li>
+    </ul>
+
+    <h3>1.5 最佳实践与常见误区</h3>
+
+    <table>
+      <tr>
+        <th>最佳实践</th>
+        <th>常见误区</th>
+      </tr>
+      <tr>
+        <td>
+          <strong>小步迭代</strong>：每次只做一个改动，验证通过后再做下一个
+        </td>
+        <td>
+          <strong>以为AI生成的代码不需要检查</strong
+          >：AI可能会"发明"不存在的依赖包
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>保留"决策日志"</strong>：记录每次让AI做了什么、为什么这样做
+        </td>
+        <td>
+          <strong>忽略安全</strong
+          >：AI可能会硬编码API密钥、把密码明文存在数据库里
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>知道什么时候该停</strong
+          >：氛围编程擅长从0到1，但不太擅长最后10%的打磨
+        </td>
+        <td>
+          <strong>"Vibe Coding宿醉"</strong
+          >：快速做出能用的东西，第二天发现代码结构一团糟
+        </td>
+      </tr>
+    </table>
+
+    <!-- ========================================== -->
+    <!-- 第2章 -->
+    <!-- ========================================== -->
+    <h2 id="ch2">第2章 工具安装与环境搭建</h2>
+    <p class="chapter-meta">工欲善其事，必先利其器</p>
+
+    <h3>2.1 开发工具清单</h3>
+
+    <table>
+      <tr>
+        <th>工具</th>
+        <th>说明</th>
+      </tr>
+      <tr>
+        <td><strong>uv</strong></td>
+        <td>超快的Python工具链，装Python/建环境/管依赖全靠它</td>
+      </tr>
+      <tr>
+        <td><strong>Python 3.12+</strong></td>
+        <td>后端开发语言（由uv安装）</td>
+      </tr>
+      <tr>
+        <td><strong>VSCode</strong></td>
+        <td>代码编辑器</td>
+      </tr>
+      <tr>
+        <td><strong>Claude Code</strong></td>
+        <td>AI编程助手，氛围编程的主力</td>
+      </tr>
+      <tr>
+        <td><strong>OpenAI Codex</strong></td>
+        <td>另一个AI编程助手，备选方案</td>
+      </tr>
+      <tr>
+        <td><strong>Git</strong></td>
+        <td>版本管理</td>
+      </tr>
+      <tr>
+        <td><strong>Node.js LTS</strong></td>
+        <td>JavaScript运行环境</td>
+      </tr>
+      <tr>
+        <td><strong>uni-app CLI</strong></td>
+        <td>跨端开发框架</td>
+      </tr>
+      <tr>
+        <td><strong>微信开发者工具</strong></td>
+        <td>微信小程序的调试和预览工具</td>
+      </tr>
+    </table>
+
+    <h3>2.2 Python环境搭建（使用uv）</h3>
+
+    <pre><code class="language-bash"># Windows安装uv（PowerShell）
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# 用uv安装Python
+uv python install 3.12
+
+# 创建虚拟环境
+uv venv --python 3.12
+
+# 安装包
+uv pip install fastapi</code></pre>
+
+    <h3>2.3 Claude Code安装</h3>
+
+    <pre><code class="language-bash"># Windows安装
+irm https://claude.ai/install.ps1 | iex
+
+# 验证安装
+claude --version</code></pre>
+
+    <h3>2.4 项目初始化</h3>
+
+    <pre><code class="language-bash"># 创建项目文件夹
+mkdir checkin-app
+cd checkin-app
+
+# 启动Claude Code
+claude
+
+# 在Claude Code中输入：
+# 帮我初始化一个项目，包含以下部分：
+# 1. FastAPI后端（Python），放在backend/目录，用uv管理依赖
+# 2. Vue3前端，放在frontend/目录
+# 3. uni-app微信小程序，放在miniapp/目录
+# 4. 创建pyproject.toml和package.json
+# 5. 创建README.md说明文件
+# 6. 初始化Git仓库</code></pre>
+
+    <!-- ========================================== -->
+    <!-- 第3章 -->
+    <!-- ========================================== -->
+    <h2 id="ch3">第3章 Claude Code基础操作</h2>
+    <p class="chapter-meta">学会跟AI程序员对话</p>
+
+    <h3>3.1 基本交互模式</h3>
+
+    <pre><code class="language-bash"># 启动Claude Code
+cd checkin-app
+claude
+
+# 基本操作示例
+> 帮我看一下当前项目的文件结构
+> 帮我创建一个main.py文件，写一个FastAPI的Hello World
+> 把main.py里的Hello World改成"你好，氛围编程"</code></pre>
+
+    <h3>3.2 CLAUDE.md配置</h3>
+
+    <p>
+      <strong>CLAUDE.md</strong>是Claude
+      Code的"说明书"文件，告诉AI项目规则、编码风格、技术栈等信息。
+    </p>
+
+    <pre><code class="language-md"># AI思政打卡小程序
+
+## 项目概述
+这是一个面向高校思政教育的打卡小程序，支持查寝、上课、实习三种打卡场景。
+
+## 技术栈
+- 后端: FastAPI + Python 3.11+
+- 数据库: MySQL 8.0
+- 缓存: Redis
+- 前端: Vue3 + TypeScript
+- 小程序: uni-app (Vue3 + Vite)
+- 人脸识别: face_recognition
+
+## 编码规范
+- Python: snake_case 变量/函数，PascalCase 类名
+- 数据库: snake_case 表名和列名
+- API: RESTful 风格，/api/ 前缀
+- 所有 I/O 操作使用 async/await</code></pre>
+
+    <h3>3.3 常用命令</h3>
+
+    <table>
+      <tr>
+        <th>命令</th>
+        <th>作用</th>
+      </tr>
+      <tr>
+        <td><strong>/init</strong></td>
+        <td>初始化项目，自动生成CLAUDE.md</td>
+      </tr>
+      <tr>
+        <td><strong>/plan</strong></td>
+        <td>进入计划模式，AI先分析需求、制定计划，确认后再执行</td>
+      </tr>
+      <tr>
+        <td><strong>/compact</strong></td>
+        <td>压缩上下文，释放"内存"</td>
+      </tr>
+      <tr>
+        <td><strong>/clear</strong></td>
+        <td>清空对话历史</td>
+      </tr>
+      <tr>
+        <td><strong>/help</strong></td>
+        <td>查看帮助</td>
+      </tr>
+      <tr>
+        <td><strong>/exit</strong></td>
+        <td>退出Claude Code</td>
+      </tr>
+    </table>
+
+    <h3>3.4 Plan Mode（计划模式）</h3>
+
+    <p>
+      <strong>Plan Mode</strong>是Claude
+      Code最重要的功能之一。AI不会直接改代码，而是先分析需求、制定计划，等你确认后再执行。
+    </p>
+
+    <pre><code class="language-bash"># 第一步：进入计划模式
+> /plan
+
+# 第二步：描述需求
+> 帮我设计用户注册登录功能
+
+# 第三步：Claude Code输出计划
+# - 需要创建哪些文件
+# - 需要修改哪些文件
+# - 数据库表结构设计
+# - API接口设计
+
+# 第四步：审核计划
+# - 如果没问题，回复"开始执行"
+# - 如果需要修改，告诉AI要改哪里</code></pre>
+
+    <h3>3.5 与AI对话的技巧</h3>
+
+    <table>
+      <tr>
+        <th>差的提示词</th>
+        <th>好的提示词</th>
+      </tr>
+      <tr>
+        <td>"帮我做个登录功能"</td>
+        <td>
+          "帮我用FastAPI创建一个用户登录API接口，接收手机号和密码，验证后返回JWT
+          Token。密码用bcrypt验证，Token过期时间24小时。"
+        </td>
+      </tr>
+      <tr>
+        <td>"帮我做完整的用户系统"</td>
+        <td>
+          "第一步：先创建用户模型（User Model），包含id、手机号、密码哈希字段"
+        </td>
+      </tr>
+      <tr>
+        <td>"报错了，怎么办？"</td>
+        <td>
+          "登录接口返回500错误，日志显示KeyError:
+          'email'，请帮我排查app/routers/auth.py"
+        </td>
+      </tr>
+    </table>
+
+    <div class="tip">
+      <strong>⚡ 关键技巧：</strong
+      >不要一次让AI做太多事。把大任务拆成小步骤，一步步来。每完成一步，确认无误后再进行下一步。
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 第4章 -->
+    <!-- ========================================== -->
+    <h2 id="ch4">第4章 需求分析与提示词工程</h2>
+    <p class="chapter-meta">把你的想法变成AI能理解的指令</p>
+
+    <h3>4.1 提示词五要素</h3>
+
+    <table>
+      <tr>
+        <th>要素</th>
+        <th>说明</th>
+        <th>示例</th>
+      </tr>
+      <tr>
+        <td><strong>1. 角色（Role）</strong></td>
+        <td>告诉AI它是谁</td>
+        <td>"你是一个资深的Python后端工程师"</td>
+      </tr>
+      <tr>
+        <td><strong>2. 任务（Task）</strong></td>
+        <td>明确要做什么</td>
+        <td>"帮我创建一个FastAPI用户注册接口"</td>
+      </tr>
+      <tr>
+        <td><strong>3. 背景（Context）</strong></td>
+        <td>提供项目背景信息</td>
+        <td>"这是一个高校思政打卡小程序..."</td>
+      </tr>
+      <tr>
+        <td><strong>4. 约束（Constraints）</strong></td>
+        <td>说明限制和要求</td>
+        <td>"密码用bcrypt哈希，API用RESTful风格"</td>
+      </tr>
+      <tr>
+        <td><strong>5. 输出格式（Format）</strong></td>
+        <td>定义答案形式</td>
+        <td>"请输出完整的代码文件，包含注释说明"</td>
+      </tr>
+    </table>
+
+    <h3>4.2 MoSCoW优先级方法</h3>
+
+    <p>MoSCoW是一种需求优先级排序方法：</p>
+
+    <ul>
+      <li><strong>M - Must（必须有）</strong>：没有就不能用的功能</li>
+      <li><strong>S - Should（应该有）</strong>：没有会很难用的功能</li>
+      <li><strong>C - Could（可以有）</strong>：有了更好的功能</li>
+      <li><strong>W - Won't（这次不做）</strong>：留给以后的功能</li>
+    </ul>
+
+    <h3>4.3 提示词模板库</h3>
+
+    <h4>模板1：项目初始化</h4>
+    <pre><code>你是一个资深的Python/JavaScript全栈工程师。
+
+帮我初始化以下项目：
+- 项目名称：[项目名]
+- 技术栈：FastAPI + Vue3 + uni-app + MySQL
+
+请帮我：
+1. 创建目录结构
+2. 生成各部分的配置文件
+3. 创建基础入口文件
+4. 初始化Git仓库
+5. 创建README.md</code></pre>
+
+    <h4>模板2：数据库设计</h4>
+    <pre><code>你是一个资深的数据库架构师。
+
+帮我设计以下功能的数据库表：
+功能描述：[功能描述]
+涉及的实体：[实体列表]
+实体间关系：[关系描述]
+
+要求：
+1. 使用SQLAlchemy ORM模型（异步版本）
+2. 表名和字段名使用snake_case
+3. 每个表包含id, created_at, updated_at字段
+4. 正确定义外键关系</code></pre>
+
+    <h4>模板3：API路由</h4>
+    <pre><code>你是一个精通FastAPI的后端工程师。
+
+帮我创建以下API接口：
+接口描述：[接口描述]
+请求方式：[GET/POST/PUT/DELETE]
+路径：[如/api/checkin]
+
+要求：
+1. 使用Pydantic v2做请求/响应验证
+2. 统一响应格式：{"code": 200, "message": "success", "data": {...}}
+3. 需要认证的接口使用Depends注入
+4. 包含错误处理和参数验证</code></pre>
+
+    <h3>4.4 上下文工程</h3>
+
+    <p>上下文工程比提示词工程更高级，是给AI提供完整的工作环境：</p>
+
+    <ul>
+      <li>
+        <strong>第1层：项目上下文</strong>（放在CLAUDE.md）—
+        技术栈、代码风格、目录结构
+      </li>
+      <li>
+        <strong>第2层：任务上下文</strong>（每次对话提供）—
+        当前任务、相关文件、约束条件
+      </li>
+      <li>
+        <strong>第3层：示例上下文</strong>（用代码示范）—
+        "参照app/routers/auth.py的风格"
+      </li>
+      <li>
+        <strong>第4层：反例上下文</strong>（告诉AI不要做什么）— "不要用同步代码"
+      </li>
+    </ul>
+
+    <hr />
+
+    <div class="part-divider"><span>第二部分：后端开发</span></div>
+
+    <!-- ========================================== -->
+    <!-- 第5章 -->
+    <!-- ========================================== -->
+    <h2 id="ch5">第5章 数据库设计</h2>
+    <p class="chapter-meta">盖房子先打地基，写代码先设计数据库</p>
+
+    <h3>5.1 为什么要先设计数据库？</h3>
+
+    <p>
+      数据库就是程序的<strong>地基</strong>。如果地基没打好，后面写的所有代码都可能需要推翻重来。
+    </p>
+
+    <p>思政打卡系统需要存储的数据：</p>
+    <ul>
+      <li>用户信息（学生、老师的账号）</li>
+      <li>打卡记录（谁在什么时候打了什么卡）</li>
+      <li>人脸特征（用来验证身份）</li>
+      <li>班级信息（学生属于哪个班）</li>
+      <li>审核记录（老师审核学生打卡）</li>
+    </ul>
+
+    <h3>5.2 核心表设计</h3>
+
+    <h4>1. users 用户表</h4>
+    <table>
+      <tr>
+        <th>字段名</th>
+        <th>类型</th>
+        <th>说明</th>
+      </tr>
+      <tr>
+        <td>id</td>
+        <td>INT (主键)</td>
+        <td>用户的唯一编号，自动递增</td>
+      </tr>
+      <tr>
+        <td>username</td>
+        <td>VARCHAR(50)</td>
+        <td>登录用户名，不能重复</td>
+      </tr>
+      <tr>
+        <td>email</td>
+        <td>VARCHAR(100)</td>
+        <td>邮箱地址</td>
+      </tr>
+      <tr>
+        <td>hashed_password</td>
+        <td>VARCHAR(255)</td>
+        <td>加密后的密码（绝对不存明文！）</td>
+      </tr>
+      <tr>
+        <td>real_name</td>
+        <td>VARCHAR(50)</td>
+        <td>真实姓名</td>
+      </tr>
+      <tr>
+        <td>class_id</td>
+        <td>INT (外键)</td>
+        <td>所属班级的编号</td>
+      </tr>
+      <tr>
+        <td>is_active</td>
+        <td>BOOLEAN</td>
+        <td>账号是否启用</td>
+      </tr>
+      <tr>
+        <td>is_admin</td>
+        <td>BOOLEAN</td>
+        <td>是否是管理员</td>
+      </tr>
+      <tr>
+        <td>created_at</td>
+        <td>DATETIME</td>
+        <td>注册时间</td>
+      </tr>
+    </table>
+
+    <div class="danger">
+      <strong>⚠️ 安全提醒：</strong>密码字段叫
+      <code>hashed_password</code>，不是
+      <code>password</code
+      >！我们<strong>绝不</strong>存储用户的原始密码。密码会经过 bcrypt
+      加密后存储。
+    </div>
+
+    <h4>2. checkins 打卡记录表</h4>
+    <table>
+      <tr>
+        <th>字段名</th>
+        <th>类型</th>
+        <th>说明</th>
+      </tr>
+      <tr>
+        <td>id</td>
+        <td>INT (主键)</td>
+        <td>打卡记录的唯一编号</td>
+      </tr>
+      <tr>
+        <td>user_id</td>
+        <td>INT (外键)</td>
+        <td>谁打的卡 → 关联 users 表</td>
+      </tr>
+      <tr>
+        <td>type</td>
+        <td>ENUM</td>
+        <td>打卡类型：查寝/上课/实习</td>
+      </tr>
+      <tr>
+        <td>content</td>
+        <td>TEXT</td>
+        <td>打卡内容描述</td>
+      </tr>
+      <tr>
+        <td>photo_url</td>
+        <td>VARCHAR(255)</td>
+        <td>照片存储地址</td>
+      </tr>
+      <tr>
+        <td>latitude</td>
+        <td>FLOAT</td>
+        <td>纬度（GPS定位）</td>
+      </tr>
+      <tr>
+        <td>longitude</td>
+        <td>FLOAT</td>
+        <td>经度（GPS定位）</td>
+      </tr>
+      <tr>
+        <td>status</td>
+        <td>ENUM</td>
+        <td>状态：待审核/已通过/已拒绝</td>
+      </tr>
+      <tr>
+        <td>created_at</td>
+        <td>DATETIME</td>
+        <td>打卡时间</td>
+      </tr>
+    </table>
+
+    <h4>3. face_encodings 人脸特征表</h4>
+    <table>
+      <tr>
+        <th>字段名</th>
+        <th>类型</th>
+        <th>说明</th>
+      </tr>
+      <tr>
+        <td>id</td>
+        <td>INT (主键)</td>
+        <td>特征记录的唯一编号</td>
+      </tr>
+      <tr>
+        <td>user_id</td>
+        <td>INT (外键)</td>
+        <td>谁的人脸 → 关联 users 表</td>
+      </tr>
+      <tr>
+        <td>encoding</td>
+        <td>BLOB</td>
+        <td>128 维特征向量</td>
+      </tr>
+      <tr>
+        <td>created_at</td>
+        <td>DATETIME</td>
+        <td>录入时间</td>
+      </tr>
+    </table>
+
+    <div class="tip">
+      <strong>💡 128维特征向量：</strong
+      >把一张人脸照片转换成128个数字。你可以把它想象成用128个特征来"描述"这张脸：眼睛的大小、鼻子的形状、嘴巴的宽度……
+      这128个数字组合在一起，就能唯一地代表一张脸。
+    </div>
+
+    <h4>4. classes 班级表</h4>
+    <table>
+      <tr>
+        <th>字段名</th>
+        <th>类型</th>
+        <th>说明</th>
+      </tr>
+      <tr>
+        <td>id</td>
+        <td>INT (主键)</td>
+        <td>班级编号</td>
+      </tr>
+      <tr>
+        <td>name</td>
+        <td>VARCHAR(50)</td>
+        <td>班级名称，如"计科2301班"</td>
+      </tr>
+      <tr>
+        <td>teacher_id</td>
+        <td>INT (外键)</td>
+        <td>班主任 → 关联 users 表</td>
+      </tr>
+    </table>
+
+    <h4>5. reviews 审核表</h4>
+    <table>
+      <tr>
+        <th>字段名</th>
+        <th>类型</th>
+        <th>说明</th>
+      </tr>
+      <tr>
+        <td>id</td>
+        <td>INT (主键)</td>
+        <td>审核记录编号</td>
+      </tr>
+      <tr>
+        <td>checkin_id</td>
+        <td>INT (外键)</td>
+        <td>哪条打卡 → 关联 checkins 表</td>
+      </tr>
+      <tr>
+        <td>reviewer_id</td>
+        <td>INT (外键)</td>
+        <td>谁审核的 → 关联 users 表</td>
+      </tr>
+      <tr>
+        <td>status</td>
+        <td>ENUM</td>
+        <td>审核结果：通过/拒绝</td>
+      </tr>
+      <tr>
+        <td>comment</td>
+        <td>TEXT</td>
+        <td>审核意见</td>
+      </tr>
+      <tr>
+        <td>created_at</td>
+        <td>DATETIME</td>
+        <td>审核时间</td>
+      </tr>
+    </table>
+
+    <h4>6. allowed_locations 允许打卡位置表</h4>
+    <table>
+      <tr>
+        <th>字段名</th>
+        <th>类型</th>
+        <th>说明</th>
+      </tr>
+      <tr>
+        <td>id</td>
+        <td>INT (主键)</td>
+        <td>位置编号</td>
+      </tr>
+      <tr>
+        <td>name</td>
+        <td>VARCHAR(100)</td>
+        <td>位置名称，如"3号宿舍楼"</td>
+      </tr>
+      <tr>
+        <td>latitude</td>
+        <td>FLOAT</td>
+        <td>中心点纬度</td>
+      </tr>
+      <tr>
+        <td>longitude</td>
+        <td>FLOAT</td>
+        <td>中心点经度</td>
+      </tr>
+      <tr>
+        <td>radius</td>
+        <td>INT</td>
+        <td>允许范围（米）</td>
+      </tr>
+    </table>
+
+    <h3>5.3 ER关系图</h3>
+
+    <p>表与表之间通过外键建立联系：</p>
+    <ul>
+      <li>
+        <strong>users → checkins</strong>（一对多）：一个用户可以有多条打卡记录
+      </li>
+      <li>
+        <strong>users → face_encodings</strong
+        >（一对多）：一个用户可以录入多张人脸照片
+      </li>
+      <li><strong>classes → users</strong>（一对多）：一个班级有多个学生</li>
+      <li>
+        <strong>checkins → reviews</strong>（一对多）：一条打卡可以被多次审核
+      </li>
+    </ul>
+
+    <pre><code>classes ──1:N──▶ users ──1:N──▶ checkins ──1:N──▶ reviews
+              │
+              └──1:N──▶ face_encodings</code></pre>
+
+    <h3>5.4 数据库迁移 — Alembic</h3>
+
+    <p>
+      <strong>Alembic</strong
+      >是数据库迁移工具，像Git管理代码一样管理数据库结构变化。
+    </p>
+
+    <pre><code class="language-bash"># 初始化Alembic
+alembic init migrations
+
+# 生成迁移文件
+alembic revision --autogenerate -m "create tables"
+
+# 执行迁移
+alembic upgrade head</code></pre>
+
+    <h3>5.5 数据库设计最佳实践</h3>
+
+    <ul>
+      <li><strong>索引设计</strong>：经常查询的字段加索引，不该加的不加</li>
+      <li>
+        <strong>命名规范</strong>：表名复数、列名snake_case、外键以_id结尾
+      </li>
+      <li><strong>时间字段</strong>：统一用UTC存储，显示时再转换成本地时间</li>
+      <li><strong>软删除</strong>：用is_deleted字段标记，不要真的DELETE</li>
+    </ul>
+
+    <!-- ========================================== -->
+    <!-- 第6章 -->
+    <!-- ========================================== -->
+    <h2 id="ch6">第6章 后端代码生成</h2>
+    <p class="chapter-meta">让AI帮你写出程序的"大脑"</p>
+
+    <h3>6.1 后端是做什么的？</h3>
+
+    <p>
+      后端是程序的"大脑"，运行在服务器上，负责处理数据、验证身份、执行业务逻辑。
+    </p>
+
+    <ul>
+      <li><strong>FastAPI</strong> — Python的高性能Web框架</li>
+      <li><strong>API</strong> — 前后端通信的接口，像餐厅的菜单</li>
+    </ul>
+
+    <h3>6.2 项目结构</h3>
+
+    <pre><code>app/
+├── main.py          # 入口文件
+├── config.py        # 配置文件
+├── database.py      # 数据库连接
+├── deps.py          # 依赖注入
+├── models/          # 数据模型（对应数据库表）
+│   ├── user.py
+│   ├── checkin.py
+│   └── ...
+├── routers/         # 路由（处理API请求）
+│   ├── auth.py
+│   ├── checkin.py
+│   └── admin.py
+├── services/        # 业务逻辑
+│   ├── auth_service.py
+│   ├── checkin_service.py
+│   └── ...
+└── schemas/         # 数据格式定义
+    ├── user_schema.py
+    └── checkin_schema.py</code></pre>
+
+    <div class="tip">
+      <strong>📐 分层架构：</strong
+      >routers（路由层）负责接待，services（服务层）负责干活，models（模型层）负责数据。各司其职，改一层不影响其他层。
+    </div>
+
+    <h3>6.3 数据模型（Models）</h3>
+
+    <pre><code class="language-python">from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, Text, Enum
+from sqlalchemy.sql import func
+from app.database import Base
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(50), unique=True, nullable=False, index=True)
+    email = Column(String(100), unique=True, nullable=False)
+    hashed_password = Column(String(255), nullable=False)
+    real_name = Column(String(50), nullable=False)
+    class_id = Column(Integer, nullable=True)
+    is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now())</code></pre>
+
+    <h3>6.4 API路由（Routers）</h3>
+
+    <pre><code class="language-python">from fastapi import APIRouter, Depends, HTTPException
+from app.schemas.user_schema import UserCreate, UserLogin, Token
+from app.services.auth_service import register_user, login_user
+
+router = APIRouter(prefix="/api/auth", tags=["认证"])
+
+@router.post("/register", response_model=Token)
+async def register(user_data: UserCreate):
+    result, error = await register_user(user_data)
+    if error:
+        raise HTTPException(status_code=400, detail=error)
+    return result
+
+@router.post("/login", response_model=Token)
+async def login(user_data: UserLogin):
+    result, error = await login_user(user_data)
+    if error:
+        raise HTTPException(status_code=401, detail=error)
+    return result</code></pre>
+
+    <h3>6.5 认证系统</h3>
+
+    <p>
+      <strong>JWT（JSON Web Token）</strong> —
+      身份认证方式，用户登录后获得"电子身份证"。
+    </p>
+
+    <h4>密码加密 — bcrypt</h4>
+    <pre><code class="language-python">import bcrypt
+
+# 注册时：加密密码
+password = "mypassword123"
+hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
+
+# 登录时：验证密码
+is_correct = bcrypt.checkpw(password.encode(), hashed)</code></pre>
+
+    <h4>Token管理</h4>
+    <pre><code class="language-python">import hashlib, secrets
+
+async def create_token(user_id: int, redis) -> str:
+    token = secrets.token_hex(32)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    await redis.set(f"token:{token_hash}", str(user_id), ex=86400)
+    return token
+
+async def verify_token(token: str, redis) -> int:
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    user_id = await redis.get(f"token:{token_hash}")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Token无效")
+    return int(user_id)</code></pre>
+
+    <h3>6.6 文件上传</h3>
+
+    <pre><code class="language-python">from fastapi import UploadFile, File
+import shutil, os
+
+@router.post("/upload")
+async def upload_photo(file: UploadFile = File(...), current_user = Depends(get_current_user)):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="只能上传图片文件")
+    file_ext = os.path.splitext(file.filename)[1]
+    filename = f"{current_user.id}_{int(time.time())}{file_ext}"
+    filepath = f"uploads/{filename}"
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    return {"url": f"/uploads/{filename}"}</code></pre>
+
+    <h3>6.7 FastAPI最佳实践</h3>
+
+    <ul>
+      <li><strong>分层架构</strong>：routers → services → models，各司其职</li>
+      <li>
+        <strong>依赖注入</strong>：用Depends管理共享资源（数据库连接、当前用户）
+      </li>
+      <li>
+        <strong>配置管理</strong>：用Pydantic Settings + .env文件管理敏感信息
+      </li>
+      <li><strong>异步优先</strong>：所有I/O操作都用async/await</li>
+      <li>
+        <strong>错误处理</strong>：service层返回(result,
+        error)元组，router层转HTTPException
+      </li>
+    </ul>
+
+    <!-- ========================================== -->
+    <!-- 第7章 -->
+    <!-- ========================================== -->
+    <h2 id="ch7">第7章 人脸识别系统</h2>
+    <p class="chapter-meta">让计算机"认识"你的脸</p>
+
+    <h3>7.1 人脸识别三步流程</h3>
+
+    <ol>
+      <li>
+        <strong>检测人脸</strong>：在照片中找到人脸的位置（CNN卷积神经网络）
+      </li>
+      <li><strong>提取特征</strong>：把人脸转换成128维特征向量</li>
+      <li>
+        <strong>比对匹配</strong>：比较两组128个数字的距离，判断是否为同一人
+      </li>
+    </ol>
+
+    <h3>7.2 face_recognition库</h3>
+
+    <p>
+      <strong>face_recognition</strong
+      >是Python的人脸识别库，底层使用dlib，准确率99.38%，CPU上就能运行。
+    </p>
+
+    <h3>7.3 安装</h3>
+
+    <pre><code class="language-bash"># 第1步：安装cmake
+pip install cmake
+
+# 第2步：安装dlib（可能需要5-10分钟编译）
+pip install dlib
+
+# 第3步：安装face_recognition
+pip install face_recognition
+
+# 第4步：安装Pillow和numpy
+pip install Pillow numpy</code></pre>
+
+    <div class="warning">
+      <strong>⚠️ Windows安装注意：</strong>需要先安装Visual Studio Build
+      Tools，勾选"使用C++的桌面开发"。否则dlib编译会失败。
+    </div>
+
+    <h3>7.4 后台人脸录入</h3>
+
+    <pre><code class="language-python">import face_recognition
+import numpy as np
+
+async def register_face(user_id: int, photo_path: str) -> dict:
+    # 第1步：加载图片
+    image = face_recognition.load_image_file(photo_path)
+
+    # 第2步：检测人脸位置
+    face_locations = face_recognition.face_locations(image)
+    if len(face_locations) == 0:
+        return None, "照片中未检测到人脸"
+    if len(face_locations) > 1:
+        return None, "照片中检测到多张人脸"
+
+    # 第3步：提取人脸特征（128维向量）
+    encodings = face_recognition.face_encodings(image, face_locations)
+    encoding = encodings[0]
+
+    # 第4步：转换为二进制存入数据库
+    encoding_bytes = encoding.tobytes()
+
+    # 存入face_encodings表...
+    return {"message": "人脸录入成功"}, None</code></pre>
+
+    <h3>7.5 人脸比对验证</h3>
+
+    <pre><code class="language-python">async def verify_face(user_id: int, photo_path: str) -> dict:
+    # 提取打卡照片的人脸特征
+    image = face_recognition.load_image_file(photo_path)
+    face_locations = face_recognition.face_locations(image)
+    if len(face_locations) == 0:
+        return None, "未检测到人脸"
+
+    unknown_encodings = face_recognition.face_encodings(image, face_locations)
+    unknown_encoding = unknown_encodings[0]
+
+    # 与数据库中存储的特征比对
+    known_encodings = await get_user_face_encodings(user_id)
+
+    for known_encoding in known_encodings:
+        matches = face_recognition.compare_faces(
+            [known_encoding], unknown_encoding, tolerance=0.6
+        )
+        if matches[0]:
+            return {"verified": True, "message": "验证通过"}, None
+
+    return None, "人脸验证失败"</code></pre>
+
+    <h3>7.6 阈值（tolerance）调优</h3>
+
+    <table>
+      <tr>
+        <th>场景</th>
+        <th>推荐阈值</th>
+        <th>说明</th>
+      </tr>
+      <tr>
+        <td>安全场景（考试、门禁）</td>
+        <td>0.5（更严格）</td>
+        <td>宁可误拒，不可误放</td>
+      </tr>
+      <tr>
+        <td>一般场景（日常打卡）</td>
+        <td>0.6（默认值）</td>
+        <td>平衡安全和体验</td>
+      </tr>
+      <tr>
+        <td>便利场景（签到）</td>
+        <td>0.7（更宽松）</td>
+        <td>方便优先</td>
+      </tr>
+    </table>
+
+    <h3>7.7 活体检测</h3>
+
+    <p>防止"拿照片冒充"的三种方案：</p>
+
+    <ol>
+      <li>
+        <strong>连续帧检测</strong
+        >（推荐）：连续拍几帧，分析微小变化，真人会有自然微动
+      </li>
+      <li><strong>眨眼检测</strong>：检测眼睛开合状态变化</li>
+      <li><strong>动作指令</strong>：系统随机指令"眨眨眼""向左转头"</li>
+    </ol>
+
+    <h3>7.8 性能优化</h3>
+
+    <ul>
+      <li><strong>Redis缓存特征向量</strong>：减少数据库查询</li>
+      <li><strong>批量比对</strong>：一次与多个人脸特征比对</li>
+      <li><strong>图片压缩</strong>：上传前压缩到800px宽度</li>
+      <li><strong>HOG vs CNN</strong>：实时打卡用HOG（快），录入用CNN（准）</li>
+    </ul>
+
+    <hr />
+
+    <div class="part-divider"><span>第三部分：前端开发</span></div>
+
+    <!-- ========================================== -->
+    <!-- 第8章 -->
+    <!-- ========================================== -->
+    <h2 id="ch8">第8章 前端页面生成</h2>
+    <p class="chapter-meta">让用户看到漂亮的界面</p>
+
+    <h3>8.1 前端三大件</h3>
+
+    <ul>
+      <li><strong>HTML</strong> — 骨架，定义页面元素</li>
+      <li><strong>CSS</strong> — 皮肤，定义元素样式</li>
+      <li><strong>JavaScript</strong> — 肌肉，让页面动起来</li>
+    </ul>
+
+    <p><strong>Vue3</strong> — "搭积木"式的前端框架，组件化开发。</p>
+
+    <h3>8.2 6个核心页面</h3>
+
+    <ol>
+      <li>
+        <strong>登录/注册页面</strong> — 用户名、密码输入框，登录/注册按钮
+      </li>
+      <li><strong>首页</strong> — 今日打卡状态、快捷操作、大按钮"去打卡"</li>
+      <li><strong>打卡页面</strong> — 选择类型、拍照、定位、提交</li>
+      <li><strong>历史记录页面</strong> — 打卡记录列表，按时间倒序</li>
+      <li><strong>教师审核页面</strong> — 筛选、查看、审核打卡记录</li>
+      <li><strong>个人中心</strong> — 个人信息、修改密码、统计数据</li>
+    </ol>
+
+    <h3>8.3 组件设计</h3>
+
+    <table>
+      <tr>
+        <th>组件名</th>
+        <th>用途</th>
+      </tr>
+      <tr>
+        <td>UserAvatar</td>
+        <td>用户头像显示</td>
+      </tr>
+      <tr>
+        <td>LocationMap</td>
+        <td>显示打卡位置地图</td>
+      </tr>
+      <tr>
+        <td>PhotoUpload</td>
+        <td>拍照/上传照片</td>
+      </tr>
+      <tr>
+        <td>StatusTag</td>
+        <td>状态标签（待审核/已通过/已拒绝）</td>
+      </tr>
+      <tr>
+        <td>CheckinCard</td>
+        <td>打卡记录卡片</td>
+      </tr>
+    </table>
+
+    <h3>8.4 路由配置</h3>
+
+    <pre><code class="language-javascript">// router/index.js
+import { createRouter, createWebHistory } from 'vue-router'
+
+const routes = [
+  { path: '/login', name: 'Login', component: () => import('../views/Login.vue') },
+  { path: '/', name: 'Home', component: () => import('../views/Home.vue'), meta: { requiresAuth: true } },
+  { path: '/checkin', name: 'Checkin', component: () => import('../views/Checkin.vue'), meta: { requiresAuth: true } },
+  { path: '/history', name: 'History', component: () => import('../views/History.vue'), meta: { requiresAuth: true } },
+  { path: '/review', name: 'Review', component: () => import('../views/Review.vue'), meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: '/profile', name: 'Profile', component: () => import('../views/Profile.vue'), meta: { requiresAuth: true } }
+]
+
+const router = createRouter({ history: createWebHistory(), routes })
+
+// 路由守卫：未登录跳转登录页
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('token')
+  if (to.meta.requiresAuth && !token) {
+    next('/login')
+  } else {
+    next()
+  }
+})</code></pre>
+
+    <h3>8.5 状态管理（Pinia）</h3>
+
+    <p>
+      <strong>Pinia</strong
+      >是Vue3的状态管理工具，集中管理全局共享数据（如当前登录用户）。
+    </p>
+
+    <pre><code class="language-javascript">// stores/user.js
+import { defineStore } from 'pinia'
+
+export const useUserStore = defineStore('user', {
+  state: () => ({
+    token: localStorage.getItem('token') || '',
+    userInfo: null,
+    isLoggedIn: false
+  }),
+  actions: {
+    async login(username, password) {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      const data = await response.json()
+      if (data.access_token) {
+        this.token = data.access_token
+        this.isLoggedIn = true
+        localStorage.setItem('token', data.access_token)
+      }
+    },
+    logout() {
+      this.token = ''
+      this.userInfo = null
+      this.isLoggedIn = false
+      localStorage.removeItem('token')
+    }
+  }
+})</code></pre>
+
+    <h3>8.6 前后端API对接</h3>
+
+    <pre><code class="language-javascript">// 封装API请求
+const API_BASE = '/api'
+
+async function request(url, options = {}) {
+  const token = localStorage.getItem('token')
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  }
+  const response = await fetch(`${API_BASE}${url}`, {
+    ...options,
+    headers: { ...headers, ...options.headers }
+  })
+  if (response.status === 401) {
+    localStorage.removeItem('token')
+    window.location.href = '/login'
+    return
+  }
+  return response.json()
+}</code></pre>
+
+    <!-- ========================================== -->
+    <!-- 第9章 -->
+    <!-- ========================================== -->
+    <h2 id="ch9">第9章 小程序开发实战</h2>
+    <p class="chapter-meta">用uni-app框架开发微信小程序</p>
+
+    <h3>9.1 什么是微信小程序？</h3>
+
+    <p>不用下载安装，在微信里直接打开使用的"轻量级APP"。</p>
+
+    <table>
+      <tr>
+        <th>对比项</th>
+        <th>微信小程序</th>
+        <th>普通APP</th>
+      </tr>
+      <tr>
+        <td>安装方式</td>
+        <td>无需下载，微信内打开</td>
+        <td>应用商店下载安装</td>
+      </tr>
+      <tr>
+        <td>开发成本</td>
+        <td>较低</td>
+        <td>较高（iOS+Android各一套）</td>
+      </tr>
+      <tr>
+        <td>能力限制</td>
+        <td>部分硬件能力受限</td>
+        <td>几乎无限制</td>
+      </tr>
+    </table>
+
+    <h3>9.2 uni-app跨端框架</h3>
+
+    <p>
+      <strong>uni-app</strong> —
+      写一次代码，同时编译成微信小程序、APP、H5网页等多个平台。
+    </p>
+
+    <h3>9.3 uni-app项目结构</h3>
+
+    <pre><code>my-checkin-app/
+├── pages/                  # 页面目录
+│   ├── index/index.vue     # 首页
+│   ├── checkin/checkin.vue # 打卡页
+│   └── profile/profile.vue # 个人中心
+├── static/                 # 静态资源
+├── components/             # 自定义组件
+├── api/                    # API接口
+├── utils/                  # 工具函数
+├── App.vue                 # 应用入口
+├── main.js                 # 入口JS
+├── manifest.json           # 应用配置
+├── pages.json              # 页面路由配置
+└── uni.scss                # 全局样式变量</code></pre>
+
+    <h3>9.4 页面生命周期</h3>
+
+    <pre><code class="language-javascript">export default {
+  // 页面加载时触发（只一次）
+  onLoad(options) {
+    this.loadUserInfo()
+  },
+  // 页面显示时触发（每次都触发）
+  onShow() {
+    this.refreshData()
+  },
+  // 页面初次渲染完成（只一次）
+  onReady() {
+    this.getMapContext()
+  },
+  // 页面隐藏时触发
+  onHide() {
+    this.pauseTimer()
+  },
+  // 页面卸载时触发
+  onUnload() {
+    this.clearTimer()
+  }
+}</code></pre>
+
+    <div class="tip">
+      <strong>⚡ 记忆口诀：</strong
+      >Load加载一次，Show每次都来，Ready渲染完成，Hide藏起来了，Unload彻底走了。
+    </div>
+
+    <h3>9.5 GPS定位获取</h3>
+
+    <pre><code class="language-javascript">uni.getLocation({
+  type: 'gcj02', // 国测局坐标系（国内地图都用这个）
+  isHighAccuracy: true,
+  highAccuracyExpireTime: 3000,
+  success: (res) => {
+    console.log('纬度:', res.latitude)
+    console.log('经度:', res.longitude)
+    console.log('精度:', res.accuracy, '米')
+  },
+  fail: (err) => {
+    uni.showToast({ title: '获取位置失败', icon: 'none' })
+  }
+})</code></pre>
+
+    <h3>9.6 地图组件</h3>
+
+    <pre><code class="language-html">&lt;template&gt;
+  &lt;map
+    :latitude="latitude"
+    :longitude="longitude"
+    :scale="16"
+    :markers="markers"
+    :circles="circles"
+    style="width: 100%; height: 400rpx;"
+    show-location
+  /&gt;
+&lt;/template&gt;</code></pre>
+
+    <h3>9.7 拍照功能</h3>
+
+    <pre><code class="language-javascript">// 拍照
+uni.chooseImage({
+  count: 1,
+  sourceType: ['camera'], // 只用摄像头
+  sizeType: ['compressed'],
+  success: (res) => {
+    const tempFilePath = res.tempFilePaths[0]
+    this.photoPath = tempFilePath
+    this.compressAndUpload(tempFilePath)
+  }
+})
+
+// 压缩图片
+uni.compressImage({
+  src: filePath,
+  quality: 70,
+  success: (res) => {
+    this.uploadPhoto(res.tempFilePath)
+  }
+})
+
+// 上传到服务器
+uni.uploadFile({
+  url: 'https://your-api.com/api/checkin/verify',
+  filePath: filePath,
+  name: 'photo',
+  header: { 'Authorization': 'Bearer ' + uni.getStorageSync('token') },
+  formData: { 'latitude': this.userLat, 'longitude': this.userLng },
+  success: (res) => {
+    const data = JSON.parse(res.data)
+    if (data.code === 200) {
+      uni.showToast({ title: '打卡成功！', icon: 'success' })
+    }
+  }
+})</code></pre>
+
+    <h3>9.8 小程序开发最佳实践</h3>
+
+    <ul>
+      <li>使用<strong>Vue3 + Vite</strong>版本，不要用Vue2</li>
+      <li>小程序包体积限制<strong>2MB</strong>，超过用分包加载</li>
+      <li>图片资源放<code>static/</code>目录，不用网络图片</li>
+      <li>上线前用<strong>"体验版"</strong>全面测试</li>
+    </ul>
+
+    <!-- ========================================== -->
+    <!-- 第10章 -->
+    <!-- ========================================== -->
+    <h2 id="ch10">第10章 定位打卡与人脸核验</h2>
+    <p class="chapter-meta">
+      实现完整的打卡流程：GPS定位验证 + 人脸比对 + 后端校验
+    </p>
+
+    <h3>10.1 打卡完整流程（6步）</h3>
+
+    <ol>
+      <li>获取GPS位置</li>
+      <li>判断地理围栏</li>
+      <li>打开摄像头拍照</li>
+      <li>上传照片+位置</li>
+      <li>后端人脸比对</li>
+      <li>返回打卡结果</li>
+    </ol>
+
+    <h3>10.2 地理围栏（Haversine公式）</h3>
+
+    <p>计算地球表面两点之间的距离，判断是否在围栏内。</p>
+
+    <pre><code class="language-python">import math
+
+def haversine(lat1, lon1, lat2, lon2):
+    """计算两个GPS坐标之间的距离（米）"""
+    R = 6371000  # 地球平均半径（米）
+    lat1_rad = math.radians(lat1)
+    lat2_rad = math.radians(lat2)
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2 +
+         math.cos(lat1_rad) * math.cos(lat2_rad) *
+         math.sin(dlon / 2) ** 2)
+    c = 2 * math.asin(math.sqrt(a))
+    return R * c
+
+def is_in_geofence(user_lat, user_lng, target_lat, target_lng, radius):
+    distance = haversine(user_lat, user_lng, target_lat, target_lng)
+    return distance <= radius, distance</code></pre>
+
+    <h3>10.3 不同场景的围栏半径</h3>
+
+    <table>
+      <tr>
+        <th>场景</th>
+        <th>推荐半径</th>
+        <th>说明</th>
+      </tr>
+      <tr>
+        <td>教室打卡</td>
+        <td>50米</td>
+        <td>教室面积有限</td>
+      </tr>
+      <tr>
+        <td>宿舍打卡</td>
+        <td>100米</td>
+        <td>宿舍楼面积较大</td>
+      </tr>
+      <tr>
+        <td>操场打卡</td>
+        <td>200米</td>
+        <td>操场面积大</td>
+      </tr>
+      <tr>
+        <td>实习地点</td>
+        <td>150米</td>
+        <td>企业园区范围</td>
+      </tr>
+    </table>
+
+    <div class="warning">
+      <strong>⚠️ 现实考虑：</strong
+      >GPS定位本身有误差（室外5-15米，室内30-100米），围栏半径不能设太小。宿舍楼内GPS精度差，建议用Wi-Fi指纹或蓝牙辅助定位。
+    </div>
+
+    <h3>10.4 后端打卡验证接口</h3>
+
+    <pre><code class="language-python">@router.post("/api/checkin/verify")
+async def verify_checkin(
+    photo: UploadFile = File(...),
+    latitude: str = Form(...),
+    longitude: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    # 步骤1：解析位置数据
+    user_lat = float(latitude)
+    user_lng = float(longitude)
+
+    # 步骤2：验证地理围栏
+    target = await get_task_location(db, task_id)
+    in_fence, distance = is_in_geofence(
+        user_lat, user_lng, target.latitude, target.longitude, target.radius
+    )
+    if not in_fence:
+        return {"code": 403, "message": f"不在打卡范围内（距离{distance:.0f}米）"}
+
+    # 步骤3：提取人脸特征
+    image_bytes = await photo.read()
+    image = face_recognition.load_image_file(BytesIO(image_bytes))
+    face_locations = face_recognition.face_locations(image)
+    if len(face_locations) == 0:
+        return {"code": 400, "message": "未检测到人脸"}
+    face_encoding = face_recognition.face_encodings(image, face_locations)[0]
+
+    # 步骤4：与人脸库比对
+    registered_encoding = np.frombuffer(user.face_encoding, dtype=np.float64)
+    distance = face_recognition.face_distance([registered_encoding], face_encoding)[0]
+    if distance >= 0.6:
+        return {"code": 403, "message": "人脸比对未通过"}
+
+    # 步骤5：记录打卡结果
+    record = CheckinRecord(user_id=user.id, ...)
+    db.add(record)
+    await db.commit()
+
+    return {"code": 200, "message": "打卡成功"}</code></pre>
+
+    <h3>10.5 打卡状态管理</h3>
+
+    <ul>
+      <li><strong>重复打卡检测</strong>：每天同一任务只能打一次卡</li>
+      <li><strong>时间段限制</strong>：只能在规定时间内打卡</li>
+      <li><strong>频率限制</strong>：失败次数过多锁定一段时间</li>
+    </ul>
+
+    <h3>10.6 模拟定位测试</h3>
+
+    <p>用微信开发者工具的"定位"功能模拟不同位置，测试围栏判断是否正确。</p>
+
+    <!-- ========================================== -->
+    <!-- 第11章 -->
+    <!-- ========================================== -->
+    <h2 id="ch11">第11章 UI美化与用户体验</h2>
+    <p class="chapter-meta">让你的小程序从"能用"变成"好用"再到"爱用"</p>
+
+    <h3>11.1 配色方案 — 60-30-10法则</h3>
+
+    <table>
+      <tr>
+        <th>比例</th>
+        <th>用途</th>
+        <th>示例</th>
+      </tr>
+      <tr>
+        <td><strong>60%</strong></td>
+        <td>主色（背景色）</td>
+        <td>白色 #FFFFFF 或浅灰 #F5F7FA</td>
+      </tr>
+      <tr>
+        <td><strong>30%</strong></td>
+        <td>辅色（主要元素）</td>
+        <td>蓝色 #0077B6</td>
+      </tr>
+      <tr>
+        <td><strong>10%</strong></td>
+        <td>强调色</td>
+        <td>橙色 #FF6B35</td>
+      </tr>
+    </table>
+
+    <h3>11.2 组件库选择</h3>
+
+    <table>
+      <tr>
+        <th>对比项</th>
+        <th>WeUI</th>
+        <th>ColorUI</th>
+      </tr>
+      <tr>
+        <td>风格</td>
+        <td>微信原生风格，简洁克制</td>
+        <td>活泼现代，色彩丰富</td>
+      </tr>
+      <tr>
+        <td>来源</td>
+        <td>微信官方团队</td>
+        <td>社区开发者</td>
+      </tr>
+      <tr>
+        <td>适用场景</td>
+        <td>工具类、商务类</td>
+        <td>社交类、教育类</td>
+      </tr>
+    </table>
+
+    <div class="tip">
+      <strong>⚡ 建议：</strong>两个混着用 —
+      用WeUI的表单、对话框（保证规范），用ColorUI的按钮、卡片（增加吸引力）。
+    </div>
+
+    <h3>11.3 字体层级设计</h3>
+
+    <table>
+      <tr>
+        <th>层级</th>
+        <th>字号</th>
+        <th>粗细</th>
+        <th>用途</th>
+      </tr>
+      <tr>
+        <td>大标题</td>
+        <td>36rpx</td>
+        <td>bold (700)</td>
+        <td>页面标题</td>
+      </tr>
+      <tr>
+        <td>小标题</td>
+        <td>30rpx</td>
+        <td>medium (500)</td>
+        <td>卡片标题</td>
+      </tr>
+      <tr>
+        <td>正文</td>
+        <td>28rpx</td>
+        <td>regular (400)</td>
+        <td>内容文字</td>
+      </tr>
+      <tr>
+        <td>辅助文字</td>
+        <td>24rpx</td>
+        <td>light (300)</td>
+        <td>次要信息</td>
+      </tr>
+      <tr>
+        <td>标签</td>
+        <td>20rpx</td>
+        <td>medium (500)</td>
+        <td>小标签</td>
+      </tr>
+    </table>
+
+    <h3>11.4 卡片式布局</h3>
+
+    <pre><code class="language-css">.card {
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+}</code></pre>
+
+    <h3>11.5 微交互动画</h3>
+
+    <ul>
+      <li><strong>按钮点击缩放</strong>：按下时缩小到95%</li>
+      <li><strong>加载动画</strong>：旋转spinner、骨架屏</li>
+      <li><strong>页面切换过渡</strong>：淡入效果</li>
+      <li><strong>打卡成功弹跳</strong>：bounceIn动画</li>
+    </ul>
+
+    <h3>11.6 移动端适配</h3>
+
+    <pre><code class="language-css">/* 底部安全区域适配（iPhone横条） */
+.bottom-btn {
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+}
+
+/* 顶部安全区域（刘海屏） */
+.top-bar {
+  padding-top: calc(20rpx + env(safe-area-inset-top));
+}</code></pre>
+
+    <h3>11.7 无障碍设计</h3>
+
+    <ul>
+      <li>文字对比度至少4.5:1（WCAG AA标准）</li>
+      <li>按钮最小44×44px，间距至少8px</li>
+      <li>正文不小于14px，支持系统字体缩放</li>
+      <li>不要只靠颜色传达信息，同时用图标/文字说明</li>
+    </ul>
+
+    <hr />
+
+    <div class="part-divider"><span>第四部分：上线运维</span></div>
+
+    <!-- ========================================== -->
+    <!-- 第12章 -->
+    <!-- ========================================== -->
+    <h2 id="ch12">第12章 联调与上线部署</h2>
+    <p class="chapter-meta">把前后端连在一起，把小程序发布上线</p>
+
+    <h3>12.1 前后端联调</h3>
+
+    <p>
+      <strong>联调（集成调试）</strong> —
+      把前端和后端连在一起测试，确保它们能正常"对话"。
+    </p>
+
+    <h4>常见联调问题</h4>
+
+    <ol>
+      <li>
+        <strong>跨域（CORS）</strong>：浏览器安全限制，不同域名/端口不能直接通信
+      </li>
+      <li><strong>接口不匹配</strong>：前端调的路径和后端定义的不一致</li>
+      <li><strong>数据格式错误</strong>：前端发的格式和后端期望的不一样</li>
+    </ol>
+
+    <pre><code class="language-python"># FastAPI中解决跨域
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],        # 开发阶段允许所有来源
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)</code></pre>
+
+    <h3>12.2 小程序审核提交流程</h3>
+
+    <ol>
+      <li>登录微信公众平台（mp.weixin.qq.com）</li>
+      <li>填写小程序信息（名称、简介、服务类目、图标）</li>
+      <li>在开发者工具中点击"上传"代码</li>
+      <li>在公众平台提交审核（填写功能页面、测试账号）</li>
+      <li>等待审核（1-7天）</li>
+      <li>审核通过后发布</li>
+    </ol>
+
+    <h3>12.3 真机测试</h3>
+
+    <p>
+      提交审核前务必真机测试！用微信开发者工具的"预览"功能生成二维码，手机扫码测试。
+    </p>
+
+    <h4>测试清单</h4>
+    <ul>
+      <li>登录功能（正常登录、失败提示、Token过期）</li>
+      <li>打卡功能（文字、照片、列表显示）</li>
+      <li>人脸识别（录入、比对、摄像头）</li>
+      <li>GPS定位（定位准确、围栏判断、错误提示）</li>
+      <li>通用体验（加载速度、网络异常、多机型适配）</li>
+    </ul>
+
+    <h3>12.4 常见审核被拒原因</h3>
+
+    <ol>
+      <li><strong>用户隐私协议缺失</strong> — 必须填写隐私保护指引</li>
+      <li><strong>定位权限描述不清晰</strong> — 必须说明为什么要获取位置</li>
+      <li><strong>人脸识别未做隐私声明</strong> — 人脸数据属敏感信息</li>
+      <li>
+        <strong>内容审核机制缺失</strong> — 用户生成内容必须接入内容安全检测
+      </li>
+      <li><strong>测试内容未清理</strong> — 不要出现"测试""demo"等字样</li>
+    </ol>
+
+    <div class="tip">
+      <strong>⚡ 审核加速技巧：</strong>① 提供可用的测试账号密码 ②
+      备注中写清楚功能流程和测试步骤 ③ 工作日上午提交（审核队列较短）
+    </div>
+
+    <h3>12.5 正式发布</h3>
+
+    <ul>
+      <li><strong>全量发布</strong>：所有用户立即更新</li>
+      <li><strong>灰度发布</strong>：先让一部分用户体验，没问题再全量</li>
+    </ul>
+
+    <p>
+      版本号遵循<strong>语义化版本号</strong>：MAJOR.MINOR.PATCH（主版本.次版本.补丁号）
+    </p>
+
+    <!-- ========================================== -->
+    <!-- 第13章 -->
+    <!-- ========================================== -->
+    <h2 id="ch13">第13章 AI辅助测试</h2>
+    <p class="chapter-meta">用AI自动生成测试，保证代码质量</p>
+
+    <h3>13.1 为什么要写测试？</h3>
+
+    <ul>
+      <li>
+        <strong>防止改A坏B</strong>：修改代码后跑测试，知道有没有影响其他功能
+      </li>
+      <li><strong>自动验证</strong>：不用每次手动点来点去</li>
+      <li><strong>活文档</strong>：测试代码本身就是最好的使用说明</li>
+      <li><strong>放心重构</strong>：有测试兜底才敢优化代码</li>
+    </ul>
+
+    <h3>13.2 单元测试（pytest）</h3>
+
+    <pre><code class="language-python"># tests/test_auth.py
+import pytest
+from httpx import AsyncClient, ASGITransport
+from app.main import app
+
+@pytest.fixture
+async def client():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+
+@pytest.mark.asyncio
+async def test_register_success(client):
+    """测试：正常注册新用户"""
+    response = await client.post("/api/auth/register", json={
+        "username": "testuser",
+        "password": "Test123456",
+        "email": "test@example.com"
+    })
+    assert response.status_code == 200
+
+@pytest.mark.asyncio
+async def test_login_wrong_password(client):
+    """测试：密码错误"""
+    response = await client.post("/api/auth/login", json={
+        "username": "testuser",
+        "password": "WrongPassword"
+    })
+    assert response.status_code == 401</code></pre>
+
+    <h3>13.3 测试覆盖率</h3>
+
+    <p><strong>测试覆盖率</strong> — 代码被测试到的比例。用pytest-cov分析。</p>
+
+    <pre><code class="language-bash"># 安装
+pip install pytest-cov
+
+# 运行测试并生成覆盖率报告
+pytest --cov=app tests/ -v
+
+# 生成HTML报告（在浏览器中查看）
+pytest --cov=app --cov-report=html tests/</code></pre>
+
+    <h3>13.4 推荐覆盖率目标</h3>
+
+    <table>
+      <tr>
+        <th>模块类型</th>
+        <th>推荐覆盖率</th>
+        <th>重点测试内容</th>
+      </tr>
+      <tr>
+        <td>API路由层（routers/）</td>
+        <td>≥ 90%</td>
+        <td>所有接口的正常和异常流程</td>
+      </tr>
+      <tr>
+        <td>业务逻辑层（services/）</td>
+        <td>≥ 85%</td>
+        <td>核心业务规则和边界条件</td>
+      </tr>
+      <tr>
+        <td>数据模型层（models/）</td>
+        <td>≥ 70%</td>
+        <td>字段验证、关系约束</td>
+      </tr>
+      <tr>
+        <td>工具函数（utils/）</td>
+        <td>≥ 95%</td>
+        <td>各种输入的返回值</td>
+      </tr>
+    </table>
+
+    <h3>13.5 AAA测试模式</h3>
+
+    <p>Arrange（准备数据）→ Act（执行操作）→ Assert（断言结果）</p>
+
+    <h3>13.6 用AI生成测试的最佳提示词</h3>
+
+    <pre><code>请为 app/routers/checkin.py 生成完整的测试文件 tests/test_checkin.py
+
+要求：
+1. 使用 pytest + pytest-asyncio + httpx
+2. 每个测试用例独立，使用 fixture 重置数据
+3. 覆盖正常流程和所有异常情况
+4. 参照 tests/test_auth.py 的代码风格
+5. 使用 SQLite 内存数据库
+6. 测试数据用工厂函数生成</code></pre>
+
+    <!-- ========================================== -->
+    <!-- 第14章 -->
+    <!-- ========================================== -->
+    <h2 id="ch14">第14章 部署运维实战</h2>
+    <p class="chapter-meta">把项目部署到服务器，7x24小时稳定运行</p>
+
+    <h3>14.1 开发环境 vs 生产环境</h3>
+
+    <table>
+      <tr>
+        <th>维度</th>
+        <th>开发环境</th>
+        <th>生产环境</th>
+      </tr>
+      <tr>
+        <td>访问者</td>
+        <td>只有你自己</td>
+        <td>所有用户</td>
+      </tr>
+      <tr>
+        <td>安全性</td>
+        <td>不太重要</td>
+        <td>非常重要！</td>
+      </tr>
+      <tr>
+        <td>性能</td>
+        <td>慢一点没关系</td>
+        <td>要快！用户等3秒就会离开</td>
+      </tr>
+      <tr>
+        <td>稳定性</td>
+        <td>崩了重启就好</td>
+        <td>7x24小时不间断</td>
+      </tr>
+    </table>
+
+    <h3>14.2 Docker容器化</h3>
+
+    <p>
+      <strong>Docker</strong> —
+      "集装箱"技术，把程序和运行环境打包在一起，在哪都能一样运行。
+    </p>
+
+    <h4>Dockerfile示例</h4>
+    <pre>>
+  </body>
+</html>
+.txt
+COPY . .
+EXPOSE 9000
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "9000"]</code></pre>
+
+<h4>docker-compose多容器编排</h4>
+<pre><code class="language-yaml">version: '3.8'
+services:
+  api:
+    build: .
+    ports:
+      - "9000:9000"
+    environment:
+      - DATABASE_URL=mysql+aiomysql://root:root123@db:3306/checkin_db
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    restart: always
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: checkin_db
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+
+volumes:
+  mysql_data:</code></pre>
+
+<pre><code class="language-bash"># 一键启动
+docker-compose up -d
+
+# 查看状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f api
+
+# 停止
+docker-compose down</code></pre>
+
+<h3>14.3 Redis缓存</h3>
+
+<p>Redis三大用途：</p>
+<ol>
+<li><strong>Session缓存</strong>：用户登录Token存在Redis，不用每次查数据库</li>
+<li><strong>接口限流</strong>：防止恶意频繁请求</li>
+<li><strong>人脸特征缓存</strong>：人脸识别时减少数据库查询</li>
+</ol>
+
+<h3>14.4 CI/CD流水线</h3>
+
+<p><strong>CI/CD</strong> — 代码提交后自动测试、自动部署的流程。</p>
+
+<pre><code class="language-yaml"># .github/workflows/deploy.yml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: pytest tests/ -v --cov=app
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/checkin-app
+            git pull origin main
+            docker-compose up -d --build</code></pre>
+
+<h3>14.5 Nginx反向代理</h3>
+
+<p>Nginx站在前台接客，收到请求后转交给后台的FastAPI处理。</p>
+
+<pre><code class="language-bash"># /etc/nginx/sites-available/checkin-app
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location /static/ {
+        alias /opt/checkin-app/static/;
+        expires 30d;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:9000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}</code></pre>
+
+<h3>14.6 HTTPS配置</h3>
+
+<pre><code class="language-bash"># 安装Certbot
+sudo apt install certbot python3-certbot-nginx
+
+# 一键获取SSL证书
+sudo certbot --nginx -d your-domain.com</code></pre>
+
+<h3>14.7 日志监控（loguru）</h3>
+
+<p><strong>日志级别</strong>：DEBUG → INFO → WARNING → ERROR → CRITICAL</p>
+
+<pre><code class="language-python">from loguru import logger
+import sys
+
+logger.remove()
+
+# 控制台输出（带颜色）
+logger.add(sys.stderr, level="DEBUG", format="...")
+
+# 文件输出（每天一个文件，保留30天，自动压缩）
+logger.add(
+    "logs/app_{time:YYYY-MM-DD}.log",
+    rotation="00:00",
+    retention="30 days",
+    compression="zip",
+    level="INFO",
+    encoding="utf-8"
+)
+
+# 错误日志单独存放
+logger.add("logs/error_{time:YYYY-MM-DD}.log", level="ERROR")</code></pre>
+
+<h3>14.8 生产环境监控清单</h3>
+
+<table>
+<tr><th>监控项</th><th>告警阈值</th></tr>
+<tr><td>API响应时间</td><td>P99 > 3秒告警</td></tr>
+<tr><td>错误率</td><td>5xx > 5%告警</td></tr>
+<tr><td>数据库连接池</td><td>使用率 > 80%告警</td></tr>
+<tr><td>Redis内存</td><td>使用率 > 90%告警</td></tr>
+<tr><td>磁盘空间</td><td>使用率 > 85%告警</td></tr>
+</table>
+
+<div class="danger">
+<strong>⚠️ 生产环境三大坑：</strong><br>
+① <strong>.env文件泄露</strong> — 加入.gitignore，生产环境用环境变量<br>
+② <strong>日志没有轮转</strong> — 配置rotation，否则撑爆磁盘<br>
+③ <strong>数据库没备份</strong> — 每天自动备份：mysqldump | gzip > backup.sql.gz
+</div>
+
+<hr>
+
+<h2>🎉 恭喜完成14章学习！</h2>
+
+<h3>你掌握的核心技能</h3>
+
+<table>
+<tr><th>部分</th><th>核心技能</th></tr>
+<tr><td><strong>基础准备（第1-4章）</strong></td><td>氛围编程概念、开发环境搭建、Claude Code操作、提示词工程</td></tr>
+<tr><td><strong>后端开发（第5-7章）</strong></td><td>数据库设计、FastAPI后端生成、人脸识别系统</td></tr>
+<tr><td><strong>前端开发（第8-11章）</strong></td><td>Vue3前端页面、uni-app小程序、定位打卡核验、UI美化设计</td></tr>
+<tr><td><strong>上线运维（第12-14章）</strong></td><td>联调上线发布、AI辅助测试、Docker部署运维</td></tr>
+</table>
+
+<h3>下一步可以做什么</h3>
+
+<ul>
+<li>完善项目：加数据导出、图表统计、消息推送</li>
+<li>做新项目：用同样方法做其他项目</li>
+<li>学习原理：深入学习古法编程路线的底层原理</li>
+<li>参加比赛：用项目参加"互联网+"、"挑战杯"等大赛</li>
+<li>写进简历："从零到一完成全栈项目"</li>
+</ul>
+
+<div class="tip">
+<strong>💡 最后的建议：</strong>氛围编程让你快速做出项目，但如果想深入理解编程原理，建议同时学习古法编程系列。当你既会"氛围编程"（快速出活），又懂"古法编程"（理解原理），你就是真正的全栈开发者！
+</div>
+
+<hr>
+
+<p style="text-align: center; color: #666; margin-top: 50px;">
+<em>本文档整理自《星际学院 · 氛围编程》14章完整教程<br>
+用于指导AI思政打卡小程序项目开发</em>
+</p>
+
+</body>
+</html>
