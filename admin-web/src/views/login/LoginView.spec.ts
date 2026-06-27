@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+﻿import { mount } from '@vue/test-utils'
 import ElementPlus, { ElMessage } from 'element-plus'
 import { createPinia } from 'pinia'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -10,6 +10,7 @@ import { useAuthStore } from '../../stores/auth'
 describe('LoginView', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    localStorage.clear()
   })
 
   it('renders the login copy for administrators', async () => {
@@ -27,10 +28,13 @@ describe('LoginView', () => {
       },
     })
 
-    expect(wrapper.text()).toContain('AI思政辅助平台')
-    expect(wrapper.text()).toContain('账号')
-    expect(wrapper.text()).toContain('密码')
-    expect(wrapper.text()).toContain('登录')
+    expect(wrapper.text()).toContain('知勤')
+    expect(wrapper.text()).toContain('管理员登录')
+    expect(wrapper.text()).toContain('立即登录')
+
+    const placeholders = wrapper.findAll('.el-input__inner').map((input) => input.attributes('placeholder'))
+    expect(placeholders).toContain('请输入账号')
+    expect(placeholders).toContain('请输入密码')
   })
 
   it('authenticates against the backend admin role', async () => {
@@ -53,11 +57,17 @@ describe('LoginView', () => {
     const authStore = useAuthStore()
     const loginSpy = vi.spyOn(authStore, 'login').mockResolvedValue()
 
-    await wrapper.find('input[placeholder="请输入账号"]').setValue('admin')
-    await wrapper.find('input[placeholder="请输入密码"]').setValue('admin123456')
+    const inputs = wrapper.findAll('.el-input__inner')
+    await inputs[0].setValue('admin')
+    await inputs[1].setValue('123456')
+
+    const captchaComponent = wrapper.findComponent({ name: 'CaptchaImage' })
+    const captchaCode = captchaComponent.emitted('change')?.[0]?.[0] as string
+    await inputs[2].setValue(captchaCode)
+
     await wrapper.find('.login-view__submit').trigger('click')
 
-    expect(loginSpy).toHaveBeenCalledWith('admin', 'admin123456')
+    expect(loginSpy).toHaveBeenCalledWith('admin', '123456')
   })
 
   it('requires an explicit account instead of falling back to admin', async () => {
@@ -81,7 +91,8 @@ describe('LoginView', () => {
     const loginSpy = vi.spyOn(authStore, 'login').mockResolvedValue()
     const messageSpy = vi.spyOn(ElMessage, 'error').mockImplementation(() => undefined as never)
 
-    await wrapper.find('input[placeholder="请输入密码"]').setValue('admin123456')
+    const inputs = wrapper.findAll('.el-input__inner')
+    await inputs[1].setValue('123456')
     await wrapper.find('.login-view__submit').trigger('click')
 
     expect(loginSpy).not.toHaveBeenCalled()
@@ -110,8 +121,14 @@ describe('LoginView', () => {
     vi.spyOn(authStore, 'login').mockRejectedValue(new Error('账号或密码错误'))
     const messageSpy = vi.spyOn(ElMessage, 'error').mockImplementation(() => undefined as never)
 
-    await wrapper.find('input[placeholder="请输入账号"]').setValue('admin')
-    await wrapper.find('input[placeholder="请输入密码"]').setValue('bad-password')
+    const inputs = wrapper.findAll('.el-input__inner')
+    await inputs[0].setValue('admin')
+    await inputs[1].setValue('bad-password')
+
+    const captchaComponent = wrapper.findComponent({ name: 'CaptchaImage' })
+    const captchaCode = captchaComponent.emitted('change')?.[0]?.[0] as string
+    await inputs[2].setValue(captchaCode)
+
     await wrapper.find('.login-view__submit').trigger('click')
 
     expect(messageSpy).toHaveBeenCalledWith('账号或密码错误')

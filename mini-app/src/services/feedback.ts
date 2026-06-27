@@ -62,6 +62,26 @@ export function showSuccess(message: string) {
   uni.showToast({ title: message, icon: 'success' })
 }
 
+export function showCheckinErrorModal(message: string) {
+  logError('签到失败', message)
+
+  if (typeof uni === 'undefined') {
+    return
+  }
+
+  if (typeof uni.showModal === 'function') {
+    uni.showModal({
+      title: '签到失败',
+      content: message,
+      showCancel: false,
+      confirmText: '我知道了',
+    })
+    return
+  }
+
+  uni.showToast({ title: message, icon: 'none' })
+}
+
 export function showError(error: unknown, fallback: string): string {
   const message = errorMessage(error, fallback)
   if (typeof error === 'object' && error !== null && (error as { silent?: unknown }).silent === true) {

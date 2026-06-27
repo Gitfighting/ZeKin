@@ -1,0 +1,25 @@
+meta {
+  name: 06 打卡记录列表
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{base_url}}/api/student/records
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{student_token}}
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("至少一条记录", function() {
+    const body = res.getBody();
+    expect(body.data.total).to.be.at.least(1);
+  });
+}

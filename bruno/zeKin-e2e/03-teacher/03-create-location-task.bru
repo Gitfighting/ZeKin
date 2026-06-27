@@ -1,0 +1,63 @@
+meta {
+  name: 03 创建位置签到任务
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/api/teacher/tasks
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacher_token}}
+}
+
+body:json {
+  {
+    "title": "Bruno-E2E-位置签到",
+    "type_id": 1,
+    "group_ids": [1],
+    "starts_at": "{{starts_at}}",
+    "ends_at": "{{ends_at}}",
+    "schedule_mode": "one_time",
+    "rules_snapshot": {
+      "timeRule": {
+        "mode": "single",
+        "startTime": "08:00",
+        "endTime": "22:00",
+        "allowLate": true,
+        "allowMakeup": true
+      },
+      "verificationRule": {
+        "methods": ["location"],
+        "location": {
+          "placeName": "3号宿舍楼",
+          "longitude": 120.000001,
+          "latitude": 30.000001,
+          "radius": 300
+        }
+      },
+      "reviewRule": { "mode": "exception_only" }
+    }
+  }
+}
+
+script:post-response {
+  const body = res.getBody();
+  if (body?.data?.id) {
+    bru.setEnvVar("task_id", String(body.data.id));
+  }
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("任务创建成功", function() {
+    const body = res.getBody();
+    expect(body.data).to.have.property("id");
+    expect(body.data.schedule_mode).to.equal("one_time");
+  });
+}

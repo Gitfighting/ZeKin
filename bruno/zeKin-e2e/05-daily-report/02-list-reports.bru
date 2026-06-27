@@ -1,0 +1,25 @@
+meta {
+  name: 02 查看我的日报
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/api/student/daily-reports
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{student_token}}
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("包含刚提交的日报", function() {
+    const body = res.getBody();
+    expect(body.data.total).to.be.at.least(1);
+  });
+}

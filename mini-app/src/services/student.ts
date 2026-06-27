@@ -10,6 +10,18 @@ export interface QuickEntry {
   badge?: string
 }
 
+export interface StudentJoinedGroup {
+  id: number
+  name: string
+  inviteCode?: string
+  studentCount: number
+  recentTaskCount?: number
+  teacherId?: number
+  teacherName?: string
+  studentProfileId?: number
+  alreadyMember?: boolean
+}
+
 export interface DynamicField {
   key: string
   label: string
@@ -17,6 +29,19 @@ export interface DynamicField {
   placeholder: string
   required?: boolean
   maxLength?: number
+}
+
+export type CheckinMethod = 'face' | 'location' | 'qr_code' | 'checkin_code' | 'attachment' | 'gesture'
+
+export interface AttachmentRule {
+  required: boolean
+  minTextLength: number
+  maxFileCount: number
+  label: string
+}
+
+export interface GestureRule {
+  presetPattern: string
 }
 
 export interface StudentTask {
@@ -39,6 +64,10 @@ export interface StudentTask {
     tip: string
   }
   dynamicFields: DynamicField[]
+  scheduleMode: 'one_time' | 'recurring'
+  methods: CheckinMethod[]
+  attachmentRule: AttachmentRule
+  gestureRule: GestureRule
 }
 
 export interface StudentDashboard {
@@ -57,12 +86,17 @@ export interface StudentTaskQuery {
 
 export interface CheckinPayload {
   taskId: string
-  longitude: number
-  latitude: number
+  longitude?: number
+  latitude?: number
+  checkinCode?: string
   verificationCode?: string
   formData: Record<string, string>
   faceImage?: string
   photoUrls?: string[]
+  qrPayload?: string
+  attachment?: { text?: string; files?: string[] }
+  gesture?: { pattern_id?: string; points?: number[][] }
+  occurrenceDate?: string
 }
 
 export interface CheckinResult {
@@ -76,15 +110,29 @@ export interface CheckinResult {
   locationLabel: string
 }
 
+export type AttendanceStatusKey = 'present' | 'late' | 'early_leave' | 'absent' | 'leave'
+
+export const ATTENDANCE_LABELS: Record<AttendanceStatusKey, string> = {
+  present: '签到',
+  late: '迟到',
+  early_leave: '早退',
+  absent: '未签到',
+  leave: '请假',
+}
+
 export interface StudentRecord {
   id: string
   taskTitle: string
   type: string
   status: ResultState
+  attendanceStatus: AttendanceStatusKey
+  occurrenceDate: string
   submittedAt: string
   reviewComment?: string
   locationLabel: string
 }
+
+export type RecordFilterKey = 'all' | AttendanceStatusKey
 
 export interface AppealPayload {
   recordId: string
@@ -151,7 +199,11 @@ interface BackendStudentRecord {
   task_title?: string
   type?: string
   status?: string
+  attendance_status?: string
+  attendanceStatus?: string
   submitted_at?: string
+  occurrence_date?: string
+  manual_status?: string | null
   need_review?: boolean
   review_comment?: string
   location_label?: string
@@ -161,9 +213,16 @@ interface BackendMessage {
   id: number | string
   title?: string
   content?: string
-  read_status?: boolean
+  read_status?: string | boolean
   read?: boolean
   created_at?: string
+}
+
+interface BackendMessagesResponse {
+  items?: BackendMessage[]
+  total?: number
+  unread_count?: number
+  unreadCount?: number
 }
 
 interface BackendStudentProfile {
@@ -318,21 +377,76 @@ function mapDynamicField(value: unknown, index: number): DynamicField {
   }
 }
 
+const METHOD_LABELS: Record<CheckinMethod, string> = {
+  face: '完成人脸核验',
+  location: '上传当前位置',
+  qr_code: '扫描签到二维码',
+  checkin_code: '输入签到码',
+  attachment: '上传日志/附件',
+  gesture: '绘制签到手势',
+}
+
+function resolveMethods(rules: Record<string, unknown>): CheckinMethod[] {
+  const vr = readObject(rules.verificationRule)
+  const known: CheckinMethod[] = ['face', 'location', 'qr_code', 'checkin_code', 'attachment', 'gesture']
+  const declared = readArray(vr.methods)
+    .map((item) => String(item))
+    .filter((item): item is CheckinMethod => known.includes(item as CheckinMethod))
+
+  if (declared.length > 0) {
+    const order = readArray(vr.order).map((item) => String(item))
+    const ordered = order.filter((item): item is CheckinMethod => declared.includes(item as CheckinMethod))
+    declared.forEach((item) => {
+      if (!ordered.includes(item)) {
+        ordered.push(item)
+      }
+    })
+    // 兼容旧 faceRule.enabled
+    if (readObject(rules.faceRule).enabled && !ordered.includes('face')) {
+      ordered.push('face')
+    }
+    return ordered
+  }
+
+  // 旧结构推断
+  const legacy: CheckinMethod[] = []
+  if (readObject(rules.locationRule).mode !== 'none' && Object.keys(readObject(rules.locationRule)).length > 0) {
+    legacy.push('location')
+  }
+  if (readObject(rules.faceRule).enabled) {
+    legacy.push('face')
+  }
+  return legacy
+}
+
 function mapStudentTask(raw: BackendStudentTask): StudentTask {
   const rules = readObject(raw.rules_snapshot)
-  const locationRule = readObject(rules.locationRule)
+  const vr = readObject(rules.verificationRule)
+  // 位置配置：新结构优先 verificationRule.location，回退 locationRule
+  const locationRule = Object.keys(readObject(vr.location)).length
+    ? readObject(vr.location)
+    : readObject(rules.locationRule)
   const submitRule = readObject(rules.submitRule)
-  const faceRule = readObject(rules.faceRule)
+  const faceRule = Object.keys(readObject(vr.face)).length
+    ? readObject(vr.face)
+    : readObject(rules.faceRule)
+  const attachmentConfig = readObject(vr.attachment)
+  const gestureConfig = readObject(vr.gesture)
   const dynamicFields = readArray(submitRule.fields).map(mapDynamicField)
+  const methods = resolveMethods(rules)
   const status = normalizeTaskStatus(raw.status)
   const locationName = readString(locationRule.placeName, '指定地点')
   const radius = readNumber(locationRule.radius)
   const timeWindow = [formatTime(raw.starts_at), formatTime(raw.ends_at)].filter(Boolean).join(' - ')
   const requirements = [
-    '上传当前位置',
+    ...(methods.length ? methods.map((method) => METHOD_LABELS[method]) : ['上传当前位置']),
     ...dynamicFields.map((field) => field.label),
-    ...(faceRule.enabled ? ['完成人脸核验'] : []),
   ]
+  const faceEnabled = methods.includes('face') || Boolean(faceRule.enabled)
+  const scheduleMode = readString(
+    (raw as Record<string, unknown>).schedule_mode as string,
+    'one_time',
+  ) === 'recurring' ? 'recurring' : 'one_time'
 
   return {
     id: String(raw.id),
@@ -350,10 +464,21 @@ function mapStudentTask(raw: BackendStudentTask): StudentTask {
     targetRadius: radius,
     requirements,
     faceRule: {
-      enabled: Boolean(faceRule.enabled),
-      tip: Boolean(faceRule.enabled) ? '请按提示完成人脸核验' : '本次任务无需人脸核验',
+      enabled: faceEnabled,
+      tip: faceEnabled ? '请按提示完成人脸核验' : '本次任务无需人脸核验',
     },
     dynamicFields,
+    scheduleMode,
+    methods,
+    attachmentRule: {
+      required: Boolean(attachmentConfig.required),
+      minTextLength: readNumber(attachmentConfig.minTextLength) ?? 0,
+      maxFileCount: readNumber(attachmentConfig.maxFileCount) ?? 3,
+      label: readString(attachmentConfig.label, '日志/附件'),
+    },
+    gestureRule: {
+      presetPattern: readString(gestureConfig.presetPattern, ''),
+    },
   }
 }
 
@@ -380,8 +505,39 @@ function mapCheckinResult(raw: BackendCheckinResult, payload: CheckinPayload): C
       ? raw.exception_types.map((item) => `异常类型：${item}`)
       : ['结果已同步到打卡记录'],
     submittedAt: formatDateTime(raw.submitted_at) || formatNow(),
-    locationLabel: readString(raw.location_label, `${payload.latitude}, ${payload.longitude}`),
+    locationLabel: readString(
+      raw.location_label,
+      payload.latitude !== undefined && payload.longitude !== undefined
+        ? `${payload.latitude}, ${payload.longitude}`
+        : '已提交',
+    ),
   }
+}
+
+function isAttendanceStatus(value: string): value is AttendanceStatusKey {
+  return value in ATTENDANCE_LABELS
+}
+
+function mapAttendanceStatus(raw: BackendStudentRecord): StudentRecord['attendanceStatus'] {
+  const fromApi = raw.attendanceStatus ?? raw.attendance_status
+  if (fromApi && isAttendanceStatus(fromApi)) {
+    return fromApi
+  }
+
+  if (raw.manual_status && isAttendanceStatus(raw.manual_status)) {
+    return raw.manual_status
+  }
+
+  if (raw.status === 'late') {
+    return 'late'
+  }
+  if (raw.status === 'normal') {
+    return 'present'
+  }
+  if (raw.status === 'exception' || raw.status === 'rejected') {
+    return 'absent'
+  }
+  return 'absent'
 }
 
 function mapStudentRecord(raw: BackendStudentRecord): StudentRecord {
@@ -390,6 +546,8 @@ function mapStudentRecord(raw: BackendStudentRecord): StudentRecord {
     taskTitle: readString(raw.task_title, raw.task_id ? `任务 #${raw.task_id}` : '打卡任务'),
     type: readString(raw.type, '打卡记录'),
     status: normalizeRecordState(raw.status, Boolean(raw.need_review)),
+    attendanceStatus: mapAttendanceStatus(raw),
+    occurrenceDate: readString(raw.occurrence_date, raw.submitted_at?.slice(0, 10) ?? ''),
     submittedAt: formatDateTime(raw.submitted_at),
     reviewComment: readString(raw.review_comment, raw.need_review ? '等待辅导员复核' : undefined),
     locationLabel: readString(raw.location_label, '已提交定位'),
@@ -407,6 +565,13 @@ function mapMessageType(message: BackendMessage): MessageItem['type'] {
   return 'reminder'
 }
 
+function isMessageRead(raw: BackendMessage): boolean {
+  if (typeof raw.read_status === 'string') {
+    return raw.read_status === 'read'
+  }
+  return Boolean(raw.read_status ?? raw.read)
+}
+
 function mapMessage(raw: BackendMessage): MessageItem {
   return {
     id: String(raw.id),
@@ -414,7 +579,7 @@ function mapMessage(raw: BackendMessage): MessageItem {
     title: readString(raw.title, '系统消息'),
     content: readString(raw.content),
     time: formatDateTime(raw.created_at),
-    read: Boolean(raw.read_status ?? raw.read),
+    read: isMessageRead(raw),
   }
 }
 
@@ -465,6 +630,7 @@ export async function getStudentDashboard(): Promise<StudentDashboard> {
     alerts: exceptionCount ? [`你有 ${exceptionCount} 条异常记录待处理`] : [],
     quickEntries: [
       { label: '今日任务', path: '/pages/student/tasks', ...(pendingCount ? { badge: String(pendingCount) } : {}) },
+      { label: '加入班级', path: '/pages/student/join-class' },
       { label: '打卡记录', path: '/pages/student/records' },
       { label: '异常申诉', path: '/pages/student/appeal' },
       { label: '个人中心', path: '/pages/student/profile' },
@@ -494,14 +660,19 @@ export async function submitCheckin(payload: CheckinPayload): Promise<CheckinRes
     ...payload.formData,
     ...(payload.photoUrls?.length ? { photo_urls: payload.photoUrls } : {}),
   }
+  const checkinCode = payload.checkinCode ?? payload.verificationCode
   const response = await request<ApiResponse<BackendCheckinResult>>({
     url: `/student/tasks/${payload.taskId}/checkin`,
     method: 'POST',
     data: {
-      longitude: payload.longitude,
-      latitude: payload.latitude,
-      dynamic_code: payload.verificationCode ?? '',
+      ...(payload.longitude !== undefined ? { longitude: payload.longitude } : {}),
+      ...(payload.latitude !== undefined ? { latitude: payload.latitude } : {}),
+      ...(checkinCode ? { checkin_code: checkinCode, dynamic_code: checkinCode } : {}),
       ...(payload.faceImage ? { face_image: payload.faceImage } : {}),
+      ...(payload.qrPayload ? { qr_payload: payload.qrPayload } : {}),
+      ...(payload.attachment ? { attachment: payload.attachment } : {}),
+      ...(payload.gesture ? { gesture: payload.gesture } : {}),
+      ...(payload.occurrenceDate ? { occurrence_date: payload.occurrenceDate } : {}),
       submit_payload: submitPayload,
     },
   })
@@ -531,12 +702,26 @@ export async function submitAppeal(payload: AppealPayload): Promise<{ success: b
   }
 }
 
-export async function getStudentMessages(): Promise<MessageItem[]> {
-  const response = await request<ApiResponse<BackendList<BackendMessage>>>({
+export async function getStudentMessages(): Promise<{ messages: MessageItem[]; unreadCount: number }> {
+  const response = await request<ApiResponse<BackendMessagesResponse>>({
     url: '/student/messages',
     method: 'GET',
   })
-  return unwrapItems(response).map(mapMessage)
+  const data = unwrapData(response)
+  const messages = unwrapItems(response).map(mapMessage)
+  const unreadCount =
+    data.unreadCount ??
+    data.unread_count ??
+    messages.filter((item) => !item.read).length
+  return { messages, unreadCount }
+}
+
+export async function getStudentMessageDetail(messageId: string): Promise<MessageItem> {
+  const response = await request<ApiResponse<BackendMessage>>({
+    url: `/student/messages/${messageId}`,
+    method: 'GET',
+  })
+  return mapMessage(unwrapData(response))
 }
 
 export async function getStudentProfile(): Promise<StudentProfile> {
@@ -553,4 +738,132 @@ export async function getGrowthSummary(): Promise<GrowthSummary> {
     method: 'GET',
   })
   return mapGrowthSummary(unwrapData(response))
+}
+
+// ─── 日报接口 ─────────────────────────────────────────────────────────
+
+export interface DailyReportPayload {
+  task_id?: number
+  report_date: string  // YYYY-MM-DD
+  content: string
+  work_hours?: number
+  mood?: 'good' | 'normal' | 'bad'
+  photo_urls?: string[]
+}
+
+export interface DailyReportItem {
+  id: string
+  report_date: string
+  content: string
+  work_hours: number | null
+  mood: string | null
+  status: string
+  teacher_comment: string | null
+  created_at: string
+}
+
+interface BackendDailyReport {
+  id: number | string
+  report_date?: string
+  content?: string
+  work_hours?: number | null
+  mood?: string | null
+  status?: string
+  teacher_comment?: string | null
+  created_at?: string | null
+}
+
+function mapDailyReport(raw: BackendDailyReport): DailyReportItem {
+  return {
+    id: String(raw.id),
+    report_date: readString(raw.report_date),
+    content: readString(raw.content),
+    work_hours: typeof raw.work_hours === 'number' ? raw.work_hours : null,
+    mood: raw.mood ?? null,
+    status: readString(raw.status, 'submitted'),
+    teacher_comment: raw.teacher_comment ?? null,
+    created_at: formatDateTime(raw.created_at),
+  }
+}
+
+export async function submitDailyReport(payload: DailyReportPayload): Promise<DailyReportItem> {
+  const response = await request<ApiResponse<BackendDailyReport>>({
+    url: '/student/daily-reports',
+    method: 'POST',
+    data: payload,
+  })
+  return mapDailyReport(unwrapData(response))
+}
+
+export async function getDailyReports(): Promise<DailyReportItem[]> {
+  const response = await request<ApiResponse<BackendList<BackendDailyReport>>>({
+    url: '/student/daily-reports',
+    method: 'GET',
+  })
+  return unwrapItems(response).map(mapDailyReport)
+}
+
+interface BackendJoinGroupResponse {
+  group?: {
+    id: number
+    name?: string
+    invite_code?: string
+    inviteCode?: string
+    student_count?: number
+    studentCount?: number
+  }
+  already_member?: boolean
+  alreadyMember?: boolean
+}
+
+interface BackendStudentGroup {
+  id: number
+  name?: string
+  student_count?: number
+  studentCount?: number
+  recent_task_count?: number
+  recentTaskCount?: number
+  teacher_id?: number
+  teacherId?: number
+  teacher_name?: string
+  teacherName?: string
+  student_profile_id?: number
+  studentProfileId?: number
+}
+
+function mapStudentGroup(raw: BackendStudentGroup): StudentJoinedGroup {
+  return {
+    id: raw.id,
+    name: readString(raw.name, '班级'),
+    studentCount: raw.studentCount ?? raw.student_count ?? 0,
+    recentTaskCount: raw.recentTaskCount ?? raw.recent_task_count ?? 0,
+    teacherId: raw.teacherId ?? raw.teacher_id,
+    teacherName: readString(raw.teacherName ?? raw.teacher_name, ''),
+    studentProfileId: raw.studentProfileId ?? raw.student_profile_id,
+  }
+}
+
+export async function getStudentJoinedGroups(): Promise<StudentJoinedGroup[]> {
+  const response = await request<ApiResponse<BackendList<BackendStudentGroup>>>({
+    url: '/student/groups',
+    method: 'GET',
+  })
+  return unwrapItems(response).map(mapStudentGroup)
+}
+
+export async function joinClassByInviteCode(inviteCode: string): Promise<StudentJoinedGroup> {
+  const response = await request<ApiResponse<BackendJoinGroupResponse>>({
+    url: '/student/groups/join',
+    method: 'POST',
+    data: { invite_code: inviteCode.trim().toUpperCase() },
+  })
+  const data = unwrapData(response)
+  const group = data.group ?? { id: 0 }
+  return {
+    id: group.id,
+    name: readString(group.name, '班级'),
+    inviteCode: group.inviteCode ?? group.invite_code,
+    studentCount: group.studentCount ?? group.student_count ?? 0,
+    alreadyMember: Boolean(data.alreadyMember ?? data.already_member),
+  }
 }

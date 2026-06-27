@@ -7,6 +7,12 @@
 			}
 		},
 		{
+			"path": "pages/auth/register",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/student/home",
 			"style": {
 				"navigationStyle": "custom"
@@ -43,6 +49,12 @@
 			}
 		},
 		{
+			"path": "pages/student/message-detail",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/student/profile",
 			"style": {
 				"navigationStyle": "custom"
@@ -51,7 +63,7 @@
 		{
 			"path": "pages/student/records",
 			"style": {
-				"navigationBarTitleText": "打卡记录"
+				"navigationStyle": "custom"
 			}
 		},
 		{
@@ -61,15 +73,27 @@
 			}
 		},
 		{
+			"path": "pages/student/join-class",
+			"style": {
+				"navigationBarTitleText": "加入班群"
+			}
+		},
+		{
+			"path": "pages/student/my-classes",
+			"style": {
+				"navigationBarTitleText": "我的班级"
+			}
+		},
+		{
 			"path": "pages/teacher/home",
 			"style": {
-				"navigationBarTitleText": "教师首页"
+				"navigationStyle": "custom"
 			}
 		},
 		{
 			"path": "pages/teacher/tasks",
 			"style": {
-				"navigationBarTitleText": "任务列表"
+				"navigationStyle": "custom"
 			}
 		},
 		{
@@ -85,6 +109,12 @@
 			}
 		},
 		{
+			"path": "pages/teacher/qr-projection",
+			"style": {
+				"navigationBarTitleText": "二维码投屏"
+			}
+		},
+		{
 			"path": "pages/teacher/exceptions",
 			"style": {
 				"navigationBarTitleText": "异常审核"
@@ -93,13 +123,25 @@
 		{
 			"path": "pages/teacher/groups",
 			"style": {
-				"navigationBarTitleText": "班级管理"
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/teacher/group-create",
+			"style": {
+				"navigationBarTitleText": "创建班级"
 			}
 		},
 		{
 			"path": "pages/teacher/group-detail",
 			"style": {
 				"navigationBarTitleText": "班级详情"
+			}
+		},
+		{
+			"path": "pages/teacher/risk-students",
+			"style": {
+				"navigationBarTitleText": "风险学生"
 			}
 		},
 		{
@@ -116,33 +158,42 @@
 		}
 	],
 	"tabBar": {
+		"custom": true,
 		"color": "#667085",
 		"selectedColor": "#1677FF",
-		"backgroundColor": "#FFFFFF",
+		"backgroundColor": "#FDFDFD",
 		"borderStyle": "white",
 		"list": [
 			{
 				"pagePath": "pages/student/home",
-				"text": "首页"
+				"text": "首页",
+				"iconPath": "static/tabbar/home.png",
+				"selectedIconPath": "static/tabbar/home-active.png"
 			},
 			{
 				"pagePath": "pages/student/tasks",
-				"text": "打卡任务"
+				"text": "打卡任务",
+				"iconPath": "static/tabbar/tasks.png",
+				"selectedIconPath": "static/tabbar/tasks-active.png"
 			},
 			{
 				"pagePath": "pages/student/messages",
-				"text": "消息"
+				"text": "消息",
+				"iconPath": "static/tabbar/messages.png",
+				"selectedIconPath": "static/tabbar/messages-active.png"
 			},
 			{
 				"pagePath": "pages/student/profile",
-				"text": "我的"
+				"text": "我的",
+				"iconPath": "static/tabbar/profile.png",
+				"selectedIconPath": "static/tabbar/profile-active.png"
 			}
 		]
 	},
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
-		"navigationBarTitleText": "智慧考勤",
-		"navigationBarBackgroundColor": "#F3F8FF",
-		"backgroundColor": "#F3F8FF"
+		"navigationBarTitleText": "知勤",
+		"navigationBarBackgroundColor": "#FDFDFD",
+		"backgroundColor": "#FDFDFD"
 	}
 }

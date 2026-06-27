@@ -5,6 +5,26 @@ export type TeacherTaskStatus = TaskStatus | 'pending_review'
 export type TeacherExceptionStatus = 'pending' | 'approved' | 'rejected' | 'need_more'
 export type TeacherTaskTemplate = string
 export type TeacherTaskType = 'attendance' | 'photo' | 'location' | 'custom'
+export type CheckinMethod = 'face' | 'location' | 'qr_code' | 'checkin_code' | 'attachment' | 'gesture'
+export type ScheduleMode = 'one_time' | 'recurring'
+
+export interface MethodConfig {
+  face?: { tolerance?: number }
+  location?: { placeName?: string; longitude?: number; latitude?: number; radius?: number }
+  qr_code?: { expireSeconds?: number; refreshIntervalSeconds?: number }
+  checkin_code?: { code?: string }
+  attachment?: { required?: boolean; minTextLength?: number; label?: string }
+  gesture?: { presetPattern?: string }
+}
+
+export interface TaskQrCode {
+  taskId: number
+  qrToken: string
+  qrImage: string
+  expiresAt: number
+  expireSeconds: number
+  refreshIntervalSeconds: number
+}
 
 export interface TeacherDashboard {
   todayTasks: number
@@ -19,6 +39,7 @@ export interface TeacherGroup {
   studentCount: number
   recentTaskCount: number
   courseName?: string
+  inviteCode?: string
 }
 
 export interface TeacherTask {
@@ -39,7 +60,18 @@ export interface TeacherTask {
 export interface TeacherTaskStudent {
   id: number
   name: string
-  status: 'submitted' | 'missing' | 'pending_review' | 'approved' | 'rejected'
+  status:
+    | 'submitted'
+    | 'missing'
+    | 'pending_review'
+    | 'approved'
+    | 'rejected'
+    | 'present'
+    | 'late'
+    | 'early_leave'
+    | 'absent'
+    | 'leave'
+  manualStatus?: AttendanceStatus | null
   submittedAt?: string
 }
 
@@ -54,10 +86,19 @@ export interface TeacherException {
   comment?: string
 }
 
+export interface TeacherRiskStudent {
+  id: number
+  name: string
+  groupName: string
+  missCount: number
+}
+
 export interface TeacherTaskDetail {
   task: TeacherTask & {
     description?: string
     published: boolean
+    checkinCode?: string
+    methods?: CheckinMethod[]
   }
   students: TeacherTaskStudent[]
   exceptions: TeacherException[]
@@ -71,6 +112,9 @@ export interface CreateTeacherTaskPayload {
   templateName: TeacherTaskTemplate
   startsAt: string
   endsAt: string
+  methods?: CheckinMethod[]
+  methodConfig?: MethodConfig
+  scheduleMode?: ScheduleMode
   advancedRules?: {
     allowLateMinutes?: number
     needPhoto?: boolean
@@ -105,6 +149,8 @@ interface BackendTeacherGroup {
   id: number
   name?: string
   group_type?: string
+  invite_code?: string
+  inviteCode?: string
   student_count?: number
   studentCount?: number
   recent_task_count?: number
@@ -162,6 +208,8 @@ interface BackendTeacherTaskStudent {
   id: number
   name?: string
   status?: string
+  manual_status?: string | null
+  manualStatus?: string | null
   submitted_at?: string | null
   submittedAt?: string | null
 }
@@ -310,6 +358,7 @@ function mapTeacherGroup(raw: BackendTeacherGroup): TeacherGroup {
     studentCount: raw.studentCount ?? raw.student_count ?? 0,
     recentTaskCount: raw.recentTaskCount ?? raw.recent_task_count ?? 0,
     courseName: raw.courseName ?? raw.course_name ?? raw.group_type,
+    inviteCode: raw.inviteCode ?? raw.invite_code,
   }
 }
 
@@ -361,6 +410,11 @@ function normalizeStudentStatus(status?: string): TeacherTaskStudent['status'] {
     case 'pending_review':
     case 'approved':
     case 'rejected':
+    case 'present':
+    case 'late':
+    case 'early_leave':
+    case 'absent':
+    case 'leave':
       return status
     default:
       return 'missing'
@@ -368,31 +422,110 @@ function normalizeStudentStatus(status?: string): TeacherTaskStudent['status'] {
 }
 
 function mapTeacherTaskStudent(raw: BackendTeacherTaskStudent): TeacherTaskStudent {
+  const manual = raw.manualStatus ?? raw.manual_status ?? null
   return {
     id: raw.id,
     name: readString(raw.name, `学生 ${raw.id}`),
     status: normalizeStudentStatus(raw.status),
+    manualStatus: (manual as TeacherTaskStudent['manualStatus']) ?? null,
     submittedAt: formatDateTime(raw.submittedAt ?? raw.submitted_at),
   }
 }
 
 function mapTaskDetail(raw: BackendTeacherTaskDetail): TeacherTaskDetail {
   const rawTask = raw.task ?? raw
+  const rules = readObject(rawTask.rules_snapshot)
+  const vr = readObject(rules.verificationRule)
+  const checkinCfg = readObject(vr.checkin_code)
+  const knownMethods: CheckinMethod[] = ['face', 'location', 'qr_code', 'checkin_code', 'attachment', 'gesture']
+  const methods = readArray(vr.methods)
+    .map((item) => String(item))
+    .filter((item): item is CheckinMethod => knownMethods.includes(item as CheckinMethod))
   const task = mapTeacherTask(rawTask)
   return {
     task: {
       ...task,
-      description: readString(rawTask.description, readString(readObject(rawTask.rules_snapshot).description)),
+      description: readString(rawTask.description, readString(rules.description)),
       published: Boolean(rawTask.published ?? rawTask.status !== 'draft'),
+      checkinCode: readString(checkinCfg.code) || undefined,
+      methods: methods.length ? methods : undefined,
     },
     students: (raw.students ?? []).map(mapTeacherTaskStudent),
     exceptions: (raw.exceptions ?? []).map(mapTeacherException),
   }
 }
 
+export function generateCheckinCode(length = 6): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  let code = ''
+  for (let i = 0; i < length; i += 1) {
+    code += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return code
+}
+
+function buildVerificationRule(methods: CheckinMethod[], cfg: MethodConfig) {
+  const verificationRule: Record<string, unknown> = {
+    methods,
+    order: methods,
+  }
+  if (methods.includes('face')) {
+    verificationRule.face = {
+      tolerance: cfg.face?.tolerance ?? 0.6,
+      detectionModel: 'hog',
+    }
+  }
+  if (methods.includes('location')) {
+    verificationRule.location = {
+      placeName: cfg.location?.placeName ?? '指定签到地点',
+      longitude: cfg.location?.longitude ?? 0,
+      latitude: cfg.location?.latitude ?? 0,
+      radius: cfg.location?.radius ?? 300,
+    }
+  }
+  if (methods.includes('qr_code')) {
+    verificationRule.qr_code = {
+      refreshIntervalSeconds: cfg.qr_code?.refreshIntervalSeconds ?? 60,
+      expireSeconds: cfg.qr_code?.expireSeconds ?? 120,
+      allowReuse: false,
+    }
+  }
+  if (methods.includes('checkin_code')) {
+    const rawCode = cfg.checkin_code?.code?.trim()
+    verificationRule.checkin_code = {
+      code: (rawCode || generateCheckinCode(6)).toUpperCase(),
+      caseSensitive: false,
+    }
+  }
+  if (methods.includes('attachment')) {
+    verificationRule.attachment = {
+      required: cfg.attachment?.required ?? true,
+      acceptTypes: ['text', 'image'],
+      minTextLength: cfg.attachment?.minTextLength ?? 10,
+      maxFileCount: 3,
+      maxFileSizeMb: 10,
+      label: cfg.attachment?.label ?? '今日工作日志',
+    }
+  }
+  if (methods.includes('gesture')) {
+    verificationRule.gesture = {
+      mode: 'preset',
+      presetPattern: cfg.gesture?.presetPattern ?? 'Z',
+      tolerance: 0.15,
+      challengeEnabled: false,
+    }
+  }
+  return verificationRule
+}
+
 function buildRulesSnapshot(payload: CreateTeacherTaskPayload) {
   const rules = payload.advancedRules ?? {}
   const needsPhoto = Boolean(rules.needPhoto)
+  const cfg = payload.methodConfig ?? {}
+  const methods: CheckinMethod[] = payload.methods?.length
+    ? payload.methods
+    : (needsPhoto ? ['location', 'face'] : ['location'])
+  const locationCfg = cfg.location ?? {}
 
   return {
     templateName: payload.templateName,
@@ -408,16 +541,14 @@ function buildRulesSnapshot(payload: CreateTeacherTaskPayload) {
       makeupNeedReview: true,
     },
     locationRule: {
-      mode: 'fixed_area',
-      placeName: '指定签到地点',
-      longitude: 0,
-      latitude: 0,
-      radius: 300,
+      mode: methods.includes('location') ? 'fixed_area' : 'none',
+      placeName: locationCfg.placeName ?? '指定签到地点',
+      longitude: locationCfg.longitude ?? 0,
+      latitude: locationCfg.latitude ?? 0,
+      radius: locationCfg.radius ?? 300,
       allowExceptionSubmit: true,
     },
-    verificationRule: {
-      methods: needsPhoto ? ['location', 'photo'] : ['location'],
-    },
+    verificationRule: buildVerificationRule(methods, cfg),
     submitRule: {
       fields: [
         {
@@ -439,8 +570,8 @@ function buildRulesSnapshot(payload: CreateTeacherTaskPayload) {
       notifyTeacherAfterEnd: true,
     },
     faceRule: {
-      enabled: needsPhoto,
-      provider: 'placeholder',
+      enabled: methods.includes('face'),
+      provider: 'face_recognition',
     },
   }
 }
@@ -477,6 +608,50 @@ export function getTeacherGroups() {
   }).then((items) => items.map(mapTeacherGroup))
 }
 
+export function createTeacherGroup(name: string) {
+  return requestData<BackendTeacherGroup>({
+    url: '/teacher/groups',
+    method: 'POST',
+    data: { name },
+  }).then(mapTeacherGroup)
+}
+
+interface BackendTeacherGroupDetail {
+  group?: BackendTeacherGroup
+  stats?: {
+    attendance_rate?: number
+    attendanceRate?: number
+    exception_rate?: number
+    exceptionRate?: number
+    pending_review_count?: number
+    pendingReviewCount?: number
+  }
+  students?: BackendTeacherTaskStudent[]
+  tasks?: BackendTeacherTask[]
+}
+
+export function getTeacherGroupDetail(groupId: number): Promise<TeacherGroupDetail> {
+  return requestData<BackendTeacherGroupDetail>({
+    url: `/teacher/groups/${groupId}`,
+    method: 'GET',
+  }).then((data) => ({
+    group: mapTeacherGroup(data.group ?? { id: groupId }),
+    stats: {
+      attendanceRate: readNumber(data.stats?.attendanceRate ?? data.stats?.attendance_rate),
+      exceptionRate: readNumber(data.stats?.exceptionRate ?? data.stats?.exception_rate),
+      pendingReviewCount: readNumber(
+        data.stats?.pendingReviewCount ?? data.stats?.pending_review_count,
+      ),
+    },
+    students: (data.students ?? []).map((student) => ({
+      id: student.id,
+      name: readString(student.name, `学生 ${student.id}`),
+      status: (readString(student.status, 'joined') as TeacherTaskStudent['status']),
+    })),
+    tasks: (data.tasks ?? []).map(mapTeacherTask),
+  }))
+}
+
 export function getTeacherTasks(status?: TeacherTaskStatus) {
   const search = status ? `?status=${encodeURIComponent(status)}` : ''
 
@@ -487,6 +662,7 @@ export function getTeacherTasks(status?: TeacherTaskStatus) {
 }
 
 export function createTeacherTask(payload: CreateTeacherTaskPayload) {
+  const scheduleMode: ScheduleMode = payload.scheduleMode ?? 'one_time'
   return requestData<BackendTeacherTask>({
     url: '/teacher/tasks',
     method: 'POST',
@@ -498,9 +674,60 @@ export function createTeacherTask(payload: CreateTeacherTaskPayload) {
       group_ids: payload.groupIds,
       starts_at: payload.startsAt,
       ends_at: payload.endsAt,
+      schedule_mode: scheduleMode,
+      ...(scheduleMode === 'recurring' ? { recurrence_rule: 'FREQ=DAILY' } : {}),
       rules_snapshot: buildRulesSnapshot(payload),
     },
   }).then(mapTeacherTask)
+}
+
+interface BackendTaskQrCode {
+  task_id?: number
+  qr_token?: string
+  qr_image?: string
+  expires_at?: number
+  expire_seconds?: number
+  refresh_interval_seconds?: number
+}
+
+function mapTaskQrCode(raw: BackendTaskQrCode, taskId: number): TaskQrCode {
+  return {
+    taskId: raw.task_id ?? taskId,
+    qrToken: readString(raw.qr_token),
+    qrImage: readString(raw.qr_image),
+    expiresAt: readNumber(raw.expires_at),
+    expireSeconds: readNumber(raw.expire_seconds, 120),
+    refreshIntervalSeconds: readNumber(raw.refresh_interval_seconds, 60),
+  }
+}
+
+export function getTaskQrCode(id: number) {
+  return requestData<BackendTaskQrCode>({
+    url: `/teacher/tasks/${id}/qr-code`,
+    method: 'GET',
+  }).then((data) => mapTaskQrCode(data, id))
+}
+
+export function refreshTaskQrCode(id: number) {
+  return requestData<BackendTaskQrCode>({
+    url: `/teacher/tasks/${id}/qr-code/refresh`,
+    method: 'POST',
+  }).then((data) => mapTaskQrCode(data, id))
+}
+
+export type AttendanceStatus = 'present' | 'late' | 'early_leave' | 'absent' | 'leave'
+
+export function setStudentAttendance(
+  taskId: number,
+  studentId: number,
+  status: AttendanceStatus,
+  remark?: string,
+) {
+  return requestData<{ task_id: number; student_id: number; manual_status: string; status: string }>({
+    url: `/teacher/tasks/${taskId}/students/${studentId}/attendance`,
+    method: 'POST',
+    data: { status, remark: remark ?? '' },
+  })
 }
 
 export function getTeacherTaskDetail(id: number) {
@@ -529,6 +756,42 @@ export function getTeacherExceptions() {
     url: '/teacher/exceptions',
     method: 'GET',
   }).then((items) => items.map(mapTeacherException))
+}
+
+export async function getTeacherRiskStudents(): Promise<TeacherRiskStudent[]> {
+  const counter = new Map<number, TeacherRiskStudent>()
+
+  function addMiss(id: number, name: string, groupName: string, count = 1) {
+    const existing = counter.get(id) ?? { id, name, groupName, missCount: 0 }
+    existing.missCount += count
+    existing.name = name
+    existing.groupName = groupName
+    counter.set(id, existing)
+  }
+
+  const tasks = await getTeacherTasks()
+  const trackedTasks = tasks.filter((task) =>
+    ['in_progress', 'ended', 'pending_review'].includes(task.status),
+  )
+
+  await Promise.all(
+    trackedTasks.slice(0, 20).map(async (task) => {
+      try {
+        const detail = await getTeacherTaskDetail(task.id)
+        for (const student of detail.students) {
+          if (student.status === 'missing' || student.status === 'absent') {
+            addMiss(student.id, student.name, task.groupName, 1)
+          }
+        }
+      } catch {
+        // 单个任务失败不影响整体统计
+      }
+    }),
+  )
+
+  return [...counter.values()]
+    .filter((item) => item.missCount > 0)
+    .sort((a, b) => b.missCount - a.missCount)
 }
 
 export function reviewTeacherException(id: number, payload: ReviewTeacherExceptionPayload) {

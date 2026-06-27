@@ -1,0 +1,27 @@
+meta {
+  name: 02 学生列表
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/api/admin/students
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("包含演示学生", function() {
+    const body = res.getBody();
+    expect(body.data.total).to.be.at.least(1);
+    const nos = body.data.items.map((s) => s.student_no);
+    expect(nos).to.include("20260001");
+  });
+}

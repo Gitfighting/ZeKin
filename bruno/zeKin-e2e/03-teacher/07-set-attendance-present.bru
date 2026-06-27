@@ -1,0 +1,32 @@
+meta {
+  name: 07 手动改回签到
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{base_url}}/api/teacher/tasks/{{task_id}}/students/{{student_profile_id}}/attendance
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacher_token}}
+}
+
+body:json {
+  {
+    "status": "present",
+    "remark": "Bruno 补签"
+  }
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("考勤已更新为签到", function() {
+    const body = res.getBody();
+    expect(body.data.manual_status).to.equal("present");
+  });
+}

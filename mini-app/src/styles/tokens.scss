@@ -8,7 +8,23 @@ $danger: #f04438;
 $text-primary: #101828;
 $text-secondary: #667085;
 $text-muted: #98a2b3;
+$letter-spacing: 1px;
 $border-light: #d8e8ff;
-$page-bg: #f3f8ff;
-$card-bg: #ffffff;
-$mobile-gradient: linear-gradient(180deg, #0f8bff 0%, #38b6ff 48%, #f3f8ff 100%);
+$page-bg: #fdfdfd;
+$card-bg: #fdfdfd;
+$mobile-gradient: linear-gradient(180deg, #0f8bff 0%, #38b6ff 48%, #fdfdfd 100%);
+$tab-bar-height: 98rpx;
+$tab-bar-safe-bottom: calc(#{$tab-bar-height} + env(safe-area-inset-bottom) + 24rpx);
+
+.tab-page,
+.student-tab-page {
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-page__scroll,
+.student-tab-page__scroll {
+  height: 100%;
+  box-sizing: border-box;
+}

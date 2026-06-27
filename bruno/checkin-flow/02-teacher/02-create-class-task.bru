@@ -1,0 +1,69 @@
+meta {
+  name: 02 创建课程打卡任务（一次性）
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/teacher/tasks
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacher_token}}
+}
+
+body:json {
+  {
+    "title": "Bruno测试-课程签到",
+    "type_id": 2,
+    "group_ids": [1],
+    "starts_at": "{{starts_at}}",
+    "ends_at": "{{ends_at}}",
+    "schedule_mode": "one_time",
+    "rules_snapshot": {
+      "timeRule": {
+        "mode": "single",
+        "startTime": "08:00",
+        "endTime": "08:15",
+        "allowLate": true,
+        "allowMakeup": false,
+        "makeupNeedReview": false
+      },
+      "locationRule": {
+        "mode": "fixed_area",
+        "placeName": "A202教室",
+        "longitude": 120.0001,
+        "latitude": 30.0002,
+        "radius": 100,
+        "allowExceptionSubmit": true
+      },
+      "verificationRule": {"methods": ["location", "face"]},
+      "submitRule": {
+        "fields": [
+          {
+            "key": "seat_no",
+            "label": "座位号",
+            "type": "text",
+            "placeholder": "如A03",
+            "required": true
+          }
+        ]
+      },
+      "reviewRule": {"mode": "exception_only"},
+      "reminderRule": {
+        "beforeStartMinutes": 5,
+        "beforeEndMinutes": 2,
+        "notifyTeacherAfterEnd": true
+      },
+      "faceRule": {
+        "enabled": true,
+        "provider": "face_recognition",
+        "tolerance": 0.6,
+        "detectionModel": "hog",
+        "tip": "请正对摄像头完成人脸核验"
+      }
+    }
+  }
+}

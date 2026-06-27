@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 
-import TeacherTabBar from './components/TeacherTabBar.vue'
+import TeacherTabBar from '@/components/TeacherTabBar.vue'
 import { clearLoginState } from '@/services/auth'
 import { logInfo, showError } from '@/services/feedback'
 import { getTeacherGroups, type TeacherGroup } from '@/services/teacher'
@@ -66,7 +66,8 @@ onMounted(loadProfile)
 </script>
 
 <template>
-  <view class="teacher-page">
+  <view class="tab-page">
+    <scroll-view scroll-y class="teacher-page tab-page__scroll">
     <view class="profile-card">
       <text class="profile-name">{{ teacherName }}</text>
       <text class="profile-role">{{ teacherRole }}</text>
@@ -107,6 +108,7 @@ onMounted(loadProfile)
     <view class="section-card">
       <view class="logout-button" @click="handleLogout">退出登录</view>
     </view>
+    </scroll-view>
 
     <TeacherTabBar active="profile" />
   </view>
@@ -116,9 +118,10 @@ onMounted(loadProfile)
 @use '@/styles/tokens.scss' as *;
 
 .teacher-page {
-  min-height: 100vh;
-  padding: 24rpx 24rpx 180rpx;
+  min-height: 100%;
+  padding: 24rpx 24rpx $tab-bar-safe-bottom;
   background: $page-bg;
+  box-sizing: border-box;
 }
 
 .profile-card,

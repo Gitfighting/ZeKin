@@ -1,0 +1,4 @@
+.custom-tab-bar-placeholder {
+  height: 0;
+  overflow: hidden;
+}

@@ -1,0 +1,32 @@
+﻿meta {
+  name: 02 学生登录
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "account": "20260001",
+    "password": "123456"
+  }
+}
+
+script:post-response {
+  const data = res.getBody()
+  if (data && data.data && data.data.access_token) {
+    bru.setEnvVar("student_token", data.data.access_token)
+  }
+}
+
+tests {
+  test("学生登录成功", function() {
+    expect(res.getStatus()).to.equal(200)
+    expect(res.getBody().data.user.user_type).to.equal("student")
+  })
+}

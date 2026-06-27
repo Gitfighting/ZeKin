@@ -35,7 +35,9 @@
     "build:quickapp-webview-huawei": "uni build -p quickapp-webview-huawei",
     "build:quickapp-webview-union": "uni build -p quickapp-webview-union",
     "type-check": "vue-tsc --noEmit",
-    "test:unit": "vitest --config vitest.config.ts"
+    "test:unit": "vitest --config vitest.config.ts",
+    "gen:iconfont": "node scripts/gen-iconfont-base64.mjs",
+    "gen:tabbar": "node scripts/gen-tabbar-icons.mjs"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-4080420251103001",
@@ -68,8 +70,10 @@
     "@vue/runtime-core": "^3.4.21",
     "@vue/test-utils": "^2.4.11",
     "@vue/tsconfig": "^0.1.3",
+    "fontmin": "^1.1.1",
     "jsdom": "^29.1.1",
     "sass": "^1.101.0",
+    "sharp": "^0.35.2",
     "typescript": "^4.9.4",
     "vite": "5.2.8",
     "vitest": "^1.6.1",

@@ -8,8 +8,21 @@ import { logInfo, showError } from '@/services/feedback'
 import { getStudentTaskDetail, type StudentTask } from '@/services/student'
 
 const task = ref<StudentTask | null>(null)
+const checkinDone = ref(false)
 
 const hasException = computed(() => task.value?.status === 'exception')
+const isCompleted = computed(
+  () => checkinDone.value || task.value?.status === 'normal' || task.value?.status === 'ended',
+)
+const primaryLabel = computed(() => {
+  if (hasException.value) {
+    return '去申诉'
+  }
+  if (isCompleted.value) {
+    return '打卡完成'
+  }
+  return '签到'
+})
 
 function previousPageRoute(): string {
   if (typeof getCurrentPages !== 'function') {
@@ -50,6 +63,11 @@ function handlePrimaryAction() {
     return
   }
 
+  if (isCompleted.value) {
+    uni.navigateBack({ delta: 1 })
+    return
+  }
+
   if (hasException.value) {
     uni.navigateTo({
       url: '/pages/student/appeal?recordId=record-3',
@@ -63,6 +81,7 @@ function handlePrimaryAction() {
 }
 
 onLoad((options) => {
+  checkinDone.value = options?.done === '1'
   void loadTask(options?.id)
 })
 </script>
@@ -71,7 +90,7 @@ onLoad((options) => {
   <scroll-view scroll-y class="detail-page">
     <view class="detail-page__nav">
       <button class="detail-page__back" aria-label="返回" @click="handleBack"></button>
-      <text class="detail-page__nav-title">任务详情</text>
+      <text class="detail-page__nav-title">打卡详情</text>
       <view class="detail-page__nav-spacer"></view>
     </view>
 
@@ -127,8 +146,20 @@ onLoad((options) => {
     </view>
 
     <view class="detail-page__footer">
-      <button class="detail-page__button" type="primary" @click="handlePrimaryAction">
-        {{ hasException ? '去申诉' : task.actionText }}
+      <button
+        class="detail-page__button"
+        :class="{ 'detail-page__button--done': isCompleted }"
+        type="primary"
+        @click="handlePrimaryAction"
+      >
+        {{ primaryLabel }}
+      </button>
+      <button
+        v-if="task.type === '实习打卡'"
+        class="detail-page__button detail-page__button--secondary"
+        @click="uni.navigateTo({ url: `/pages/student/daily-report?task_id=${task.id}` })"
+      >
+        提交日报
       </button>
     </view>
     </template>
@@ -246,7 +277,10 @@ onLoad((options) => {
 }
 
 .detail-page__footer {
-  padding-bottom: 24rpx;
+  position: sticky;
+  bottom: 0;
+  padding: 24rpx 0 calc(24rpx + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba($page-bg, 0) 0%, $page-bg 28%);
 }
 
 .detail-page__button {
@@ -255,5 +289,19 @@ onLoad((options) => {
   background: $primary;
   font-size: 30rpx;
   font-weight: 600;
+
+  & + & {
+    margin-top: 16rpx;
+  }
+}
+
+.detail-page__button--done {
+  background: $success;
+}
+
+.detail-page__button--secondary {
+  background: #fff;
+  border: 2rpx solid $primary;
+  color: $primary;
 }
 </style>

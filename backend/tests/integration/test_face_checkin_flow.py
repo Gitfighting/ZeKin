@@ -1,4 +1,4 @@
-from copy import deepcopy
+﻿from copy import deepcopy
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -23,8 +23,8 @@ def test_checkin_with_enabled_face_rule_requires_registered_face(monkeypatch) ->
         lambda: datetime(2026, 6, 24, 21, 45, tzinfo=ZoneInfo("Asia/Shanghai")),
     )
     client = TestClient(app)
-    admin_token = _login(client, "admin", "admin123456", "admin")
-    teacher_token = _login(client, "teacher", "teacher123456", "teacher")
+    admin_token = _login(client, "admin", "123456", "admin")
+    teacher_token = _login(client, "20261001", "123456", "teacher")
 
     student_payload = {
         "student_no": "20260001",
@@ -50,7 +50,7 @@ def test_checkin_with_enabled_face_rule_requires_registered_face(monkeypatch) ->
             "student_no": "20260001",
             "phone": "13800000001",
             "code": "000000",
-            "password": "student123456",
+            "password": "123456",
         },
     )
     assert activate_response.status_code == 200
@@ -89,8 +89,5 @@ def test_checkin_with_enabled_face_rule_requires_registered_face(monkeypatch) ->
         },
     )
 
-    assert checkin_response.status_code == 200
-    result = checkin_response.json()["data"]
-    assert result["status"] == "exception"
-    assert result["exception_types"] == ["face_failed"]
-    assert result["need_review"] is True
+    assert checkin_response.status_code == 400
+    assert "人脸" in checkin_response.json()["detail"]

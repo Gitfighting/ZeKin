@@ -1,0 +1,25 @@
+meta {
+  name: 08 学生档案
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{base_url}}/api/student/profile
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{student_token}}
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("学号正确", function() {
+    const body = res.getBody();
+    expect(body.data.student_no).to.equal("20260001");
+  });
+}

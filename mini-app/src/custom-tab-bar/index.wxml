@@ -1,0 +1,2 @@
+<!-- uni-app 占位：实际底栏由各 tab 页内 StudentTabBar 组件渲染 -->
+<view class="custom-tab-bar-placeholder"></view>

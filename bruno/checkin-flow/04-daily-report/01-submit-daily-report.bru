@@ -1,0 +1,44 @@
+meta {
+  name: 01 提交每日日报（实习场景）
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/student/daily-reports
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{student_token}}
+}
+
+body:json {
+  {
+    "task_id": null,
+    "report_date": "{{report_date}}",
+    "content": "今天在企业参与了需求评审会议，完成了用户模块的接口联调工作。下午和导师讨论了技术方案，收获很多。",
+    "work_hours": 8,
+    "mood": "good",
+    "photo_urls": []
+  }
+}
+
+script:post-response {
+  const data = res.getBody()
+  if (data && data.data && data.data.id) {
+    bru.setEnvVar("report_id", String(data.data.id))
+  }
+}
+
+tests {
+  test("状态码200", function() {
+    expect(res.getStatus()).to.equal(200)
+  })
+  test("日报创建成功", function() {
+    const body = res.getBody()
+    expect(body.data).to.have.property("id")
+    expect(body.data.status).to.equal("submitted")
+  })
+}

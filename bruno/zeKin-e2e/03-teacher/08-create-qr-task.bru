@@ -1,0 +1,54 @@
+meta {
+  name: 08 创建二维码签到任务
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{base_url}}/api/teacher/tasks
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacher_token}}
+}
+
+body:json {
+  {
+    "title": "Bruno-E2E-二维码签到",
+    "type_id": 2,
+    "group_ids": [1],
+    "starts_at": "{{starts_at}}",
+    "ends_at": "{{ends_at}}",
+    "schedule_mode": "one_time",
+    "rules_snapshot": {
+      "verificationRule": {
+        "methods": ["qr_code"],
+        "qr_code": {
+          "refreshIntervalSeconds": 60,
+          "expireSeconds": 300,
+          "allowReuse": false
+        }
+      },
+      "reviewRule": { "mode": "exception_only" }
+    }
+  }
+}
+
+script:post-response {
+  const body = res.getBody();
+  if (body?.data?.id) {
+    bru.setEnvVar("qr_task_id", String(body.data.id));
+  }
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("二维码任务创建成功", function() {
+    const body = res.getBody();
+    expect(body.data).to.have.property("id");
+  });
+}

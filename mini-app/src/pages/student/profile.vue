@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 
 import StatusTag from '@/components/StatusTag.vue'
+import StudentTabBar from '@/components/StudentTabBar.vue'
+import { refreshStudentUnreadMessageCount } from '@/composables/useStudentUnreadMessages'
 import { clearLoginState } from '@/services/auth'
 import { logInfo, showError } from '@/services/feedback'
 import {
@@ -42,6 +44,7 @@ function handleLogout() {
 }
 
 onShow(async () => {
+  void refreshStudentUnreadMessageCount()
   try {
     const [profileResponse, growthResponse] = await Promise.all([getStudentProfile(), getGrowthSummary()])
     profile.value = profileResponse
@@ -63,7 +66,8 @@ onShow(async () => {
 </script>
 
 <template>
-  <scroll-view scroll-y class="profile-page">
+  <view class="student-tab-page">
+  <scroll-view scroll-y class="profile-page student-tab-page__scroll">
     <view class="profile-page__hero">
       <text class="profile-page__title">我的</text>
       <text class="profile-page__subtitle">{{ profile ? `${profile.realName} · ${profile.className}` : '暂无个人信息' }}</text>
@@ -123,14 +127,16 @@ onShow(async () => {
     <view class="profile-page__card profile-page__actions">
       <button class="profile-page__logout" @click="handleLogout">退出登录</button>
     </view>
+    <view class="tab-page__safe-bottom"></view>
   </scroll-view>
+  <StudentTabBar active="profile" />
+  </view>
 </template>
 
 <style scoped lang="scss">
 @use '@/styles/tokens.scss' as *;
 
 .profile-page {
-  min-height: 100vh;
   background: $page-bg;
 }
 
@@ -223,7 +229,11 @@ onShow(async () => {
 }
 
 .profile-page__actions {
-  margin-bottom: 40rpx;
+  margin-bottom: 0;
+}
+
+.tab-page__safe-bottom {
+  height: $tab-bar-safe-bottom;
 }
 
 .profile-page__logout {

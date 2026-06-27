@@ -51,7 +51,7 @@ def _import_and_activate_student(client: TestClient, admin_token: str) -> str:
             "student_no": "20260001",
             "phone": "13800000001",
             "code": "000000",
-            "password": "student123456",
+            "password": "123456",
         },
     )
     assert activate.status_code == 200
@@ -80,9 +80,9 @@ def _create_task(
 def _add_second_teacher_and_group() -> tuple[int, int]:
     with SessionLocal() as session:
         teacher = User(
-            account="teacher2",
+            account="20261002",
             phone="13800000003",
-            password_hash=pwd_context.hash("teacher123456"),
+            password_hash=pwd_context.hash("123456"),
             user_type=UserType.TEACHER.value,
             display_name="王老师",
         )
@@ -90,14 +90,18 @@ def _add_second_teacher_and_group() -> tuple[int, int]:
         session.flush()
         profile = TeacherProfile(
             user_id=teacher.id,
-            teacher_no="T2026002",
+            teacher_no="20261002",
             name="王老师",
             phone="13800000003",
             department="软件学院",
         )
         session.add(profile)
         session.flush()
-        group = Group(name="软件2602", group_type="class")
+        group = Group(
+            name="软件2602",
+            group_type="class",
+            invite_code="TEST02",
+        )
         session.add(group)
         session.flush()
         session.add(GroupTeacher(group_id=group.id, teacher_profile_id=profile.id))
@@ -135,14 +139,14 @@ def test_roleless_login_resolves_mini_app_users_but_not_admins() -> None:
 
     teacher_login = client.post(
         "/api/auth/login",
-        json={"account": "teacher", "password": "teacher123456"},
+        json={"account": "20261001", "password": "123456"},
     )
     assert teacher_login.status_code == 200
     assert teacher_login.json()["data"]["user"]["user_type"] == "teacher"
 
     admin_login = client.post(
         "/api/auth/login",
-        json={"account": "admin", "password": "admin123456"},
+        json={"account": "admin", "password": "123456"},
     )
     assert admin_login.status_code == 400
 
@@ -150,7 +154,7 @@ def test_roleless_login_resolves_mini_app_users_but_not_admins() -> None:
 def test_teacher_groups_come_from_database_memberships() -> None:
     _, group_id = _add_second_teacher_and_group()
     client = _client()
-    teacher2_token = _login(client, "teacher2", "teacher123456", "teacher")
+    teacher2_token = _login(client, "20261002", "123456", "teacher")
 
     response = client.get(
         "/api/teacher/groups", headers={"Authorization": f"Bearer {teacher2_token}"}
@@ -175,9 +179,9 @@ def test_appeal_and_review_create_student_messages(monkeypatch) -> None:
         lambda: datetime(2026, 6, 24, 22, 45, tzinfo=ZoneInfo("Asia/Shanghai")),
     )
     client = _client()
-    admin_token = _login(client, "admin", "admin123456", "admin")
+    admin_token = _login(client, "admin", "123456", "admin")
     student_token = _import_and_activate_student(client, admin_token)
-    teacher_token = _login(client, "teacher", "teacher123456", "teacher")
+    teacher_token = _login(client, "20261001", "123456", "teacher")
     task_id = _create_task(client, teacher_token)
     checkin = client.post(
         f"/api/student/tasks/{task_id}/checkin",
@@ -232,10 +236,10 @@ def test_teacher_cannot_publish_end_or_review_out_of_scope_task(monkeypatch) -> 
     )
     _add_second_teacher_and_group()
     client = _client()
-    admin_token = _login(client, "admin", "admin123456", "admin")
+    admin_token = _login(client, "admin", "123456", "admin")
     student_token = _import_and_activate_student(client, admin_token)
-    teacher_token = _login(client, "teacher", "teacher123456", "teacher")
-    teacher2_token = _login(client, "teacher2", "teacher123456", "teacher")
+    teacher_token = _login(client, "20261001", "123456", "teacher")
+    teacher2_token = _login(client, "20261002", "123456", "teacher")
     task_id = _create_task(client, teacher_token)
 
     assert (

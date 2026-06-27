@@ -1,0 +1,10 @@
+// 微信小程序不支持 wxss 内 url() 引用本地 ttf，字体由 utils/iconfont.ts 的 loadFontFace 加载
+/* #ifndef MP-WEIXIN */
+@font-face {
+  font-family: 'iconfont';
+  src: url('../static/fonts/iconfont.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+/* #endif */

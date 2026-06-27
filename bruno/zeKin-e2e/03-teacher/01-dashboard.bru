@@ -1,0 +1,25 @@
+meta {
+  name: 01 教师看板
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/api/teacher/dashboard
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacher_token}}
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("包含任务数", function() {
+    const body = res.getBody();
+    expect(body.data).to.have.property("task_count");
+  });
+}

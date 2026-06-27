@@ -1,0 +1,69 @@
+meta {
+  name: 03 创建实习打卡任务（循环）
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/api/teacher/tasks
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacher_token}}
+}
+
+body:json {
+  {
+    "title": "Bruno测试-实习日报打卡",
+    "type_id": 3,
+    "group_ids": [1],
+    "starts_at": "{{starts_at}}",
+    "ends_at": "{{ends_at}}",
+    "schedule_mode": "one_time",
+    "rules_snapshot": {
+      "timeRule": {
+        "mode": "single",
+        "startTime": "08:30",
+        "endTime": "10:00",
+        "allowLate": true,
+        "allowMakeup": true,
+        "makeupNeedReview": true
+      },
+      "locationRule": {
+        "mode": "none",
+        "placeName": "实习单位",
+        "longitude": 0,
+        "latitude": 0,
+        "radius": 500,
+        "allowExceptionSubmit": true
+      },
+      "verificationRule": {"methods": ["location", "face"]},
+      "submitRule": {
+        "fields": [
+          {
+            "key": "work_content",
+            "label": "今日工作内容",
+            "type": "textarea",
+            "placeholder": "请简述今日实习内容",
+            "required": true
+          }
+        ]
+      },
+      "reviewRule": {"mode": "all"},
+      "reminderRule": {
+        "beforeStartMinutes": 15,
+        "beforeEndMinutes": 10,
+        "notifyTeacherAfterEnd": true
+      },
+      "faceRule": {
+        "enabled": true,
+        "provider": "face_recognition",
+        "tolerance": 0.65,
+        "detectionModel": "hog",
+        "tip": "请在实习现场正对摄像头完成人脸核验"
+      }
+    }
+  }
+}

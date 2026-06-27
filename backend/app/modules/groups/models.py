@@ -11,6 +11,7 @@ class Group(Base, TimestampMixin):
     organization_id: Mapped[int | None] = mapped_column(ForeignKey("organizations.id"), nullable=True)
     name: Mapped[str] = mapped_column(String(100))
     group_type: Mapped[str] = mapped_column(String(50), default="class")
+    invite_code: Mapped[str] = mapped_column(String(8), unique=True, index=True)
 
 
 class GroupMember(Base, TimestampMixin):

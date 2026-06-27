@@ -1,0 +1,44 @@
+meta {
+  name: 04 提交位置签到
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/api/student/tasks/{{task_id}}/checkin
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{student_token}}
+}
+
+body:json {
+  {
+    "longitude": 120.000001,
+    "latitude": 30.000001,
+    "occurrence_date": "{{today}}",
+    "submit_payload": {
+      "remark": "Bruno E2E 位置签到"
+    }
+  }
+}
+
+script:post-response {
+  const body = res.getBody();
+  if (body?.data?.record_id) {
+    bru.setEnvVar("record_id", String(body.data.record_id));
+  }
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("签到成功返回 record_id", function() {
+    const body = res.getBody();
+    expect(body.data).to.have.property("record_id");
+    expect(body.data.status).to.be.oneOf(["normal", "late", "exception"]);
+  });
+}

@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  getStudentMessageDetail,
   getStudentMessages,
   getStudentRecords,
   getStudentTasks,
@@ -74,7 +75,7 @@ describe('student service', () => {
 
     expect(lastRequest()).toEqual(
       expect.objectContaining({
-        url: 'http://localhost:8000/api/student/tasks',
+        url: 'http://192.168.165.19:8000/api/student/tasks',
         method: 'GET',
       }),
     )
@@ -123,11 +124,12 @@ describe('student service', () => {
 
     expect(lastRequest()).toEqual(
       expect.objectContaining({
-        url: 'http://localhost:8000/api/student/tasks/42/checkin',
+        url: 'http://192.168.165.19:8000/api/student/tasks/42/checkin',
         method: 'POST',
         data: {
           longitude: 120.01,
           latitude: 30.02,
+          checkin_code: 'A123',
           dynamic_code: 'A123',
           submit_payload: {
             remark: 'arrived',
@@ -184,7 +186,7 @@ describe('student service', () => {
 
     expect(lastRequest()).toEqual(
       expect.objectContaining({
-        url: 'http://localhost:8000/api/student/records/7/appeal',
+        url: 'http://192.168.165.19:8000/api/student/records/7/appeal',
         method: 'POST',
         data: {
           reason: 'Location drifted',
@@ -232,10 +234,12 @@ describe('student service', () => {
         },
       ],
       total: 1,
+      unread_count: 0,
     })
 
-    const messages = await getStudentMessages()
+    const { messages, unreadCount } = await getStudentMessages()
 
+    expect(unreadCount).toBe(0)
     expect(messages).toEqual([
       {
         id: '3',
@@ -246,5 +250,27 @@ describe('student service', () => {
         read: true,
       },
     ])
+  })
+
+  it('loads message detail and marks read status from backend', async () => {
+    mockApiResponse({
+      id: 8,
+      title: '新打卡任务',
+      content: '老师发布了打卡任务',
+      read_status: 'read',
+      created_at: '2026-06-27T07:42:00+08:00',
+    })
+
+    const message = await getStudentMessageDetail('8')
+
+    expect(lastRequest()?.url).toBe('/student/messages/8')
+    expect(message).toEqual({
+      id: '8',
+      type: 'reminder',
+      title: '新打卡任务',
+      content: '老师发布了打卡任务',
+      time: '2026-06-27 07:42',
+      read: true,
+    })
   })
 })

@@ -1,0 +1,32 @@
+meta {
+  name: 03 教师点评日报
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/api/teacher/daily-reports/{{report_id}}/comment
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacher_token}}
+}
+
+body:json {
+  {
+    "comment": "工作内容详实，建议多关注技术文档的整理，继续加油！"
+  }
+}
+
+tests {
+  test("状态码200", function() {
+    expect(res.getStatus()).to.equal(200)
+  })
+  test("状态变为reviewed", function() {
+    const body = res.getBody()
+    expect(body.data.status).to.equal("reviewed")
+    expect(body.data.teacher_comment).to.be.a("string")
+  })
+}

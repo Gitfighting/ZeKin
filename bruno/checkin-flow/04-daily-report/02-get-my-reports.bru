@@ -1,0 +1,24 @@
+meta {
+  name: 02 学生查看自己的日报
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/api/student/daily-reports
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{student_token}}
+}
+
+tests {
+  test("状态码200", function() {
+    expect(res.getStatus()).to.equal(200)
+  })
+  test("返回items数组", function() {
+    const body = res.getBody()
+    expect(body.data.items).to.be.an("array")
+  })
+}

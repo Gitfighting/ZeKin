@@ -9,3 +9,4 @@ from app.modules.records import models as records_models  # noqa: F401
 from app.modules.rule_templates import models as rule_templates_models  # noqa: F401
 from app.modules.statistics import models as statistics_models  # noqa: F401
 from app.modules.tasks import models as tasks_models  # noqa: F401
+from app.modules.daily_report import models as daily_report_models  # noqa: F401

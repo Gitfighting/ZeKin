@@ -1,0 +1,66 @@
+meta {
+  name: 01 创建查寝打卡任务
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/teacher/tasks
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacher_token}}
+}
+
+body:json {
+  {
+    "title": "Bruno测试-查寝打卡",
+    "type_id": 1,
+    "group_ids": [1],
+    "starts_at": "{{starts_at}}",
+    "ends_at": "{{ends_at}}",
+    "schedule_mode": "one_time",
+    "rules_snapshot": {
+      "timeRule": {
+        "mode": "single",
+        "startTime": "21:30",
+        "endTime": "23:00",
+        "allowLate": false,
+        "allowMakeup": true,
+        "makeupNeedReview": true
+      },
+      "locationRule": {
+        "mode": "fixed_area",
+        "placeName": "3号宿舍楼",
+        "longitude": 120.000001,
+        "latitude": 30.000001,
+        "radius": 300,
+        "allowExceptionSubmit": true
+      },
+      "verificationRule": {"methods": ["location", "face"]},
+      "submitRule": {"fields": []},
+      "reviewRule": {"mode": "exception_only"},
+      "reminderRule": {
+        "beforeStartMinutes": 10,
+        "beforeEndMinutes": 5,
+        "notifyTeacherAfterEnd": true
+      },
+      "faceRule": {
+        "enabled": true,
+        "provider": "face_recognition",
+        "tolerance": 0.6,
+        "detectionModel": "hog",
+        "tip": "请正对摄像头"
+      }
+    }
+  }
+}
+
+script:post-response {
+  const data = res.getBody()
+  if (data && data.data && data.data.id) {
+    bru.setEnvVar("task_id", String(data.data.id))
+  }
+}

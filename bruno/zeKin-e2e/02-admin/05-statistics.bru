@@ -1,0 +1,25 @@
+meta {
+  name: 05 监管统计
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{base_url}}/api/admin/statistics
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("包含统计字段", function() {
+    const body = res.getBody();
+    expect(body.data).to.have.property("task_count");
+  });
+}

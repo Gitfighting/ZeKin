@@ -1,100 +1,136 @@
 <script setup lang="ts">
 import { onLoad } from '@dcloudio/uni-app'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
-import DynamicForm from '@/components/DynamicForm.vue'
 import LocationPicker from '@/components/LocationPicker.vue'
-import { logInfo, showError } from '@/services/feedback'
-import { getStudentTaskDetail, submitCheckin, type StudentTask } from '@/services/student'
+import { logInfo, showCheckinErrorModal, showError, errorMessage } from '@/services/feedback'
+import { calcDistance } from '@/services/location'
+import {
+  getStudentTaskDetail,
+  submitCheckin,
+  type CheckinMethod,
+  type StudentTask,
+} from '@/services/student'
 import type { LocationResult } from '@/services/location'
 
 const task = ref<StudentTask | null>(null)
+const submitting = ref(false)
+const stepIndex = ref(0)
+
+// 各签到方式收集的数据
 const location = ref<LocationResult | null>(null)
-const verificationCode = ref('')
-const dynamicForm = ref<Record<string, string>>({})
 const faceImage = ref('')
 const facePreview = ref('')
-const submitting = ref(false)
+const qrPayload = ref('')
+const checkinCode = ref('')
+const attachmentText = ref('')
+const attachmentFiles = ref<string[]>([])
+const gesturePoints = ref<number[][]>([])
 
-function applyTask(nextTask: StudentTask | null) {
-  task.value = nextTask
-  dynamicForm.value = {}
-  faceImage.value = ''
-  facePreview.value = ''
+const methods = computed<CheckinMethod[]>(() => task.value?.methods ?? [])
+const totalSteps = computed(() => methods.value.length)
+const currentMethod = computed<CheckinMethod | null>(() => methods.value[stepIndex.value] ?? null)
+const isLastStep = computed(() => stepIndex.value >= totalSteps.value - 1)
+
+const METHOD_TITLES: Record<CheckinMethod, string> = {
+  face: '人脸核验',
+  location: '位置校验',
+  qr_code: '扫码签到',
+  checkin_code: '签到码',
+  attachment: '日志/附件',
+  gesture: '手势签到',
+}
+
+function todayDate(): string {
+  const now = new Date()
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
 async function loadTask(id?: string) {
-  if (!id || typeof uni === 'undefined' || typeof uni.request !== 'function') {
-    applyTask(null)
+  if (!id) {
+    task.value = null
     uni.showToast({ title: '缺少任务编号', icon: 'none' })
     return
   }
-
   try {
-    applyTask(await getStudentTaskDetail(id))
-    logInfo('学生打卡任务加载成功', { taskId: id })
+    task.value = await getStudentTaskDetail(id)
+    stepIndex.value = 0
+    logInfo('学生打卡任务加载成功', { taskId: id, methods: task.value.methods })
   } catch (error) {
-    applyTask(null)
+    task.value = null
     showError(error, '任务加载失败')
   }
 }
 
-async function handleSubmit() {
-  if (!task.value) {
-    uni.showToast({
-      title: '任务尚未加载',
-      icon: 'none',
-    })
-    return
+function hasLocationTarget(): boolean {
+  const current = task.value
+  if (!current) {
+    return false
   }
+  return Math.abs(current.targetLat ?? 0) > 0.0001 && Math.abs(current.targetLng ?? 0) > 0.0001
+}
 
+function isLocationValid(): boolean {
   if (!location.value) {
-    uni.showToast({
-      title: '请先获取当前位置',
-      icon: 'none',
-    })
-    return
+    return false
+  }
+  if (!hasLocationTarget() || !task.value) {
+    return true
+  }
+  const distance = calcDistance(
+    location.value.latitude,
+    location.value.longitude,
+    task.value.targetLat ?? 0,
+    task.value.targetLng ?? 0,
+  )
+  return distance <= (task.value.targetRadius ?? 100)
+}
+
+function stepCompleted(method: CheckinMethod | null): boolean {
+  switch (method) {
+    case 'location':
+      return isLocationValid()
+    case 'face':
+      return Boolean(faceImage.value)
+    case 'qr_code':
+      return Boolean(qrPayload.value)
+    case 'checkin_code':
+      return checkinCode.value.trim().length >= 4
+    case 'attachment':
+      return attachmentText.value.length >= (task.value?.attachmentRule.minTextLength ?? 0)
+        && (!task.value?.attachmentRule.required || attachmentText.value.length > 0 || attachmentFiles.value.length > 0)
+    case 'gesture':
+      return gesturePoints.value.length >= 3
+    default:
+      return false
+  }
+}
+
+function goNext() {
+  if (currentMethod.value === 'location') {
+    if (!location.value) {
+      showCheckinErrorModal('请先获取当前位置后再继续')
+      return
+    }
+    if (!isLocationValid()) {
+      showCheckinErrorModal('当前位置不在签到范围内，请到老师指定的地点附近后重新定位')
+      return
+    }
   }
 
-  if (!verificationCode.value) {
-    uni.showToast({
-      title: '请输入动态签到码',
-      icon: 'none',
-    })
+  if (!stepCompleted(currentMethod.value)) {
+    uni.showToast({ title: '请先完成当前步骤', icon: 'none' })
     return
   }
-
-  if (task.value.faceRule.enabled && !faceImage.value) {
-    uni.showToast({
-      title: '请先完成人脸核验',
-      icon: 'none',
-    })
-    return
+  if (!isLastStep.value) {
+    stepIndex.value += 1
   }
+}
 
-  submitting.value = true
-
-  try {
-    const result = await submitCheckin({
-      taskId: task.value.id,
-      longitude: location.value.longitude,
-      latitude: location.value.latitude,
-      verificationCode: verificationCode.value,
-      formData: { ...dynamicForm.value },
-      faceImage: faceImage.value,
-    })
-    logInfo('学生打卡提交成功', {
-      taskId: task.value.id,
-      state: result.state,
-    })
-    uni.setStorageSync('latest_checkin_result', result)
-    uni.navigateTo({
-      url: `/pages/student/result?state=${result.state}`,
-    })
-  } catch (error) {
-    showError(error, '提交失败，请稍后重试')
-  } finally {
-    submitting.value = false
+function goPrev() {
+  if (stepIndex.value > 0) {
+    stepIndex.value -= 1
   }
 }
 
@@ -103,9 +139,7 @@ function pathToBase64(path: string): Promise<string> {
     uni.getFileSystemManager().readFile({
       filePath: path,
       encoding: 'base64',
-      success: (result) => {
-        resolve(`data:image/jpeg;base64,${result.data}`)
-      },
+      success: (result) => resolve(`data:image/jpeg;base64,${result.data}`),
       fail: reject,
     })
   })
@@ -113,23 +147,110 @@ function pathToBase64(path: string): Promise<string> {
 
 async function captureFace() {
   try {
-    const result = await uni.chooseImage({
-      count: 1,
-      sizeType: ['compressed'],
-      sourceType: ['camera'],
-    })
+    const result = await uni.chooseImage({ count: 1, sizeType: ['compressed'], sourceType: ['camera'] })
     const path = result.tempFilePaths[0]
     if (!path) {
       return
     }
     facePreview.value = path
     faceImage.value = await pathToBase64(path)
-    uni.showToast({
-      title: '人脸照片已采集',
-      icon: 'success',
-    })
+    uni.showToast({ title: '人脸照片已采集', icon: 'success' })
   } catch (error) {
     showError(error, '人脸采集失败')
+  }
+}
+
+async function scanQrCode() {
+  try {
+    const result = await uni.scanCode({ scanType: ['qrCode'] })
+    qrPayload.value = result.result
+    uni.showToast({ title: '扫码成功', icon: 'success' })
+  } catch (error) {
+    showError(error, '扫码失败，请重试')
+  }
+}
+
+async function pickAttachment() {
+  try {
+    const result = await uni.chooseImage({ count: task.value?.attachmentRule.maxFileCount ?? 3 })
+    attachmentFiles.value = result.tempFilePaths
+    uni.showToast({ title: `已选择 ${result.tempFilePaths.length} 个附件`, icon: 'none' })
+  } catch (error) {
+    showError(error, '附件选择失败')
+  }
+}
+
+function toggleGestureCell(cell: number) {
+  const total = 3
+  const x = (cell % total) / (total - 1)
+  const y = Math.floor(cell / total) / (total - 1)
+  gesturePoints.value = [...gesturePoints.value, [Number(x.toFixed(2)), Number(y.toFixed(2))]]
+}
+
+function resetGesture() {
+  gesturePoints.value = []
+}
+
+async function handleSubmit() {
+  if (!task.value) {
+    return
+  }
+
+  if (methods.value.includes('location') && !isLocationValid()) {
+    showCheckinErrorModal('当前位置不在签到范围内，请到老师指定的地点附近后重新定位')
+    return
+  }
+
+  // 校验所有步骤完成
+  for (const method of methods.value) {
+    if (!stepCompleted(method)) {
+      if (method === 'location') {
+        showCheckinErrorModal('当前位置不在签到范围内，请到老师指定的地点附近后重新定位')
+      } else if (method === 'checkin_code') {
+        showCheckinErrorModal('请输入正确的签到码')
+      } else if (method === 'face') {
+        showCheckinErrorModal('请先完成人脸拍摄')
+      } else {
+        uni.showToast({ title: `请完成「${METHOD_TITLES[method]}」`, icon: 'none' })
+      }
+      return
+    }
+  }
+
+  submitting.value = true
+  try {
+    const result = await submitCheckin({
+      taskId: task.value.id,
+      ...(location.value
+        ? { longitude: location.value.longitude, latitude: location.value.latitude }
+        : {}),
+      formData: {},
+      ...(faceImage.value ? { faceImage: faceImage.value } : {}),
+      ...(qrPayload.value ? { qrPayload: qrPayload.value } : {}),
+      ...(checkinCode.value.trim() ? { checkinCode: checkinCode.value.trim() } : {}),
+      ...(methods.value.includes('attachment')
+        ? { attachment: { text: attachmentText.value, files: attachmentFiles.value } }
+        : {}),
+      ...(methods.value.includes('gesture')
+        ? {
+            gesture: {
+              pattern_id: task.value.gestureRule.presetPattern || 'custom',
+              points: gesturePoints.value,
+            },
+          }
+        : {}),
+      occurrenceDate: todayDate(),
+    })
+    logInfo('学生打卡提交成功', { taskId: task.value.id, state: result.state })
+    uni.setStorageSync('latest_checkin_result', result)
+    uni.showToast({ title: '打卡完成', icon: 'success', duration: 1800 })
+    setTimeout(() => {
+      uni.navigateBack({ delta: 2 })
+    }, 1600)
+  } catch (error) {
+    showCheckinErrorModal(errorMessage(error, '签到失败，请稍后重试'))
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -146,47 +267,125 @@ onLoad((options) => {
     </view>
 
     <template v-else>
-    <view class="submit-page__card">
-      <text class="submit-page__title">{{ task.title }}</text>
-      <text class="submit-page__subtitle">{{ task.timeWindow }} · {{ task.locationName }}</text>
-    </view>
+      <view class="submit-page__card">
+        <text class="submit-page__title">{{ task.title }}</text>
+        <text class="submit-page__subtitle">
+          {{ task.timeWindow }} · {{ task.scheduleMode === 'recurring' ? '每日打卡' : '一次打卡' }}
+        </text>
+        <view class="submit-page__steps">
+          <view
+            v-for="(method, index) in methods"
+            :key="method"
+            class="submit-page__chip"
+            :class="{
+              'submit-page__chip--active': index === stepIndex,
+              'submit-page__chip--done': stepCompleted(method) && index !== stepIndex,
+            }"
+          >
+            {{ index + 1 }}. {{ METHOD_TITLES[method] }}
+          </view>
+        </view>
+      </view>
 
-    <view class="submit-page__card">
-      <text class="submit-page__section-title">位置校验</text>
-      <LocationPicker
-        v-model="location"
-        :target="task && task.targetLat && task.targetLng ? { latitude: task.targetLat, longitude: task.targetLng, radius: task.targetRadius ?? 100 } : null"
-      />
-    </view>
+      <view v-if="totalSteps === 0" class="submit-page__card">
+        <text class="submit-page__note">该任务未配置签到方式，请联系老师。</text>
+      </view>
 
-    <view class="submit-page__card">
-      <text class="submit-page__section-title">动态签到码</text>
-      <input
-        v-model="verificationCode"
-        class="submit-page__input"
-        placeholder="请输入老师发布的动态签到码"
-      />
-    </view>
+      <view v-else class="submit-page__card">
+        <text class="submit-page__section-title">
+          Step {{ stepIndex + 1 }}/{{ totalSteps }} · {{ currentMethod ? METHOD_TITLES[currentMethod] : '' }}
+        </text>
 
-    <view class="submit-page__card">
-      <text class="submit-page__section-title">补充信息</text>
-      <DynamicForm v-model="dynamicForm" :fields="task.dynamicFields" />
-    </view>
+        <!-- 位置 -->
+        <view v-if="currentMethod === 'location'">
+          <LocationPicker
+            v-model="location"
+            :place-name="task.locationName"
+            :target="
+              Math.abs(task.targetLat) > 0.0001 && Math.abs(task.targetLng) > 0.0001
+                ? { latitude: task.targetLat, longitude: task.targetLng, radius: task.targetRadius ?? 100 }
+                : null
+            "
+          />
+          <text class="submit-page__note">{{ task.locationHint || `请在${task.locationName}附近完成定位` }}</text>
+        </view>
 
-    <view v-if="task.faceRule.enabled" class="submit-page__card">
-      <text class="submit-page__section-title">人脸核验</text>
-      <text class="submit-page__note">{{ task.faceRule.tip }}</text>
-      <image v-if="facePreview" class="submit-page__face-preview" :src="facePreview" mode="aspectFill" />
-      <button class="submit-page__face-button" @click="captureFace">
-        {{ faceImage ? '重新拍摄' : '拍摄人脸' }}
-      </button>
-    </view>
+        <!-- 人脸 -->
+        <view v-else-if="currentMethod === 'face'">
+          <text class="submit-page__note">{{ task.faceRule.tip }}</text>
+          <image v-if="facePreview" class="submit-page__face-preview" :src="facePreview" mode="aspectFill" />
+          <button class="submit-page__face-button" @click="captureFace">
+            {{ faceImage ? '重新拍摄' : '拍摄人脸' }}
+          </button>
+        </view>
 
-    <view class="submit-page__footer">
-      <button class="submit-page__button" :loading="submitting" @click="handleSubmit">
-        提交打卡
-      </button>
-    </view>
+        <!-- 二维码 -->
+        <view v-else-if="currentMethod === 'qr_code'">
+          <text class="submit-page__note">请扫描老师展示的签到二维码。</text>
+          <text v-if="qrPayload" class="submit-page__note submit-page__note--ok">二维码已扫描 ✓</text>
+          <button class="submit-page__face-button" @click="scanQrCode">
+            {{ qrPayload ? '重新扫码' : '扫一扫' }}
+          </button>
+        </view>
+
+        <!-- 签到码 -->
+        <view v-else-if="currentMethod === 'checkin_code'">
+          <text class="submit-page__note">请输入老师在课堂或群聊中公布的签到码。</text>
+          <input
+            v-model="checkinCode"
+            class="submit-page__code-input"
+            maxlength="12"
+            placeholder="请输入签到码"
+          />
+        </view>
+
+        <!-- 附件/日志 -->
+        <view v-else-if="currentMethod === 'attachment'">
+          <text class="submit-page__note">
+            {{ task.attachmentRule.label }}{{ task.attachmentRule.required ? '（必填）' : '（选填）' }}
+            <text v-if="task.attachmentRule.minTextLength">，至少 {{ task.attachmentRule.minTextLength }} 字</text>
+          </text>
+          <textarea
+            v-model="attachmentText"
+            class="submit-page__textarea"
+            placeholder="请输入今日工作/情况说明"
+          />
+          <button class="submit-page__face-button" @click="pickAttachment">
+            选择图片附件（{{ attachmentFiles.length }}）
+          </button>
+        </view>
+
+        <!-- 手势 -->
+        <view v-else-if="currentMethod === 'gesture'">
+          <text class="submit-page__note">
+            请按顺序点击九宫格绘制手势<text v-if="task.gestureRule.presetPattern">（参考图案：{{ task.gestureRule.presetPattern }}）</text>
+          </text>
+          <view class="submit-page__grid">
+            <view
+              v-for="cell in 9"
+              :key="cell"
+              class="submit-page__grid-cell"
+              @click="toggleGestureCell(cell - 1)"
+            >
+              {{ cell }}
+            </view>
+          </view>
+          <text class="submit-page__note">已记录 {{ gesturePoints.length }} 个轨迹点</text>
+          <button class="submit-page__face-button" @click="resetGesture">重置手势</button>
+        </view>
+      </view>
+
+      <view v-if="totalSteps > 0" class="submit-page__footer">
+        <button v-if="stepIndex > 0" class="submit-page__button submit-page__button--ghost" @click="goPrev">
+          上一步
+        </button>
+        <button v-if="!isLastStep" class="submit-page__button" @click="goNext">
+          下一步
+        </button>
+        <button v-else class="submit-page__button" :loading="submitting" @click="handleSubmit">
+          {{ submitting ? '签到中...' : '签到' }}
+        </button>
+      </view>
     </template>
   </scroll-view>
 </template>
@@ -224,17 +423,46 @@ onLoad((options) => {
   line-height: 1.6;
 }
 
+.submit-page__note--ok {
+  color: $primary;
+  font-weight: 600;
+}
+
+.submit-page__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.submit-page__chip {
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  background: #f0f5ff;
+  color: $text-secondary;
+  font-size: 24rpx;
+}
+
+.submit-page__chip--active {
+  background: $primary;
+  color: #fff;
+}
+
+.submit-page__chip--done {
+  background: rgba($primary, 0.12);
+  color: $primary;
+}
+
 .submit-page__section-title {
   color: $text-primary;
   font-size: 30rpx;
   font-weight: 700;
 }
 
-.submit-page__input {
+.submit-page__textarea {
   box-sizing: border-box;
   width: 100%;
-  height: 92rpx;
-  padding: 0 24rpx;
+  height: 200rpx;
+  padding: 20rpx 24rpx;
   border-radius: 22rpx;
   background: #f8fbff;
   border: 2rpx solid rgba($primary, 0.08);
@@ -242,16 +470,59 @@ onLoad((options) => {
   font-size: 28rpx;
 }
 
+.submit-page__code-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 96rpx;
+  padding: 0 28rpx;
+  border-radius: 22rpx;
+  background: #f8fbff;
+  border: 2rpx solid rgba($primary, 0.08);
+  color: $text-primary;
+  font-size: 36rpx;
+  font-weight: 700;
+  letter-spacing: 6rpx;
+  text-align: center;
+}
+
+.submit-page__grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16rpx;
+  margin: 16rpx 0;
+}
+
+.submit-page__grid-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 140rpx;
+  border-radius: 18rpx;
+  background: #f0f5ff;
+  color: $text-secondary;
+  font-size: 32rpx;
+}
+
 .submit-page__footer {
+  display: flex;
+  gap: 16rpx;
   padding-bottom: 24rpx;
 }
 
 .submit-page__button {
+  flex: 1;
   border: none;
   border-radius: 999rpx;
   background: $primary;
+  color: #fff;
   font-size: 30rpx;
   font-weight: 600;
+}
+
+.submit-page__button--ghost {
+  background: #fff;
+  color: $primary;
+  border: 2rpx solid rgba($primary, 0.3);
 }
 
 .submit-page__face-preview {

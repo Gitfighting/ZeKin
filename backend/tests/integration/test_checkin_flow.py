@@ -1,4 +1,4 @@
-from copy import deepcopy
+﻿from copy import deepcopy
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -16,7 +16,7 @@ def test_checkin_flow_and_rule_snapshot_is_immutable(monkeypatch) -> None:
 
     admin_login = client.post(
         "/api/auth/login",
-        json={"account": "admin", "password": "admin123456", "user_type": "admin"},
+        json={"account": "admin", "password": "123456", "user_type": "admin"},
     )
     assert admin_login.status_code == 200
     admin_token = admin_login.json()["data"]["access_token"]
@@ -45,7 +45,7 @@ def test_checkin_flow_and_rule_snapshot_is_immutable(monkeypatch) -> None:
             "student_no": "20260001",
             "phone": "13800000001",
             "code": "000000",
-            "password": "student123456",
+            "password": "123456",
         },
     )
     assert activate_response.status_code == 200
@@ -53,7 +53,7 @@ def test_checkin_flow_and_rule_snapshot_is_immutable(monkeypatch) -> None:
 
     teacher_login = client.post(
         "/api/auth/login",
-        json={"account": "teacher", "password": "teacher123456", "user_type": "teacher"},
+        json={"account": "20261001", "password": "123456", "user_type": "teacher"},
     )
     assert teacher_login.status_code == 200
     teacher_token = teacher_login.json()["data"]["access_token"]

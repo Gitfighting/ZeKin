@@ -1,0 +1,39 @@
+// 阿里巴巴矢量图标（bsfit 登录图标集 / iconfont font_1124695）
+@import './iconfont-face.scss';
+
+.iconfont {
+  display: inline-block;
+  font-family: 'iconfont' !important;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+  text-align: center;
+  text-transform: none;
+  vertical-align: middle;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-yonghu::before {
+  content: '\e68e';
+}
+
+.icon-mima::before {
+  content: '\e687';
+}
+
+.icon-anquan::before {
+  content: '\e713';
+}
+
+.icon-yanzhengma::before {
+  content: '\e68d';
+}
+
+.icon-yanjing::before {
+  content: '\e68b';
+}
+
+.icon-yanjing-biyan::before {
+  content: '\e68a';
+}

@@ -1,0 +1,45 @@
+meta {
+  name: 02 提交打卡（位置+人脸）
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/student/tasks/{{task_id}}/checkin
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{student_token}}
+}
+
+body:json {
+  {
+    "longitude": 120.000001,
+    "latitude": 30.000001,
+    "occurrence_date": "{{today}}",
+    "dynamic_code": "",
+    "face_image": null,
+    "submit_payload": {
+      "remark": "Bruno 测试打卡"
+    }
+  }
+}
+
+script:post-response {
+  const data = res.getBody()
+  if (data && data.data && data.data.record_id) {
+    bru.setEnvVar("record_id", String(data.data.record_id))
+  }
+}
+
+tests {
+  test("状态码应为200", function() {
+    expect(res.getStatus()).to.equal(200)
+  })
+  test("返回record_id", function() {
+    const body = res.getBody()
+    expect(body.data).to.have.property("record_id")
+  })
+}

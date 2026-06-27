@@ -67,6 +67,13 @@ class RecordRepository:
         )
         return list(self.db.scalars(statement))
 
+    def get_message_for_user(self, user_id: int, message_id: int) -> Message | None:
+        statement = select(Message).where(
+            Message.id == message_id,
+            Message.user_id == user_id,
+        )
+        return self.db.scalar(statement)
+
     def get_record(self, record_id: int) -> CheckinRecord | None:
         return self.db.get(CheckinRecord, record_id)
 

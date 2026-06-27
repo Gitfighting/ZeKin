@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import {
   calcDistance,
@@ -11,6 +11,7 @@ import {
 const props = defineProps<{
   modelValue: LocationResult | null
   target?: LocationTarget | null
+  placeName?: string
 }>()
 
 const emit = defineEmits<{
@@ -20,8 +21,21 @@ const emit = defineEmits<{
 const loading = ref(false)
 const errorMsg = ref('')
 
+const DEFAULT_CENTER = { latitude: 30.000001, longitude: 120.000001 }
+
+function isValidCoord(lat: number, lng: number): boolean {
+  return Math.abs(lat) > 0.0001 && Math.abs(lng) > 0.0001
+}
+
+const hasTarget = computed(() => {
+  if (!props.target) {
+    return false
+  }
+  return isValidCoord(props.target.latitude, props.target.longitude)
+})
+
 const distanceInfo = computed(() => {
-  if (!props.modelValue || !props.target) {
+  if (!props.modelValue || !hasTarget.value || !props.target) {
     return null
   }
   const distance = calcDistance(
@@ -39,18 +53,99 @@ const distanceInfo = computed(() => {
 
 const statusText = computed(() => {
   if (!props.modelValue) {
-    return { label: '暂未定位', color: '#999' }
+    return { label: '正在获取位置…', color: '#999' }
   }
   if (!distanceInfo.value) {
-    return { label: '已获取坐标', color: '#1677ff' }
+    return { label: '已获取当前位置', color: '#1677ff' }
   }
   if (distanceInfo.value.inside) {
     return { label: '在打卡范围内', color: '#22c55e' }
   }
   return {
-    label: `距目标 ${Math.round(distanceInfo.value.distance)}m (需 ≤${distanceInfo.value.radius}m)`,
+    label: `距签到点 ${Math.round(distanceInfo.value.distance)}m（需 ≤${distanceInfo.value.radius}m）`,
     color: '#ef4444',
   }
+})
+
+const mapCenter = computed(() => {
+  if (hasTarget.value && props.target) {
+    return {
+      latitude: props.target.latitude,
+      longitude: props.target.longitude,
+    }
+  }
+  if (props.modelValue) {
+    return {
+      latitude: props.modelValue.latitude,
+      longitude: props.modelValue.longitude,
+    }
+  }
+  return DEFAULT_CENTER
+})
+
+const mapScale = computed(() => {
+  const radius = props.target?.radius ?? 100
+  if (radius <= 50) return 17
+  if (radius <= 120) return 16
+  if (radius <= 300) return 15
+  return 14
+})
+
+const mapMarkers = computed(() => {
+  const markers: Array<Record<string, unknown>> = []
+  if (hasTarget.value && props.target) {
+    markers.push({
+      id: 1,
+      latitude: props.target.latitude,
+      longitude: props.target.longitude,
+      title: props.placeName || '签到地点',
+      width: 28,
+      height: 36,
+      callout: {
+        content: props.placeName || '签到地点',
+        display: 'ALWAYS',
+        padding: 8,
+        borderRadius: 8,
+        fontSize: 12,
+        color: '#1f2937',
+        bgColor: '#ffffff',
+      },
+    })
+  }
+  if (props.modelValue) {
+    markers.push({
+      id: 2,
+      latitude: props.modelValue.latitude,
+      longitude: props.modelValue.longitude,
+      title: '我的位置',
+      width: 24,
+      height: 24,
+    })
+  }
+  return markers
+})
+
+const mapCircles = computed(() => {
+  if (!hasTarget.value || !props.target) {
+    return []
+  }
+  return [
+    {
+      latitude: props.target.latitude,
+      longitude: props.target.longitude,
+      radius: props.target.radius,
+      color: '#1677ff55',
+      fillColor: '#1677ff22',
+      strokeWidth: 2,
+    },
+  ]
+})
+
+const rangeLabel = computed(() => {
+  if (!hasTarget.value || !props.target) {
+    return '当前位置'
+  }
+  return `打卡范围（${props.target.radius}米）`
 })
 
 async function handlePick() {
@@ -68,10 +163,37 @@ async function handlePick() {
     loading.value = false
   }
 }
+
+onMounted(() => {
+  if (!props.modelValue) {
+    void handlePick()
+  }
+})
 </script>
 
 <template>
   <view class="location-card">
+    <view class="location-card__map-wrap">
+      <map
+        class="location-card__map"
+        :latitude="mapCenter.latitude"
+        :longitude="mapCenter.longitude"
+        :scale="mapScale"
+        :markers="mapMarkers"
+        :circles="mapCircles"
+        show-location
+        enable-zoom
+        enable-scroll
+      />
+      <view class="location-card__legend">
+        <view class="location-card__legend-dot" />
+        <text class="location-card__legend-text">{{ rangeLabel }}</text>
+      </view>
+      <view v-if="placeName && hasTarget" class="location-card__place-tag">
+        <text>{{ placeName }}</text>
+      </view>
+    </view>
+
     <view class="location-card__info">
       <text class="location-card__label">当前位置</text>
       <text v-if="modelValue" class="location-card__coords">
@@ -81,15 +203,17 @@ async function handlePick() {
         精度 ±{{ modelValue.accuracy.toFixed(0) }}m
       </text>
       <text v-if="errorMsg" class="location-card__error">{{ errorMsg }}</text>
-      <text v-if="!modelValue && !errorMsg" class="location-card__hint">点击下方按钮获取当前 GPS 位置</text>
+      <text v-if="!modelValue && !errorMsg" class="location-card__hint">正在获取 GPS 位置…</text>
     </view>
 
     <view class="location-card__status">
       <view v-if="distanceInfo" :class="['location-card__badge', distanceInfo.inside ? 'badge-ok' : 'badge-far']">
-        <text v-if="distanceInfo.inside">✓ 范围内</text>
+        <text v-if="distanceInfo.inside">✓ 在打卡范围内</text>
         <text v-else>✗ 超出 {{ Math.round(distanceInfo.distance - distanceInfo.radius) }}m</text>
       </view>
-      <text v-else class="location-card__status-text">{{ statusText.label }}</text>
+      <text v-else class="location-card__status-text" :style="{ color: statusText.color }">
+        {{ statusText.label }}
+      </text>
     </view>
 
     <button class="location-card__button" :loading="loading" @click="handlePick">
@@ -105,16 +229,65 @@ async function handlePick() {
   display: flex;
   flex-direction: column;
   gap: 16rpx;
-  padding: 28rpx;
+}
+
+.location-card__map-wrap {
+  position: relative;
+  overflow: hidden;
   border-radius: 24rpx;
-  background: #f8fbff;
-  border: 2rpx solid rgba($primary, 0.08);
+  border: 2rpx solid rgba($primary, 0.12);
+  background: #eef5ff;
+}
+
+.location-card__map {
+  width: 100%;
+  height: 480rpx;
+}
+
+.location-card__legend {
+  position: absolute;
+  top: 20rpx;
+  right: 20rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8rpx 20rpx rgba(15, 23, 42, 0.08);
+}
+
+.location-card__legend-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: $primary;
+}
+
+.location-card__legend-text {
+  font-size: 22rpx;
+  color: $text-primary;
+}
+
+.location-card__place-tag {
+  position: absolute;
+  left: 50%;
+  bottom: 36rpx;
+  transform: translateX(-50%);
+  padding: 10rpx 24rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 8rpx 20rpx rgba(15, 23, 42, 0.1);
+  font-size: 26rpx;
+  font-weight: 700;
+  color: $text-primary;
 }
 
 .location-card__info {
   display: flex;
   flex-direction: column;
   gap: 8rpx;
+  padding: 0 4rpx;
 }
 
 .location-card__label {
@@ -147,6 +320,7 @@ async function handlePick() {
   display: flex;
   align-items: center;
   gap: 8rpx;
+  padding: 0 4rpx;
 }
 
 .location-card__badge {
@@ -169,7 +343,6 @@ async function handlePick() {
 }
 
 .location-card__status-text {
-  color: $text-secondary;
   font-size: 22rpx;
 }
 
@@ -182,5 +355,6 @@ async function handlePick() {
   border-radius: 999rpx;
   background: $primary;
   font-size: 24rpx;
+  color: #fff;
 }
 </style>

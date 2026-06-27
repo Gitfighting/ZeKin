@@ -1,5 +1,9 @@
-const API_BASE_URL = 'http://localhost:8000/api'
+export const API_BASE_URL = 'http://192.168.165.19:8000/api'
 const AUTH_STORAGE_KEYS = ['access_token', 'student_auth_user', 'student_profile', 'user_profile']
+
+function logRequest(step: string, detail: Record<string, unknown>) {
+  console.info(`[register-flow] 网络层 ${step}`, detail)
+}
 
 export class AuthRequiredError extends Error {
   silent = true
@@ -28,6 +32,8 @@ function redirectToLogin(): AuthRequiredError {
 
 export function request<T>(options: UniApp.RequestOptions): Promise<T> {
   const token = uni.getStorageSync('access_token')
+  const fullUrl = `${API_BASE_URL}${options.url}`
+  const isRegister = options.url === '/auth/register'
 
   return new Promise((resolve, reject) => {
     if (!token && !isAuthEndpoint(options.url)) {
@@ -35,14 +41,29 @@ export function request<T>(options: UniApp.RequestOptions): Promise<T> {
       return
     }
 
+    if (isRegister) {
+      logRequest('uni.request 发出', {
+        method: options.method ?? 'GET',
+        url: fullUrl,
+        hasToken: Boolean(token),
+      })
+    }
+
     uni.request({
       ...options,
-      url: `${API_BASE_URL}${options.url}`,
+      url: fullUrl,
       header: {
         ...(options.header ?? {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       success: (response) => {
+        if (isRegister) {
+          logRequest('uni.request 响应', {
+            statusCode: response.statusCode,
+            data: response.data,
+          })
+        }
+
         if (response.statusCode >= 200 && response.statusCode < 300) {
           resolve(response.data as T)
           return
@@ -53,7 +74,12 @@ export function request<T>(options: UniApp.RequestOptions): Promise<T> {
         }
         reject(response)
       },
-      fail: reject,
+      fail: (error) => {
+        if (isRegister) {
+          logRequest('uni.request fail', { error })
+        }
+        reject(error)
+      },
     })
   })
 }

@@ -1,0 +1,36 @@
+﻿meta {
+  name: 02 教师登录
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/api/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "account": "20261001",
+    "password": "123456",
+    "user_type": "teacher"
+  }
+}
+
+script:post-response {
+  const body = res.getBody();
+  if (body?.data?.access_token) {
+    bru.setEnvVar("teacher_token", body.data.access_token);
+  }
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("教师 token 有效", function() {
+    const body = res.getBody();
+    expect(body.data.user.user_type).to.equal("teacher");
+  });
+}

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, status
+import logging
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -7,6 +8,7 @@ from app.modules.auth.schemas import (
     BindWechatRequest,
     LoginRequest,
     MeResponse,
+    RegisterRequest,
     SendCodeRequest,
     StudentActivateRequest,
 )
@@ -14,6 +16,7 @@ from app.modules.auth.service import AuthError, AuthService
 from app.shared.response import success_response
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+logger = logging.getLogger("zeKin.auth.register")
 
 
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
@@ -43,6 +46,27 @@ def login(payload: LoginRequest, service: AuthService = Depends(get_auth_service
         result = service.authenticate(account=payload.account, password=payload.password, user_type=payload.user_type)
     except AuthError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return success_response(result)
+
+
+@router.post("/register")
+def register(payload: RegisterRequest, service: AuthService = Depends(get_auth_service)):
+    logger.info(
+        "[register-flow] 路由层 收到请求 account=%s phone=%s password_len=%s",
+        payload.account.strip(),
+        payload.phone.strip(),
+        len(payload.password),
+    )
+    try:
+        result = service.register(payload)
+    except AuthError as exc:
+        logger.warning("[register-flow] 路由层 业务校验失败: %s", exc)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    logger.info(
+        "[register-flow] 路由层 注册成功 user_id=%s display_name=%s",
+        result.user.id,
+        result.user.display_name,
+    )
     return success_response(result)
 
 

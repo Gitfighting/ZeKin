@@ -43,16 +43,6 @@ const router = createRouter({
           component: () => import('../views/groups/GroupsView.vue'),
         },
         {
-          path: 'checkin-types',
-          name: 'checkinTypes',
-          component: () => import('../views/checkin-types/CheckinTypesView.vue'),
-        },
-        {
-          path: 'rule-templates',
-          name: 'ruleTemplates',
-          component: () => import('../views/rule-templates/RuleTemplatesView.vue'),
-        },
-        {
           path: 'task-monitor',
           name: 'taskMonitor',
           component: () => import('../views/task-monitor/TaskMonitorView.vue'),
@@ -63,6 +53,14 @@ const router = createRouter({
           component: () => import('../views/exceptions/ExceptionsView.vue'),
         },
       ],
+    },
+    {
+      path: '/data-screen',
+      name: 'dataScreen',
+      component: () => import('../views/data-screen/DataScreenView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
     },
   ],
 })

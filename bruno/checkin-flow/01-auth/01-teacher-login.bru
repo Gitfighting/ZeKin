@@ -1,0 +1,32 @@
+﻿meta {
+  name: 01 教师登录
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "account": "20261001",
+    "password": "123456"
+  }
+}
+
+script:post-response {
+  const data = res.getBody()
+  if (data && data.data && data.data.access_token) {
+    bru.setEnvVar("teacher_token", data.data.access_token)
+  }
+}
+
+tests {
+  test("教师登录成功", function() {
+    expect(res.getStatus()).to.equal(200)
+    expect(res.getBody().data.user.user_type).to.equal("teacher")
+  })
+}

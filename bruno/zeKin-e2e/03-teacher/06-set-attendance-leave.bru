@@ -1,0 +1,33 @@
+meta {
+  name: 06 手动设置请假
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/api/teacher/tasks/{{task_id}}/students/{{student_profile_id}}/attendance
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacher_token}}
+}
+
+body:json {
+  {
+    "status": "leave",
+    "remark": "Bruno 测试病假"
+  }
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("考勤已更新为请假", function() {
+    const body = res.getBody();
+    expect(body.data.manual_status).to.equal("leave");
+    expect(body.data.status).to.equal("leave");
+  });
+}

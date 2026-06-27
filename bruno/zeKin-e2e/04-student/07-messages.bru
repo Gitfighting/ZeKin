@@ -1,0 +1,25 @@
+meta {
+  name: 07 消息列表
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{base_url}}/api/student/messages
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{student_token}}
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("收到任务通知", function() {
+    const body = res.getBody();
+    expect(body.data.total).to.be.at.least(1);
+  });
+}

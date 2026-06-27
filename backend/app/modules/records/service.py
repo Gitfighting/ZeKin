@@ -14,6 +14,7 @@ from app.modules.face_recognition.service import (
     decode_image_payload,
 )
 from app.modules.messages.models import Message
+from app.modules.records.checkin_errors import CheckinBlockedError, get_blocking_checkin_failure
 from app.modules.records.evaluators import (
     EvaluationResult,
     LocationRuleEvaluator,
@@ -22,7 +23,9 @@ from app.modules.records.evaluators import (
 from app.modules.records.models import Appeal, CheckinRecord
 from app.modules.records.repository import RecordRepository
 from app.modules.records.schemas import AppealRequest, CheckinRequest
-from app.shared.enums import RecordStatus
+from app.modules.records.verifiers import CheckinContext, CheckinPipeline
+from app.shared.attendance import resolve_attendance_status
+from app.shared.enums import AttendanceStatus, RecordStatus
 from app.shared.enums import ExceptionType
 
 
@@ -72,29 +75,71 @@ class RecordService:
 
         rules = deepcopy(task.rules_snapshot_jsonb)
         now = get_current_time()
-        time_result = self.time_evaluator.evaluate(now=now, rule=rules["timeRule"])
-        location_result = self.location_evaluator.evaluate(
-            longitude=payload.longitude,
-            latitude=payload.latitude,
-            rule=rules["locationRule"],
-        )
-        face_result = self._evaluate_face(
-            profile_id=profile.id,
-            rule=rules.get("faceRule", {}),
+        occurrence_date = payload.occurrence_date or now.date().isoformat()
+
+        pipeline = CheckinPipeline(rules)
+        ctx = CheckinContext(
+            db=self.db,
+            task=task,
+            student_profile_id=profile.id,
+            now=now,
             payload=payload,
+            occurrence_date=occurrence_date,
         )
-        result = self._merge_results(time_result, location_result, face_result)
+        result = pipeline.run(ctx)
+
+        blocking_error = get_blocking_checkin_failure(result)
+        if blocking_error:
+            record = CheckinRecord(
+                task_id=task.id,
+                student_profile_id=profile.id,
+                submitted_at=now,
+                occurrence_date=occurrence_date,
+                status=RecordStatus.EXCEPTION.value,
+                longitude=payload.longitude,
+                latitude=payload.latitude,
+                verification_results_jsonb=result.verification_results,
+                enabled_methods_jsonb=result.enabled_methods,
+                location_result_jsonb=result.verification_results.get("location", {}),
+                dynamic_code_result_jsonb=(
+                    result.verification_results.get("checkin_code")
+                    or result.verification_results.get("qr_code", {})
+                ),
+                face_result_jsonb=result.verification_results.get("face", {}),
+                submit_payload_jsonb=payload.submit_payload,
+                evaluation_messages_jsonb=[blocking_error, *result.messages],
+                need_review=True,
+            )
+            self.repository.add(record)
+            self.repository.flush()
+            exception = CheckinException(
+                record_id=record.id,
+                task_id=task.id,
+                student_profile_id=profile.id,
+                exception_types_jsonb=result.exception_types or ["location_error"],
+                messages_jsonb=[blocking_error],
+                status=RecordStatus.PENDING_REVIEW.value,
+            )
+            self.repository.add(exception)
+            self.repository.commit()
+            raise CheckinBlockedError(blocking_error, record.id)
 
         record = CheckinRecord(
             task_id=task.id,
             student_profile_id=profile.id,
             submitted_at=now,
+            occurrence_date=occurrence_date,
             status=result.status,
             longitude=payload.longitude,
             latitude=payload.latitude,
-            location_result_jsonb=self._result_dict(location_result),
-            dynamic_code_result_jsonb={"passed": True, "code": payload.dynamic_code},
-            face_result_jsonb=self._result_dict(face_result),
+            verification_results_jsonb=result.verification_results,
+            enabled_methods_jsonb=result.enabled_methods,
+            location_result_jsonb=result.verification_results.get("location", {}),
+            dynamic_code_result_jsonb=(
+                result.verification_results.get("checkin_code")
+                or result.verification_results.get("qr_code", {})
+            ),
+            face_result_jsonb=result.verification_results.get("face", {}),
             submit_payload_jsonb=payload.submit_payload,
             evaluation_messages_jsonb=result.messages,
             need_review=result.need_review,
@@ -119,21 +164,35 @@ class RecordService:
             "record_id": record.id,
             "status": record.status,
             "exception_types": result.exception_types,
+            "enabled_methods": result.enabled_methods,
+            "verification_results": result.verification_results,
             "need_review": result.need_review,
         }
 
     def list_student_records(self, current_user: User) -> dict:
         profile = self._require_student_profile(current_user.id)
-        items = [
-            {
-                "id": record.id,
-                "task_id": record.task_id,
-                "status": record.status,
-                "submitted_at": record.submitted_at.isoformat(),
-                "need_review": record.need_review,
-            }
-            for record in self.repository.list_records_for_student(profile.id)
-        ]
+        items = []
+        for record in self.repository.list_records_for_student(profile.id):
+            task = self.repository.get_task(record.task_id)
+            exception = self.repository.get_exception_by_record_id(record.id)
+            attendance_status = resolve_attendance_status(
+                record=record,
+                exception=exception,
+            )
+            items.append(
+                {
+                    "id": record.id,
+                    "task_id": record.task_id,
+                    "task_title": task.title if task else f"任务 #{record.task_id}",
+                    "status": record.status,
+                    "attendance_status": attendance_status,
+                    "attendanceStatus": attendance_status,
+                    "submitted_at": record.submitted_at.isoformat(),
+                    "occurrence_date": record.occurrence_date,
+                    "manual_status": record.manual_status,
+                    "need_review": record.need_review,
+                }
+            )
         return {"items": items, "total": len(items)}
 
     def submit_appeal(
@@ -176,7 +235,26 @@ class RecordService:
             }
             for message in messages
         ]
-        return {"items": items, "total": len(items)}
+        unread_count = sum(1 for message in messages if message.read_status != "read")
+        return {"items": items, "total": len(items), "unread_count": unread_count}
+
+    def _serialize_message(self, message: Message) -> dict:
+        return {
+            "id": message.id,
+            "title": message.title,
+            "content": message.content,
+            "read_status": message.read_status,
+            "created_at": message.created_at.isoformat() if message.created_at else None,
+        }
+
+    def get_message_detail(self, current_user: User, message_id: int) -> dict:
+        message = self.repository.get_message_for_user(current_user.id, message_id)
+        if message is None:
+            raise ValueError("消息不存在")
+        if message.read_status != "read":
+            message.read_status = "read"
+            self.repository.commit()
+        return self._serialize_message(message)
 
     def profile(self, current_user: User) -> dict:
         profile = self._require_student_profile(current_user.id)
@@ -223,9 +301,11 @@ class RecordService:
         decision = payload["decision"]
         if decision == "approve":
             record.status = RecordStatus.NORMAL.value
+            record.manual_status = AttendanceStatus.PRESENT.value
             exception.status = "approved"
         elif decision == "reject":
             record.status = RecordStatus.REJECTED.value
+            record.manual_status = AttendanceStatus.ABSENT.value
             exception.status = "rejected"
         else:
             record.status = RecordStatus.PENDING_REVIEW.value
@@ -241,11 +321,12 @@ class RecordService:
         )
         student_profile = self.db.get(StudentProfile, exception.student_profile_id)
         if student_profile is not None and student_profile.user_id is not None:
+            result_label = "签到" if decision == "approve" else "未签到" if decision == "reject" else "待补充材料"
             self.repository.add(
                 Message(
                     user_id=student_profile.user_id,
-                    title="审核结果",
-                    content=f"记录 {record.id} 的审核结果为 {record.status}：{payload['comment']}",
+                    title="申诉审核结果",
+                    content=f"您的异常申诉已处理，结果为{result_label}。{payload['comment'] or ''}".strip(),
                 )
             )
         self.repository.commit()
@@ -359,8 +440,27 @@ class RecordService:
             "status": task.status,
             "starts_at": task.starts_at.isoformat(),
             "ends_at": task.ends_at.isoformat(),
-            "rules_snapshot": deepcopy(task.rules_snapshot_jsonb),
+            "rules_snapshot": self._sanitize_rules_for_student(
+                deepcopy(task.rules_snapshot_jsonb)
+            ),
         }
+
+    @staticmethod
+    def _sanitize_rules_for_student(rules: dict) -> dict:
+        """学生端不下发签到码明文，仅保留校验方式声明。"""
+        vr = rules.get("verificationRule")
+        if not isinstance(vr, dict):
+            return rules
+        checkin_cfg = vr.get("checkin_code")
+        if isinstance(checkin_cfg, dict) and "code" in checkin_cfg:
+            sanitized = deepcopy(rules)
+            sanitized_vr = sanitized["verificationRule"]
+            sanitized_vr["checkin_code"] = {
+                **checkin_cfg,
+                "code": "",
+            }
+            return sanitized
+        return rules
 
     def _serialize_teacher_exception(self, item: CheckinException) -> dict:
         student = self.repository.get_student_profile(item.student_profile_id)

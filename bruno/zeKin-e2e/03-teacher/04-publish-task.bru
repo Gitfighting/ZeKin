@@ -1,0 +1,26 @@
+meta {
+  name: 04 发布任务
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/api/teacher/tasks/{{task_id}}/publish
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{teacher_token}}
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("发布成功并通知学生", function() {
+    const body = res.getBody();
+    expect(body.data.published).to.equal(true);
+    expect(body.data.notified_count).to.be.at.least(1);
+  });
+}

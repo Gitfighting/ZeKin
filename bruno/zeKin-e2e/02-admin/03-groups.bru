@@ -1,0 +1,26 @@
+meta {
+  name: 03 班级分组列表
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/api/admin/groups
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("包含软件2601班级", function() {
+    const body = res.getBody();
+    const names = body.data.items.map((g) => g.name);
+    expect(names).to.include("软件2601");
+  });
+}

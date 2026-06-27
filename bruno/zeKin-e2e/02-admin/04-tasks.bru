@@ -1,0 +1,26 @@
+meta {
+  name: 04 任务监管列表
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{base_url}}/api/admin/tasks
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("返回列表结构", function() {
+    const body = res.getBody();
+    expect(body.data).to.have.property("items");
+    expect(body.data).to.have.property("total");
+  });
+}

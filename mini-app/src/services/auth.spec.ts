@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+﻿// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { activateStudent, login } from './auth'
@@ -33,18 +33,18 @@ describe('auth service', () => {
     })
 
     await login({
-      account: 'teacher',
-      password: 'teacher123456',
+      account: '20261001',
+      password: '123456',
       userType: 'teacher',
     })
 
     expect(uni.request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: 'http://localhost:8000/api/auth/login',
+        url: 'http://192.168.165.19:8000/api/auth/login',
         method: 'POST',
         data: expect.objectContaining({
-          account: 'teacher',
-          password: 'teacher123456',
+          account: '20261001',
+          password: '123456',
           user_type: 'teacher',
         }),
       }),
@@ -73,15 +73,15 @@ describe('auth service', () => {
     })
 
     await login({
-      account: 'teacher',
-      password: 'teacher123456',
+      account: '20261001',
+      password: '123456',
     })
 
     const requestOptions = vi.mocked(uni.request).mock.calls[0][0]
     expect(requestOptions.data).toEqual({
-      account: 'teacher',
+      account: '20261001',
       username: 'teacher',
-      password: 'teacher123456',
+      password: '123456',
     })
   })
 
@@ -110,20 +110,20 @@ describe('auth service', () => {
       studentNo: '20260001',
       phone: '13800000001',
       code: '000000',
-      password: 'student123456',
-      confirmPassword: 'student123456',
+      password: '123456',
+      confirmPassword: '123456',
     })
 
     expect(uni.request).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: 'http://localhost:8000/api/auth/student/activate',
+        url: 'http://192.168.165.19:8000/api/auth/student/activate',
         method: 'POST',
         data: {
           name: '张三',
           student_no: '20260001',
           phone: '13800000001',
           code: '000000',
-          password: 'student123456',
+          password: '123456',
         },
       }),
     )

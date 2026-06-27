@@ -1,0 +1,24 @@
+meta {
+  name: 03 查看打卡记录
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/api/student/records
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{student_token}}
+}
+
+tests {
+  test("状态码200", function() {
+    expect(res.getStatus()).to.equal(200)
+  })
+  test("返回items数组", function() {
+    const body = res.getBody()
+    expect(body.data.items).to.be.an("array")
+  })
+}

@@ -1,4 +1,4 @@
-# AI Sizheng Platform Implementation Plan
+﻿# AI Sizheng Platform Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -784,7 +784,7 @@ Create `backend/tests/integration/test_checkin_flow.py` with this scenario:
 def test_admin_teacher_student_checkin_flow(client):
     admin_login = client.post("/api/auth/login", json={
         "account": "admin",
-        "password": "admin123456",
+        "password": "123456",
         "user_type": "admin",
     })
     assert admin_login.status_code == 200
@@ -808,13 +808,13 @@ def test_admin_teacher_student_checkin_flow(client):
         "student_no": "20260001",
         "phone": "13800000001",
         "code": "000000",
-        "password": "student123456",
+        "password": "123456",
     })
     assert activation.status_code == 200
 
     teacher_login = client.post("/api/auth/login", json={
         "account": "teacher",
-        "password": "teacher123456",
+        "password": "123456",
         "user_type": "teacher",
     })
     assert teacher_login.status_code == 200

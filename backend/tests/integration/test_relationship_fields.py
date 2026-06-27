@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from fastapi.testclient import TestClient
@@ -50,7 +50,7 @@ def _activate_student(
             "student_no": student_no,
             "phone": phone,
             "code": "000000",
-            "password": "student123456",
+            "password": "123456",
         },
     )
     assert response.status_code == 200
@@ -75,8 +75,8 @@ def _create_task(client: TestClient, teacher_token: str) -> int:
 
 
 def _seed_relationship_scenario(client: TestClient) -> dict[str, int | str]:
-    admin_token = _login(client, "admin", "admin123456", "admin")
-    teacher_token = _login(client, "teacher", "teacher123456", "teacher")
+    admin_token = _login(client, "admin", "123456", "admin")
+    teacher_token = _login(client, "20261001", "123456", "teacher")
     students = [
         ("20260001", "张三", "13800000001"),
         ("20260002", "李四", "13800000004"),
@@ -116,7 +116,8 @@ def _seed_relationship_scenario(client: TestClient) -> dict[str, int | str]:
             "submit_payload": {"remark": "定位偏移"},
         },
     )
-    assert exception_checkin.status_code == 200
+    assert exception_checkin.status_code == 400
+    assert "签到范围" in exception_checkin.json()["detail"]
 
     return {
         "admin_token": admin_token,
@@ -149,11 +150,11 @@ def test_teacher_relationship_fields_include_counts_progress_students_and_except
     assert tasks_response.status_code == 200
     task = tasks_response.json()["data"]["items"][0]
     assert task["student_count"] == 3
-    assert task["submitted_count"] == 2
-    assert task["completion_rate"] == 67
-    assert task["completionRate"] == 67
-    assert task["exception_count"] == 1
-    assert task["pending_review_count"] == 1
+    assert task["submitted_count"] == 1
+    assert task["completion_rate"] == 33
+    assert task["completionRate"] == 33
+    assert task["exception_count"] == 0
+    assert task["pending_review_count"] == 0
     assert task["group_names"] == ["软件2601"]
     assert task["groupName"] == "软件2601"
 
@@ -163,32 +164,22 @@ def test_teacher_relationship_fields_include_counts_progress_students_and_except
     assert detail_response.status_code == 200
     detail = detail_response.json()["data"]
     assert detail["id"] == scenario["task_id"]
-    assert detail["task"]["completionRate"] == 67
+    assert detail["task"]["completionRate"] == 33
     assert [student["name"] for student in detail["students"]] == [
         "张三",
         "李四",
         "王五",
     ]
     assert {student["name"]: student["status"] for student in detail["students"]} == {
-        "张三": "submitted",
-        "李四": "pending_review",
+        "张三": "present",
+        "李四": "missing",
         "王五": "missing",
     }
-    assert detail["exceptions"][0]["studentName"] == "李四"
-    assert detail["exceptions"][0]["taskTitle"] == "晚间查寝"
-    assert detail["exceptions"][0]["groupName"] == "软件2601"
-    assert detail["exceptions"][0]["reason"] == "当前位置不在有效范围内"
+    assert detail["exceptions"] == []
 
     exceptions_response = client.get("/api/teacher/exceptions", headers=teacher_headers)
     assert exceptions_response.status_code == 200
-    exception = exceptions_response.json()["data"]["items"][0]
-    assert exception["student_name"] == "李四"
-    assert exception["studentName"] == "李四"
-    assert exception["task_title"] == "晚间查寝"
-    assert exception["taskTitle"] == "晚间查寝"
-    assert exception["group_name"] == "软件2601"
-    assert exception["groupName"] == "软件2601"
-    assert exception["submitted_at"].startswith("2026-06-24T21:45:00")
+    assert exceptions_response.json()["data"]["items"] == []
 
 
 def test_admin_relationship_fields_include_student_teacher_group_task_and_exception_links(
@@ -207,9 +198,9 @@ def test_admin_relationship_fields_include_student_teacher_group_task_and_except
     dashboard = dashboard_response.json()["data"]
     assert dashboard["student_count"] == 3
     assert dashboard["task_count"] == 1
-    assert dashboard["exception_count"] == 1
-    assert dashboard["pending_appeal_count"] == 1
-    assert dashboard["completion_rate"] == 67
+    assert dashboard["exception_count"] == 0
+    assert dashboard["pending_appeal_count"] == 0
+    assert dashboard["completion_rate"] == 33
 
     students_response = client.get("/api/admin/students", headers=admin_headers)
     assert students_response.status_code == 200
@@ -223,8 +214,8 @@ def test_admin_relationship_fields_include_student_teacher_group_task_and_except
     assert teachers_response.status_code == 200
     teacher = teachers_response.json()["data"]["items"][0]
     assert teacher["name"] == "李老师"
-    assert teacher["account"] == "teacher"
-    assert teacher["teacher_no"] == "T2026001"
+    assert teacher["account"] == "20261001"
+    assert teacher["teacher_no"] == "20261001"
     assert teacher["group_ids"] == [1]
     assert teacher["groups"] == ["软件2601"]
     assert teacher["student_count"] == 3
@@ -244,16 +235,10 @@ def test_admin_relationship_fields_include_student_teacher_group_task_and_except
     assert task["teacher_name"] == "李老师"
     assert task["group_names"] == ["软件2601"]
     assert task["student_count"] == 3
-    assert task["submitted_count"] == 2
-    assert task["completion_rate"] == 67
-    assert task["exception_count"] == 1
+    assert task["submitted_count"] == 1
+    assert task["completion_rate"] == 33
+    assert task["exception_count"] == 0
 
     exceptions_response = client.get("/api/admin/exceptions", headers=admin_headers)
     assert exceptions_response.status_code == 200
-    exception = exceptions_response.json()["data"]["items"][0]
-    assert exception["student_name"] == "李四"
-    assert exception["student_no"] == "20260002"
-    assert exception["task_title"] == "晚间查寝"
-    assert exception["teacher_name"] == "李老师"
-    assert exception["group_names"] == ["软件2601"]
-    assert exception["record_status"] == "exception"
+    assert exceptions_response.json()["data"]["items"] == []

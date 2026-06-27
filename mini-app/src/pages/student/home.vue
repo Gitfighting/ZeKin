@@ -1,277 +1,825 @@
 <script setup lang="ts">
+
 import { onShow } from '@dcloudio/uni-app'
-import { ref } from 'vue'
 
-import TaskCard from '@/components/TaskCard.vue'
+import { computed, ref } from 'vue'
+
+import HomeTaskCard from '@/components/HomeTaskCard.vue'
+import StudentTabBar from '@/components/StudentTabBar.vue'
+import { refreshStudentUnreadMessageCount } from '@/composables/useStudentUnreadMessages'
+
+import { readStoredSession } from '@/services/auth'
+
 import { logInfo, showError } from '@/services/feedback'
-import {
-  getStudentDashboard,
-  type QuickEntry,
-  type StudentDashboard,
-  type StudentTask,
-} from '@/services/student'
 
-const dashboard = ref<StudentDashboard>({
-  greeting: '同学，你好',
-  pendingCount: 0,
-  upcomingDeadline: '暂无待办任务',
-  exceptionCount: 0,
-  alerts: [],
-  quickEntries: [
-    { label: '今日任务', path: '/pages/student/tasks' },
-    { label: '打卡记录', path: '/pages/student/records' },
-    { label: '异常申诉', path: '/pages/student/appeal' },
-    { label: '个人中心', path: '/pages/student/profile' },
-  ],
-  focusTasks: [],
+import { getStudentProfile, getStudentTasks, type StudentTask } from '@/services/student'
+
+
+
+const dailyQuote = '木叶飞舞之处，火亦生生不息'
+
+
+
+const quickEntries = [
+
+  {
+
+    key: 'tasks',
+
+    label: '打卡任务',
+
+    sub: '立即完成',
+
+    path: '/pages/student/tasks',
+
+    tone: 'blue',
+
+    icon: '📅',
+
+  },
+
+  {
+
+    key: 'records',
+
+    label: '打卡记录',
+
+    sub: '查看历史',
+
+    path: '/pages/student/records',
+
+    tone: 'green',
+
+    icon: '📋',
+
+  },
+
+  {
+
+    key: 'join',
+
+    label: '加入班群',
+
+    sub: '输入邀请码',
+
+    path: '/pages/student/join-class',
+
+    tone: 'purple',
+
+    icon: '👥',
+
+  },
+
+  {
+
+    key: 'classes',
+
+    label: '我的班级',
+
+    sub: '已加入班级',
+
+    path: '/pages/student/my-classes',
+
+    tone: 'orange',
+
+    icon: '🏫',
+
+  },
+
+] as const
+
+/** 首页「今天的任务」仅展示一条 */
+const SHOW_HOME_TODAY_TASKS = true
+
+const displayName = ref('同学')
+
+const todayTasks = ref<StudentTask[]>([])
+
+const loading = ref(false)
+
+const featuredTask = computed(() => {
+  const actionable = todayTasks.value.find(
+    (task) => task.status === 'in-progress' || task.status === 'pending',
+  )
+  return actionable ?? todayTasks.value[0] ?? null
 })
 
-function openQuickEntry(entry: QuickEntry) {
-  if (entry.path.includes('/pages/student/home') || entry.path.includes('/pages/student/tasks') || entry.path.includes('/pages/student/messages') || entry.path.includes('/pages/student/profile')) {
-    uni.switchTab({
-      url: entry.path,
-    })
+const brandBarStyle = ref<Record<string, string>>({
+  top: '48px',
+  height: '32px',
+})
+
+const heroContentStyle = ref<Record<string, string>>({
+  paddingTop: '112rpx',
+  paddingLeft: '32rpx',
+  paddingRight: '32rpx',
+})
+
+function syncHeroLayout() {
+  if (typeof uni === 'undefined') {
     return
   }
 
-  uni.navigateTo({
-    url: entry.path,
-  })
+  try {
+    const menuButton = uni.getMenuButtonBoundingClientRect()
+    brandBarStyle.value = {
+      top: `${menuButton.top}px`,
+      height: `${menuButton.height}px`,
+    }
+    heroContentStyle.value = {
+      paddingTop: `${menuButton.bottom + 12}px`,
+      paddingLeft: '32rpx',
+      paddingRight: '32rpx',
+    }
+  } catch {
+    // 非小程序环境保留默认占位
+  }
 }
+
+
+
+const greetingPrefix = computed(() => {
+
+  const hour = new Date().getHours()
+
+  if (hour < 12) {
+
+    return '上午好'
+
+  }
+
+  if (hour < 18) {
+
+    return '下午好'
+
+  }
+
+  return '晚上好'
+
+})
+
+
+
+function openQuickEntry(path: string) {
+
+  if (path.includes('/pages/student/tasks') || path.includes('/pages/student/home')) {
+
+    uni.switchTab({ url: path })
+
+    return
+
+  }
+
+  uni.navigateTo({ url: path })
+
+}
+
+
 
 function openTask(task: StudentTask) {
+
   uni.navigateTo({
+
     url: `/pages/student/task-detail?id=${task.id}`,
+
   })
+
 }
 
+
+
+function openAllTasks() {
+
+  uni.switchTab({ url: '/pages/student/tasks' })
+
+}
+
+
+
 onShow(async () => {
-  try {
-    dashboard.value = await getStudentDashboard()
-    logInfo('学生首页数据加载成功', {
-      pendingCount: dashboard.value.pendingCount,
-      exceptionCount: dashboard.value.exceptionCount,
-    })
-  } catch (error) {
-    dashboard.value = {
-      ...dashboard.value,
-      pendingCount: 0,
-      upcomingDeadline: '加载失败',
-      exceptionCount: 0,
-      alerts: [],
-      focusTasks: [],
-    }
-    showError(error, '首页数据加载失败')
+
+  syncHeroLayout()
+
+  loading.value = true
+
+  void refreshStudentUnreadMessageCount()
+
+  const session = readStoredSession()
+
+  if (session?.user.displayName) {
+
+    displayName.value = session.user.displayName.replace(/^用户/, '') || session.user.displayName
+
   }
+
+
+
+  try {
+
+    const [tasks, profile] = await Promise.all([
+
+      getStudentTasks(),
+
+      getStudentProfile().catch(() => null),
+
+    ])
+
+    if (profile?.realName) {
+
+      displayName.value = profile.realName
+
+    }
+
+    todayTasks.value = tasks.filter(
+
+      (task) => task.status === 'in-progress' || task.status === 'pending' || task.status === 'normal',
+
+    )
+
+    logInfo('学生首页加载成功', { taskCount: todayTasks.value.length })
+
+  } catch (error) {
+
+    todayTasks.value = []
+
+    showError(error, '首页数据加载失败')
+
+  } finally {
+
+    loading.value = false
+
+  }
+
 })
+
 </script>
 
+
+
 <template>
-  <scroll-view scroll-y class="student-page">
-    <view class="student-page__hero">
-      <text class="student-page__greeting">{{ dashboard.greeting }}</text>
-      <text class="student-page__headline">今日待打卡 {{ dashboard.pendingCount }} 项</text>
-      <text class="student-page__subhead">即将截止：{{ dashboard.upcomingDeadline }}</text>
+
+  <view class="student-tab-page">
+
+  <scroll-view scroll-y class="home-page student-tab-page__scroll">
+
+    <view class="home-page__hero">
+
+      <view class="home-page__hero-bg-box" aria-hidden="true">
+        <image class="home-page__hero-bg" src="/static/student-home-hero.png" mode="aspectFill" />
+      </view>
+
+      <view class="home-page__hero-mask"></view>
+
+      <view class="home-page__brand-bar" :style="brandBarStyle">
+        <text class="home-page__brand">知勤</text>
+      </view>
+
+      <view class="home-page__hero-content" :style="heroContentStyle">
+
+        <text class="home-page__greeting">{{ greetingPrefix }}，{{ displayName }} 👋</text>
+
+        <text class="home-page__slogan">诚信打卡，安全成长</text>
+
+      </view>
+
     </view>
 
-    <view class="student-page__panel student-page__stats">
-      <view class="student-page__stat">
-        <text class="student-page__stat-label">今日待打卡</text>
-        <text class="student-page__stat-value">{{ dashboard.pendingCount }}</text>
-      </view>
-      <view class="student-page__stat">
-        <text class="student-page__stat-label">即将截止</text>
-        <text class="student-page__stat-value student-page__stat-value--small">{{ dashboard.upcomingDeadline }}</text>
-      </view>
-      <view class="student-page__stat">
-        <text class="student-page__stat-label">异常提醒</text>
-        <text class="student-page__stat-value">{{ dashboard.exceptionCount }}</text>
-      </view>
-    </view>
 
-    <view class="student-page__panel">
-      <view class="student-page__section-header">
-        <text class="student-page__section-title">快捷入口</text>
-      </view>
-      <view class="student-page__quick-grid">
-        <view
-          v-for="entry in dashboard.quickEntries"
-          :key="entry.label"
-          class="student-page__quick-item"
-          @click="openQuickEntry(entry)"
-        >
-          <text class="student-page__quick-label">{{ entry.label }}</text>
-          <text v-if="entry.badge" class="student-page__quick-badge">{{ entry.badge }}</text>
+
+    <view class="home-page__toolbar home-page__toolbar--four">
+
+      <view
+
+        v-for="entry in quickEntries"
+
+        :key="entry.key"
+
+        class="home-page__tool"
+
+        @click="openQuickEntry(entry.path)"
+
+      >
+
+        <view class="home-page__tool-icon" :class="`home-page__tool-icon--${entry.tone}`">
+
+          <text>{{ entry.icon }}</text>
+
         </view>
+
+        <text class="home-page__tool-label">{{ entry.label }}</text>
+
+        <text class="home-page__tool-sub">{{ entry.sub }}</text>
+
       </view>
+
     </view>
 
-    <view class="student-page__panel">
-      <view class="student-page__section-header">
-        <text class="student-page__section-title">异常提醒</text>
+
+
+    <view v-if="SHOW_HOME_TODAY_TASKS" class="home-page__section">
+
+      <view class="home-page__tasks-card">
+
+        <view class="home-page__section-head">
+
+          <view class="home-page__section-title-wrap">
+
+            <text class="home-page__section-icon">📅</text>
+
+            <text class="home-page__section-title">今天的任务</text>
+
+          </view>
+
+          <text class="home-page__section-link" @click.stop="openAllTasks">全部任务 ›</text>
+
+        </view>
+
+
+
+        <view v-if="loading" class="home-page__tasks-empty">加载中...</view>
+
+        <view v-else-if="!featuredTask" class="home-page__tasks-empty">今日暂无打卡任务</view>
+
+        <HomeTaskCard v-else embedded :task="featuredTask" @click="openTask" />
+
       </view>
-      <view class="student-page__alerts">
-        <text v-for="item in dashboard.alerts" :key="item" class="student-page__alert-item">
-          {{ item }}
-        </text>
-        <text v-if="dashboard.alerts.length === 0" class="student-page__empty">暂无异常提醒</text>
-      </view>
+
     </view>
 
-    <view class="student-page__panel student-page__tasks">
-      <view class="student-page__section-header">
-        <text class="student-page__section-title">即将截止</text>
-      </view>
-      <TaskCard v-for="task in dashboard.focusTasks" :key="task.id" :task="task" @action="openTask" @click="openTask" />
-      <text v-if="dashboard.focusTasks.length === 0" class="student-page__empty">暂无即将截止任务</text>
-    </view>
+
+
+    <view class="home-page__quote-spacer" aria-hidden="true"></view>
+
   </scroll-view>
+
+  <view class="home-page__quote home-page__quote--pinned">
+    <image
+      class="home-page__quote-bg"
+      src="/static/man-blue-daily.png"
+      mode="aspectFill"
+      aria-hidden="true"
+    />
+    <view class="home-page__quote-copy">
+      <text class="home-page__quote-title">每日一言</text>
+      <text class="home-page__quote-text">{{ dailyQuote }}</text>
+    </view>
+  </view>
+
+  <StudentTabBar active="home" />
+
+  </view>
+
 </template>
 
+
+
 <style scoped lang="scss">
+
 @use '@/styles/tokens.scss' as *;
 
-.student-page {
-  min-height: 100vh;
+
+
+.home-page {
   background: $page-bg;
 }
 
-.student-page__hero {
+
+
+.home-page__hero {
+
+  position: relative;
+
+  height: calc(420rpx + 30px);
+
+  overflow: hidden;
+
+}
+
+
+
+.home-page__hero-bg-box {
+
+  position: absolute;
+
+  right: 0;
+
+  bottom: 0;
+
+  left: 0;
+
+  height: 175%;
+
+}
+
+
+
+.home-page__hero-bg {
+
+  width: 100%;
+
+  height: 100%;
+
+}
+
+
+
+.home-page__hero-mask {
+
+  position: absolute;
+
+  inset: 0;
+
+  background: linear-gradient(180deg, rgba(15, 120, 255, 0.1) 0%, rgba(15, 120, 255, 0.38) 100%);
+
+}
+
+
+
+.home-page__hero-content {
+
+  position: relative;
+
+  z-index: 2;
+
   display: flex;
+
   flex-direction: column;
-  gap: 14rpx;
-  padding: 112rpx 28rpx 34rpx;
-  background: $mobile-gradient;
+
+  gap: 12rpx;
+
+  color: #fff;
+
 }
 
-.student-page__greeting,
-.student-page__headline,
-.student-page__subhead {
-  color: #ffffff;
+
+
+.home-page__brand-bar {
+
+  position: absolute;
+
+  left: 0;
+
+  right: 0;
+
+  z-index: 3;
+
+  display: flex;
+
+  align-items: center;
+
+  padding-left: 32rpx;
+
+  box-sizing: border-box;
+
 }
 
-.student-page__greeting {
-  font-size: 26rpx;
-  opacity: 0.9;
-}
 
-.student-page__headline {
-  font-size: 48rpx;
+
+.home-page__brand {
+
+  font-size: 42rpx;
+
   font-weight: 700;
+
+  color: #fff;
+
+  line-height: 1;
+
 }
 
-.student-page__subhead {
-  font-size: 28rpx;
-  opacity: 0.95;
+
+
+.home-page__greeting {
+
+  margin-top: 8rpx;
+
+  font-size: 52rpx;
+
+  font-weight: 700;
+
 }
 
-.student-page__panel {
-  margin: 0 24rpx 24rpx;
-  padding: 28rpx;
+
+
+.home-page__slogan {
+
+  font-size: 30rpx;
+
+  opacity: 0.92;
+
+}
+
+
+
+.home-page__toolbar {
+
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 16rpx;
+
+  margin: -56rpx 24rpx 0;
+
+  padding: 28rpx 20rpx;
+
+  border-radius: 28rpx;
+
+  background: $card-bg;
+
+  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.1);
+
+  position: relative;
+
+  z-index: 3;
+
+}
+
+.home-page__toolbar--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12rpx;
+  padding: 28rpx 16rpx;
+}
+
+
+
+.home-page__tool {
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  gap: 10rpx;
+
+}
+
+
+
+.home-page__tool-icon {
+
+  display: flex;
+
+  width: 96rpx;
+
+  height: 96rpx;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border-radius: 28rpx;
+
+  font-size: 40rpx;
+
+}
+
+
+
+.home-page__tool-icon--blue {
+
+  background: linear-gradient(180deg, #4ca3ff 0%, #1677ff 100%);
+
+}
+
+
+
+.home-page__tool-icon--green {
+
+  background: linear-gradient(180deg, #5fe08d 0%, #20c55a 100%);
+
+}
+
+
+
+.home-page__tool-icon--purple {
+
+  background: linear-gradient(180deg, #b794ff 0%, #7c3aed 100%);
+
+}
+
+.home-page__tool-icon--orange {
+  background: linear-gradient(180deg, #ffb347 0%, #ff9f1a 100%);
+}
+
+.home-page__tool-label {
+
+  color: $text-primary;
+
+  font-size: 24rpx;
+
+  font-weight: 700;
+
+  text-align: center;
+
+}
+
+
+
+.home-page__tool-sub {
+
+  color: $text-secondary;
+
+  font-size: 20rpx;
+
+  text-align: center;
+
+}
+
+
+
+.home-page__section {
+
+  margin: 28rpx 24rpx 0;
+
+}
+
+
+
+.home-page__tasks-card {
+
+  padding: 28rpx 20rpx;
+
+  border-radius: 28rpx;
+
+  background: $card-bg;
+
+  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.1);
+
+}
+
+
+
+.home-page__section-head {
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  margin-bottom: 20rpx;
+
+  padding-bottom: 20rpx;
+
+  border-bottom: 1rpx solid rgba(15, 23, 42, 0.06);
+
+}
+
+
+
+.home-page__section-title-wrap {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 10rpx;
+
+}
+
+
+
+.home-page__section-icon {
+
+  font-size: 34rpx;
+
+}
+
+
+
+.home-page__section-title {
+
+  color: $text-primary;
+
+  font-size: 34rpx;
+
+  font-weight: 700;
+
+}
+
+
+
+.home-page__section-link {
+
+  color: $text-secondary;
+
+  font-size: 26rpx;
+
+}
+
+
+
+.home-page__tasks-empty {
+
+  padding: 8rpx 0;
+
+  color: $text-secondary;
+
+  font-size: 26rpx;
+
+  text-align: center;
+
+}
+
+
+
+.home-page__task-list {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 18rpx;
+
+}
+
+
+
+.home-page__empty {
+
+  padding: 40rpx 24rpx;
+
+  border-radius: 24rpx;
+
+  background: $card-bg;
+
+  color: $text-secondary;
+
+  font-size: 26rpx;
+
+  text-align: center;
+
+}
+
+
+
+.home-page__quote {
+  position: relative;
+  overflow: hidden;
+  min-height: 200rpx;
+  margin: 28rpx 24rpx 0;
+  padding: 28rpx 20rpx;
   border-radius: 28rpx;
   background: $card-bg;
-  box-shadow: 0 18rpx 40rpx rgba(15, 107, 214, 0.08);
+  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.1);
 }
 
-.student-page__stats {
-  margin-top: -40rpx;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16rpx;
+.home-page__quote--pinned {
+  position: fixed;
+  right: 24rpx;
+  left: 24rpx;
+  bottom: calc(#{$tab-bar-height} + env(safe-area-inset-bottom) + 24rpx);
+  z-index: 900;
+  margin: 0;
 }
 
-.student-page__stat {
+.home-page__quote-spacer {
+  height: calc(200rpx + 56rpx + 24rpx + 320rpx);
+}
+
+.home-page__quote-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.home-page__quote-copy {
+  position: relative;
+  z-index: 1;
   display: flex;
-  min-width: 0;
+  max-width: 58%;
   flex-direction: column;
-  gap: 14rpx;
-  padding: 24rpx;
-  border-radius: 24rpx;
-  background: rgba($primary, 0.05);
+  gap: calc(10rpx + 2px);
 }
 
-.student-page__stat-label {
-  color: $text-secondary;
-  font-size: 24rpx;
-}
 
-.student-page__stat-value {
-  color: $text-primary;
-  font-size: 42rpx;
-  font-weight: 700;
-  line-height: 1.3;
-}
 
-.student-page__stat-value--small {
-  font-size: 24rpx;
-}
+.home-page__quote-title {
 
-.student-page__section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24rpx;
-}
+  color: $primary;
 
-.student-page__section-title {
-  color: $text-primary;
   font-size: 30rpx;
+
   font-weight: 700;
+
 }
 
-.student-page__quick-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16rpx;
-}
 
-.student-page__quick-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 108rpx;
-  padding: 0 24rpx;
-  border-radius: 24rpx;
-  background: #f8fbff;
-  border: 2rpx solid rgba($primary, 0.08);
-}
 
-.student-page__quick-label {
+.home-page__quote-text {
+
   color: $text-primary;
-  font-size: 28rpx;
-  font-weight: 600;
-}
 
-.student-page__quick-badge {
-  min-width: 40rpx;
-  height: 40rpx;
-  line-height: 40rpx;
-  border-radius: 999rpx;
-  background: $primary;
-  color: #ffffff;
-  text-align: center;
-  font-size: 24rpx;
-}
-
-.student-page__alerts,
-.student-page__tasks {
-  display: flex;
-  flex-direction: column;
-  gap: 18rpx;
-}
-
-.student-page__alert-item {
-  padding: 20rpx 24rpx;
-  border-radius: 22rpx;
-  background: rgba($warning, 0.1);
-  color: $text-primary;
   font-size: 26rpx;
-  line-height: 1.5;
+
+  line-height: calc(1.7em + 2px);
+
 }
 
-.student-page__empty {
-  color: $text-secondary;
-  font-size: 26rpx;
-  line-height: 1.6;
-}
 </style>
+
+

@@ -10,6 +10,7 @@ class StudentImportItem(BaseModel):
     grade: str
     class_name: str
     dormitory: str
+    password: str | None = None
 
 
 class StudentImportRequest(BaseModel):

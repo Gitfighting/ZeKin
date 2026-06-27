@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 
-import type { TeacherGroupDetail } from '@/services/teacher'
+import { logInfo, showError } from '@/services/feedback'
+import { getTeacherGroupDetail, type TeacherGroupDetail } from '@/services/teacher'
 
+const groupId = ref(0)
+const loading = ref(false)
 const detail = ref<TeacherGroupDetail>({
   group: {
     id: 0,
@@ -26,6 +30,48 @@ const quickStats = computed(() => [
   { label: '待审核', value: `${detail.value.stats.pendingReviewCount}` },
 ])
 
+const studentStatusLabel: Record<string, string> = {
+  joined: '已加入',
+  submitted: '已打卡',
+  missing: '未打卡',
+  pending_review: '待审核',
+}
+
+onLoad((query) => {
+  groupId.value = Number(query?.id ?? 0)
+  loadDetail()
+})
+
+async function loadDetail() {
+  if (!groupId.value || typeof uni === 'undefined' || typeof uni.request !== 'function') {
+    return
+  }
+
+  loading.value = true
+  try {
+    detail.value = await getTeacherGroupDetail(groupId.value)
+    logInfo('班级详情加载成功', { groupId: groupId.value })
+  } catch (error) {
+    showError(error, '班级详情加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+function copyInviteCode() {
+  const code = detail.value.group.inviteCode
+  if (!code || typeof uni === 'undefined') {
+    return
+  }
+
+  uni.setClipboardData({
+    data: code,
+    success: () => {
+      uni.showToast({ title: '邀请码已复制', icon: 'success' })
+    },
+  })
+}
+
 function openTask(id: number) {
   if (typeof uni === 'undefined') {
     return
@@ -40,6 +86,10 @@ function openTask(id: number) {
     <view class="hero-card">
       <text class="page-title">{{ detail.group.name }}</text>
       <text class="page-subtitle">{{ detail.group.courseName }} · {{ detail.group.studentCount }} 名学生</text>
+      <view v-if="detail.group.inviteCode" class="invite-row">
+        <text class="invite-text">邀请码 {{ detail.group.inviteCode }}</text>
+        <text class="invite-action" @click="copyInviteCode">复制</text>
+      </view>
       <view class="stats-grid">
         <view v-for="item in quickStats" :key="item.label" class="stat-card">
           <text class="stat-value">{{ item.value }}</text>
@@ -50,11 +100,12 @@ function openTask(id: number) {
 
     <view class="section-card">
       <text class="section-title">学生列表</text>
+      <view v-if="loading" class="empty-line">加载中...</view>
       <view v-for="student in detail.students" :key="student.id" class="row-card">
         <text class="row-title">{{ student.name }}</text>
-        <text class="row-status">{{ student.status }}</text>
+        <text class="row-status">{{ studentStatusLabel[student.status] ?? student.status }}</text>
       </view>
-      <text v-if="detail.students.length === 0" class="empty-line">暂无学生详情数据</text>
+      <text v-if="!loading && detail.students.length === 0" class="empty-line">暂无学生，请将邀请码发给学生</text>
     </view>
 
     <view class="section-card">
@@ -66,7 +117,7 @@ function openTask(id: number) {
         </view>
         <text class="row-status">{{ task.status }}</text>
       </view>
-      <text v-if="detail.tasks.length === 0" class="empty-line">暂无班级任务数据</text>
+      <text v-if="detail.tasks.length === 0" class="empty-line">暂无班级任务</text>
     </view>
   </view>
 </template>
@@ -107,6 +158,27 @@ function openTask(id: number) {
   margin-top: 8rpx;
   font-size: 22rpx;
   line-height: 1.5;
+}
+
+.invite-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-top: 16rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 16rpx;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.invite-text {
+  font-size: 28rpx;
+  letter-spacing: 4rpx;
+}
+
+.invite-action {
+  font-size: 24rpx;
+  font-weight: 600;
 }
 
 .stats-grid {

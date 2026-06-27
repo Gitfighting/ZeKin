@@ -1,0 +1,37 @@
+﻿meta {
+  name: 01 管理员登录
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "account": "admin",
+    "password": "123456",
+    "user_type": "admin"
+  }
+}
+
+script:post-response {
+  const body = res.getBody();
+  if (body?.data?.access_token) {
+    bru.setEnvVar("admin_token", body.data.access_token);
+  }
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("返回 access_token", function() {
+    const body = res.getBody();
+    expect(body.data).to.have.property("access_token");
+    expect(body.data.user.user_type).to.equal("admin");
+  });
+}

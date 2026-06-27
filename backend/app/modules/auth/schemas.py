@@ -29,6 +29,12 @@ class StudentActivateRequest(BaseModel):
     password: str
 
 
+class RegisterRequest(BaseModel):
+    account: str
+    phone: str
+    password: str
+
+
 class StudentActivateResponse(BaseModel):
     activated: bool
     access_token: str

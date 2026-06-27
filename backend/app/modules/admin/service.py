@@ -1,3 +1,4 @@
+from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.modules.admin.repository import AdminRepository
@@ -8,9 +9,13 @@ from app.modules.admin.schemas import (
     TeacherImportRequest,
 )
 from app.modules.auth.models import StudentProfile, TeacherProfile, User
+from app.modules.groups.invite import generate_unique_invite_code
 from app.modules.groups.models import Group, GroupMember
 from app.modules.tasks.models import CheckinTask
-from app.shared.enums import RecordStatus
+from app.shared.enums import RecordStatus, UserType
+
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+DEFAULT_STUDENT_PASSWORD = "123456"
 
 
 class AdminService:
@@ -59,12 +64,37 @@ class AdminService:
             existing = self.repository.find_student_by_student_no(item.student_no)
             if existing is not None:
                 continue
-            profile = StudentProfile(**item.model_dump())
+            password = item.password or DEFAULT_STUDENT_PASSWORD
+            user = User(
+                account=item.student_no,
+                phone=item.phone,
+                password_hash=pwd_context.hash(password),
+                user_type=UserType.STUDENT.value,
+                display_name=item.name,
+            )
+            profile = StudentProfile(
+                user=user,
+                student_no=item.student_no,
+                name=item.name,
+                phone=item.phone,
+                college=item.college,
+                major=item.major,
+                grade=item.grade,
+                class_name=item.class_name,
+                dormitory=item.dormitory,
+                activated=True,
+                status="active",
+            )
+            self.repository.add(user)
             self.repository.add(profile)
             self.repository.flush()
             group = self.repository.get_group_by_name(item.class_name)
             if group is None:
-                group = Group(name=item.class_name, group_type="class")
+                group = Group(
+                    name=item.class_name,
+                    group_type="class",
+                    invite_code=generate_unique_invite_code(self.db),
+                )
                 self.repository.add(group)
                 self.repository.flush()
             self.repository.add_group_member(
@@ -101,7 +131,13 @@ class AdminService:
         created = 0
         for item in payload.groups:
             if self.repository.get_group_by_name(item.name) is None:
-                self.repository.add(Group(name=item.name, group_type=item.group_type))
+                self.repository.add(
+                    Group(
+                        name=item.name,
+                        group_type=item.group_type,
+                        invite_code=generate_unique_invite_code(self.db),
+                    )
+                )
                 created += 1
         self.repository.commit()
         return {"imported": created}

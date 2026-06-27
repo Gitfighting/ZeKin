@@ -1,0 +1,12 @@
+{
+  "name": "zekin-bruno-tests",
+  "private": true,
+  "scripts": {
+    "test": "cd zeKin-e2e && bru run --env local",
+    "test:checkin-flow": "cd checkin-flow && bru run --env local",
+    "test:all": "cd zeKin-e2e && bru run --env local && cd ../checkin-flow && bru run --env local"
+  },
+  "devDependencies": {
+    "@usebruno/cli": "^3.5.0"
+  }
+}

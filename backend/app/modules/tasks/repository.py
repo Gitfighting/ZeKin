@@ -1,13 +1,17 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.modules.auth.models import StudentProfile
+from app.modules.auth.models import StudentProfile, TeacherProfile
 from app.modules.checkin_types.models import CheckinType
 from app.modules.exceptions.models import CheckinException
 from app.modules.groups.models import Group, GroupMember, GroupTeacher
 from app.modules.records.models import CheckinRecord
 from app.modules.rule_templates.models import RuleTemplate
-from app.modules.tasks.models import CheckinTask, CheckinTaskGroup
+from app.modules.tasks.models import (
+    CheckinTask,
+    CheckinTaskGroup,
+    CheckinTaskOccurrence,
+)
 
 
 class TaskRepository:
@@ -70,6 +74,22 @@ class TaskRepository:
         )
         return list(self.db.scalars(statement).unique())
 
+    def get_student_profile(self, student_profile_id: int) -> StudentProfile | None:
+        return self.db.get(StudentProfile, student_profile_id)
+
+    def get_record_for_student_task(
+        self, task_id: int, student_profile_id: int
+    ) -> CheckinRecord | None:
+        statement = (
+            select(CheckinRecord)
+            .where(
+                CheckinRecord.task_id == task_id,
+                CheckinRecord.student_profile_id == student_profile_id,
+            )
+            .order_by(CheckinRecord.id.desc())
+        )
+        return self.db.scalar(statement)
+
     def list_records_for_task(self, task_id: int) -> list[CheckinRecord]:
         statement = (
             select(CheckinRecord)
@@ -127,6 +147,42 @@ class TaskRepository:
         )
         return list(self.db.scalars(statement))
 
+    def list_groups_for_student_profile(self, student_profile_id: int) -> list[Group]:
+        statement = (
+            select(Group)
+            .join(GroupMember, GroupMember.group_id == Group.id)
+            .where(GroupMember.student_profile_id == student_profile_id)
+            .order_by(Group.id)
+        )
+        return list(self.db.scalars(statement))
+
+    def list_teachers_for_group(self, group_id: int) -> list[TeacherProfile]:
+        statement = (
+            select(TeacherProfile)
+            .join(GroupTeacher, GroupTeacher.teacher_profile_id == TeacherProfile.id)
+            .where(GroupTeacher.group_id == group_id)
+            .order_by(TeacherProfile.id)
+        )
+        return list(self.db.scalars(statement))
+
+    def get_group(self, group_id: int) -> Group | None:
+        return self.db.get(Group, group_id)
+
+    def get_group_by_invite_code(self, invite_code: str) -> Group | None:
+        statement = select(Group).where(Group.invite_code == invite_code)
+        return self.db.scalar(statement)
+
+    def invite_code_exists(self, invite_code: str) -> bool:
+        statement = select(Group.id).where(Group.invite_code == invite_code)
+        return self.db.scalar(statement) is not None
+
+    def group_member_exists(self, group_id: int, student_profile_id: int) -> bool:
+        statement = select(GroupMember.id).where(
+            GroupMember.group_id == group_id,
+            GroupMember.student_profile_id == student_profile_id,
+        )
+        return self.db.scalar(statement) is not None
+
     def list_records_for_student(self, student_profile_id: int) -> list[CheckinRecord]:
         statement = (
             select(CheckinRecord)
@@ -150,3 +206,21 @@ class TaskRepository:
     def get_student_profile_by_user_id(self, user_id: int) -> StudentProfile | None:
         statement = select(StudentProfile).where(StudentProfile.user_id == user_id)
         return self.db.scalar(statement)
+
+    # ── 定时任务实例（occurrence） ──────────────────────────────────────
+    def get_occurrence(
+        self, task_id: int, occurrence_date: str
+    ) -> CheckinTaskOccurrence | None:
+        statement = select(CheckinTaskOccurrence).where(
+            CheckinTaskOccurrence.task_id == task_id,
+            CheckinTaskOccurrence.occurrence_date == occurrence_date,
+        )
+        return self.db.scalar(statement)
+
+    def list_occurrences_for_task(self, task_id: int) -> list[CheckinTaskOccurrence]:
+        statement = (
+            select(CheckinTaskOccurrence)
+            .where(CheckinTaskOccurrence.task_id == task_id)
+            .order_by(CheckinTaskOccurrence.occurrence_date)
+        )
+        return list(self.db.scalars(statement))

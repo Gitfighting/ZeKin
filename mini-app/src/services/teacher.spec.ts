@@ -123,7 +123,7 @@ describe('teacher service', () => {
 
     expect(lastRequest()).toEqual(
       expect.objectContaining({
-        url: 'http://localhost:8000/api/teacher/tasks',
+        url: 'http://192.168.165.19:8000/api/teacher/tasks',
         method: 'POST',
         data: expect.objectContaining({
           title: 'Evening check',
@@ -203,7 +203,7 @@ describe('teacher service', () => {
 
     expect(lastRequest()).toEqual(
       expect.objectContaining({
-        url: 'http://localhost:8000/api/teacher/tasks/8',
+        url: 'http://192.168.165.19:8000/api/teacher/tasks/8',
         method: 'GET',
       }),
     )
@@ -254,7 +254,7 @@ describe('teacher service', () => {
 
     expect(lastRequest()).toEqual(
       expect.objectContaining({
-        url: 'http://localhost:8000/api/teacher/exceptions/11/review',
+        url: 'http://192.168.165.19:8000/api/teacher/exceptions/11/review',
         method: 'POST',
         data: {
           decision: 'approve',

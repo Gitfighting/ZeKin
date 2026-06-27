@@ -6,6 +6,8 @@ from app.modules.auth.models import User
 from app.modules.auth.router import get_current_user
 from app.modules.records.schemas import AppealRequest, CheckinRequest
 from app.modules.records.service import RecordService
+from app.modules.tasks.schemas import JoinGroupRequest
+from app.modules.tasks.service import TaskService
 from app.shared.enums import UserType
 from app.shared.response import success_response
 
@@ -20,6 +22,10 @@ def require_student(current_user: User = Depends(get_current_user)) -> User:
 
 def get_record_service(db: Session = Depends(get_db)) -> RecordService:
     return RecordService(db)
+
+
+def get_task_service(db: Session = Depends(get_db)) -> TaskService:
+    return TaskService(db)
 
 
 @router.get("/dashboard")
@@ -58,6 +64,11 @@ def checkin(
 ):
     try:
         result = service.submit_checkin(current_user=current_user, task_id=task_id, payload=payload)
+    except CheckinBlockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": str(exc), "record_id": exc.record_id},
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return success_response(result)
@@ -91,6 +102,19 @@ def messages(current_user: User = Depends(require_student), service: RecordServi
     return success_response(service.list_messages(current_user))
 
 
+@router.get("/messages/{message_id}")
+def message_detail(
+    message_id: int,
+    current_user: User = Depends(require_student),
+    service: RecordService = Depends(get_record_service),
+):
+    try:
+        result = service.get_message_detail(current_user, message_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    return success_response(result)
+
+
 @router.get("/profile")
 def profile(current_user: User = Depends(require_student), service: RecordService = Depends(get_record_service)):
     try:
@@ -104,6 +128,31 @@ def profile(current_user: User = Depends(require_student), service: RecordServic
 def growth_summary(current_user: User = Depends(require_student), service: RecordService = Depends(get_record_service)):
     try:
         result = service.growth_summary(current_user)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return success_response(result)
+
+
+@router.get("/groups")
+def groups(
+    current_user: User = Depends(require_student),
+    service: TaskService = Depends(get_task_service),
+):
+    try:
+        result = service.list_student_groups(current_user)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return success_response(result)
+
+
+@router.post("/groups/join")
+def join_group(
+    payload: JoinGroupRequest,
+    current_user: User = Depends(require_student),
+    service: TaskService = Depends(get_task_service),
+):
+    try:
+        result = service.join_group_by_invite_code(current_user, payload.invite_code)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return success_response(result)

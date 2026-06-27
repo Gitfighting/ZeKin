@@ -1,0 +1,32 @@
+meta {
+  name: 05 二维码签到
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{base_url}}/api/student/tasks/{{qr_task_id}}/checkin
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{student_token}}
+}
+
+body:json {
+  {
+    "qr_payload": "{{qr_token}}",
+    "occurrence_date": "{{today}}"
+  }
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("二维码签到成功", function() {
+    const body = res.getBody();
+    expect(body.data).to.have.property("record_id");
+  });
+}
