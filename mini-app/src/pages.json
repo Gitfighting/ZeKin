@@ -69,7 +69,7 @@
 		{
 			"path": "pages/student/appeal",
 			"style": {
-				"navigationBarTitleText": "异常申诉"
+				"navigationStyle": "custom"
 			}
 		},
 		{

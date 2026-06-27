@@ -117,7 +117,11 @@ def _seed_relationship_scenario(client: TestClient) -> dict[str, int | str]:
         },
     )
     assert exception_checkin.status_code == 400
-    assert "签到范围" in exception_checkin.json()["detail"]
+    detail = exception_checkin.json()["detail"]
+    message = detail["message"] if isinstance(detail, dict) else detail
+    assert "签到范围" in message
+    if isinstance(detail, dict):
+        assert detail.get("record_id")
 
     return {
         "admin_token": admin_token,

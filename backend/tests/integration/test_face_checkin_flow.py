@@ -90,4 +90,8 @@ def test_checkin_with_enabled_face_rule_requires_registered_face(monkeypatch) ->
     )
 
     assert checkin_response.status_code == 400
-    assert "人脸" in checkin_response.json()["detail"]
+    detail = checkin_response.json()["detail"]
+    message = detail["message"] if isinstance(detail, dict) else detail
+    assert "人脸" in message
+    if isinstance(detail, dict):
+        assert detail.get("record_id")

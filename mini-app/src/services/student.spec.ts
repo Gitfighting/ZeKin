@@ -255,22 +255,68 @@ describe('student service', () => {
   it('loads message detail and marks read status from backend', async () => {
     mockApiResponse({
       id: 8,
-      title: '新打卡任务',
-      content: '老师发布了打卡任务',
+      title: '签到码签到0627',
+      content: '打卡方式：签到码\n打卡时间：06-27 08:00 - 23:00',
       read_status: 'read',
       created_at: '2026-06-27T07:42:00+08:00',
     })
 
     const message = await getStudentMessageDetail('8')
 
-    expect(lastRequest()?.url).toBe('/student/messages/8')
     expect(message).toEqual({
       id: '8',
       type: 'reminder',
-      title: '新打卡任务',
-      content: '老师发布了打卡任务',
+      title: '签到码签到0627',
+      content: '打卡方式：签到码\n打卡时间：06-27 08:00 - 23:00',
+      checkinMethods: '签到码',
+      timeWindow: '06-27 08:00 - 23:00',
       time: '2026-06-27 07:42',
       read: true,
     })
+  })
+
+  it('normalizes legacy task publish messages for card display', async () => {
+    mockApiResponse({
+      items: [
+        {
+          id: 10,
+          title: '新打卡任务',
+          content: '老师发布了打卡任务「签到码签到0627」，请在 06-27 08:00 - 23:00 完成打卡。',
+          read_status: 'unread',
+          created_at: '2026-06-27T07:42:00+08:00',
+        },
+      ],
+      total: 1,
+      unread_count: 1,
+    })
+
+    const { messages } = await getStudentMessages()
+
+    expect(messages[0]).toEqual(
+      expect.objectContaining({
+        title: '签到码签到0627',
+        timeWindow: '06-27 08:00 - 23:00',
+      }),
+    )
+  })
+
+  it('formats message time in Beijing timezone when backend returns UTC', async () => {
+    mockApiResponse({
+      items: [
+        {
+          id: 9,
+          title: 'UTC message',
+          content: 'published in UTC',
+          read_status: 'unread',
+          created_at: '2026-06-26T23:42:00+00:00',
+        },
+      ],
+      total: 1,
+      unread_count: 1,
+    })
+
+    const { messages } = await getStudentMessages()
+
+    expect(messages[0]?.time).toBe('2026-06-27 07:42')
   })
 })

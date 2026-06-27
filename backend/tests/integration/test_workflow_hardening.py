@@ -187,8 +187,8 @@ def test_appeal_and_review_create_student_messages(monkeypatch) -> None:
         f"/api/student/tasks/{task_id}/checkin",
         headers={"Authorization": f"Bearer {student_token}"},
         json={
-            "longitude": 120.01,
-            "latitude": 30.01,
+            "longitude": 120.000001,
+            "latitude": 30.000001,
             "dynamic_code": "",
             "submit_payload": {"remark": "定位偏移"},
         },
@@ -224,7 +224,7 @@ def test_appeal_and_review_create_student_messages(monkeypatch) -> None:
         "/api/student/messages", headers={"Authorization": f"Bearer {student_token}"}
     )
     assert any(
-        "审核结果" in item["title"]
+        "申诉审核结果" in item["title"] or "审核结果" in item["title"]
         for item in reviewed_messages.json()["data"]["items"]
     )
 

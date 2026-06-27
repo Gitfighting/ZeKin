@@ -2,26 +2,89 @@
 import { onShow } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 
-import StatusTag from '@/components/StatusTag.vue'
 import StudentTabBar from '@/components/StudentTabBar.vue'
 import { refreshStudentUnreadMessageCount } from '@/composables/useStudentUnreadMessages'
 import { logInfo, showError } from '@/services/feedback'
 import { getStudentMessages, type MessageItem } from '@/services/student'
 
+type MessageFilter = 'all' | 'unread' | 'system' | 'teacher'
+type MessageTone = 'blue' | 'orange'
+
+const filterTabs: { key: MessageFilter; label: string }[] = [
+  { key: 'all', label: '全部' },
+  { key: 'unread', label: '未读' },
+  { key: 'system', label: '系统消息' },
+  { key: 'teacher', label: '教师消息' },
+]
+
 const messages = ref<MessageItem[]>([])
 const unreadCount = ref(0)
+const activeFilter = ref<MessageFilter>('all')
 
-const tagStatusMap: Record<MessageItem['type'], 'normal' | 'in-progress' | 'pending'> = {
-  reminder: 'pending',
-  teacher_feedback: 'in-progress',
-  appeal_result: 'normal',
+function isTaskPublishMessage(item: MessageItem): boolean {
+  return Boolean(item.checkinMethods || item.timeWindow)
 }
 
-const labelMap: Record<MessageItem['type'], string> = {
-  reminder: '消息提醒',
-  teacher_feedback: '教师消息',
-  appeal_result: '消息结果',
+function isTeacherMessage(item: MessageItem): boolean {
+  if (isTaskPublishMessage(item)) {
+    return false
+  }
+  const text = `${item.title}${item.content}`
+  return item.type === 'teacher_feedback' || /老师|教师|反馈/.test(text)
 }
+
+function isSystemMessage(item: MessageItem): boolean {
+  return !isTeacherMessage(item)
+}
+
+function messageIcon(item: MessageItem): { icon: string; tone: MessageTone } {
+  if (item.type === 'teacher_feedback') {
+    return { icon: '👨‍🏫', tone: 'blue' }
+  }
+  if (item.type === 'appeal_result') {
+    return { icon: '📋', tone: 'blue' }
+  }
+  if (/异常|申诉/.test(`${item.title}${item.content}`)) {
+    return { icon: '⚠️', tone: 'orange' }
+  }
+  if (/系统|维护|通知/.test(`${item.title}${item.content}`)) {
+    return { icon: '🔔', tone: 'blue' }
+  }
+  return { icon: '📅', tone: 'blue' }
+}
+
+function messageCategory(item: MessageItem): string {
+  if (isTeacherMessage(item)) {
+    return '教师消息'
+  }
+  if (item.type === 'appeal_result') {
+    return '申诉结果'
+  }
+  if (/异常/.test(`${item.title}${item.content}`)) {
+    return '异常提醒'
+  }
+  if (/系统|维护/.test(`${item.title}${item.content}`)) {
+    return '系统通知'
+  }
+  return '打卡提醒'
+}
+
+function matchFilter(item: MessageItem, filter: MessageFilter): boolean {
+  if (filter === 'all') {
+    return true
+  }
+  if (filter === 'unread') {
+    return !item.read
+  }
+  if (filter === 'teacher') {
+    return isTeacherMessage(item)
+  }
+  return isSystemMessage(item)
+}
+
+const visibleMessages = computed(() =>
+  messages.value.filter((item) => matchFilter(item, activeFilter.value)),
+)
 
 const subtitleText = computed(() => {
   if (unreadCount.value > 0) {
@@ -29,6 +92,11 @@ const subtitleText = computed(() => {
   }
   return '查看打卡提醒、教师反馈与申诉相关消息'
 })
+
+function displayTime(time: string): string {
+  const match = time.match(/(\d{2}:\d{2})$/)
+  return match?.[1] ?? time
+}
 
 function openMessage(item: MessageItem) {
   if (typeof uni !== 'undefined') {
@@ -76,30 +144,77 @@ onShow(async () => {
         </view>
       </view>
 
+      <view class="messages-page__panel">
+        <view class="messages-page__tabs">
+          <view
+            v-for="tab in filterTabs"
+            :key="tab.key"
+            class="messages-page__tab"
+            :class="{ 'messages-page__tab--active': activeFilter === tab.key }"
+            @click="activeFilter = tab.key"
+          >
+            <text>{{ tab.label }}</text>
+          </view>
+        </view>
+      </view>
+
       <view class="messages-page__list">
         <view
-          v-for="item in messages"
+          v-for="item in visibleMessages"
           :key="item.id"
           class="messages-page__card"
           :class="{ 'messages-page__card--unread': !item.read }"
           @click="openMessage(item)"
         >
-          <view class="messages-page__card-header">
-            <view class="messages-page__title-group">
-              <view v-if="!item.read" class="messages-page__dot" aria-hidden="true"></view>
-              <text class="messages-page__card-title">{{ item.title }}</text>
-            </view>
-            <StatusTag :status="tagStatusMap[item.type]" />
+          <view
+            class="messages-page__icon"
+            :class="`messages-page__icon--${messageIcon(item).tone}`"
+          >
+            <text class="messages-page__icon-text">{{ messageIcon(item).icon }}</text>
           </view>
-          <text class="messages-page__card-type">{{ labelMap[item.type] }}</text>
-          <text class="messages-page__card-content">{{ item.content }}</text>
-          <text class="messages-page__card-time">{{ item.time }}</text>
+
+          <view class="messages-page__body">
+            <view class="messages-page__header">
+              <view class="messages-page__title-group">
+                <text class="messages-page__card-title">{{ item.title }}</text>
+                <text
+                  class="messages-page__tag"
+                  :class="`messages-page__tag--${messageIcon(item).tone}`"
+                >
+                  {{ messageCategory(item) }}
+                </text>
+              </view>
+              <view class="messages-page__status-wrap">
+                <text class="messages-page__card-time">{{ displayTime(item.time) }}</text>
+                <view v-if="!item.read" class="messages-page__dot" aria-hidden="true"></view>
+              </view>
+            </view>
+
+            <view class="messages-page__meta">
+              <template v-if="item.checkinMethods || item.timeWindow">
+                <view v-if="item.checkinMethods" class="messages-page__meta-line">
+                  <text class="messages-page__meta-label">打卡方式</text>
+                  <text class="messages-page__meta-text">{{ item.checkinMethods }}</text>
+                </view>
+                <view v-if="item.timeWindow" class="messages-page__meta-line">
+                  <text class="messages-page__meta-label">打卡时间</text>
+                  <text class="messages-page__meta-text">{{ item.timeWindow }}</text>
+                </view>
+              </template>
+              <view v-else class="messages-page__meta-line">
+                <text class="messages-page__meta-icon">💬</text>
+                <text class="messages-page__meta-text">{{ item.content }}</text>
+              </view>
+            </view>
+          </view>
         </view>
-        <view v-if="messages.length === 0" class="messages-page__empty">
+
+        <view v-if="visibleMessages.length === 0" class="messages-page__empty">
           <text class="messages-page__empty-icon">💬</text>
-          <text>暂无消息</text>
+          <text>暂无{{ filterTabs.find((tab) => tab.key === activeFilter)?.label }}消息</text>
         </view>
       </view>
+
       <view class="tab-page__safe-bottom"></view>
     </scroll-view>
     <StudentTabBar active="messages" />
@@ -182,18 +297,60 @@ onShow(async () => {
   opacity: 0.96;
 }
 
+.messages-page__panel {
+  position: relative;
+  z-index: 3;
+  margin: -36rpx 24rpx 0;
+  padding: 8rpx 24rpx 0;
+  border-radius: 28rpx 28rpx 24rpx 24rpx;
+  background: #fff;
+  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.08);
+}
+
+.messages-page__tabs {
+  display: flex;
+  border-bottom: 1rpx solid rgba(15, 23, 42, 0.06);
+}
+
+.messages-page__tab {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  color: $text-secondary;
+  font-size: 26rpx;
+  font-weight: 500;
+}
+
+.messages-page__tab--active {
+  color: $primary;
+  font-weight: 700;
+}
+
+.messages-page__tab--active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 48rpx;
+  height: 6rpx;
+  border-radius: 999rpx;
+  background: $primary;
+  transform: translateX(-50%);
+}
+
 .messages-page__list {
   display: flex;
   flex-direction: column;
-  gap: 18rpx;
+  gap: 20rpx;
   padding: 24rpx;
-  margin-top: -24rpx;
 }
 
 .messages-page__card {
   display: flex;
-  flex-direction: column;
-  gap: 14rpx;
+  gap: 20rpx;
   padding: 28rpx;
   border-radius: 24rpx;
   background: $card-bg;
@@ -205,44 +362,135 @@ onShow(async () => {
   background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
 }
 
-.messages-page__card-header {
+.messages-page__icon {
   display: flex;
+  width: 88rpx;
+  height: 88rpx;
+  flex-shrink: 0;
   align-items: center;
+  justify-content: center;
+  border-radius: 20rpx;
+}
+
+.messages-page__icon--blue {
+  background: linear-gradient(135deg, #3b9bff 0%, $primary 100%);
+}
+
+.messages-page__icon--orange {
+  background: linear-gradient(135deg, #ffb347 0%, $warning 100%);
+}
+
+.messages-page__icon-text {
+  font-size: 40rpx;
+  line-height: 1;
+}
+
+.messages-page__body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.messages-page__header {
+  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 16rpx;
+  gap: 12rpx;
 }
 
 .messages-page__title-group {
   display: flex;
-  align-items: center;
-  gap: 12rpx;
   min-width: 0;
-}
-
-.messages-page__dot {
-  width: 14rpx;
-  height: 14rpx;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: #ff4d4f;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10rpx;
 }
 
 .messages-page__card-title {
   color: $text-primary;
   font-size: 30rpx;
   font-weight: 700;
+  line-height: 1.35;
 }
 
-.messages-page__card-type,
+.messages-page__tag {
+  flex-shrink: 0;
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.messages-page__tag--blue {
+  background: rgba($primary, 0.1);
+  color: $primary;
+}
+
+.messages-page__tag--orange {
+  background: rgba($warning, 0.14);
+  color: $warning;
+}
+
+.messages-page__status-wrap {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10rpx;
+}
+
 .messages-page__card-time {
-  color: $text-secondary;
+  color: $text-muted;
   font-size: 24rpx;
+  white-space: nowrap;
 }
 
-.messages-page__card-content {
-  color: $text-primary;
-  font-size: 28rpx;
-  line-height: 1.6;
+.messages-page__dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: #ff4d4f;
+}
+
+.messages-page__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.messages-page__meta-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+
+.messages-page__meta-label {
+  flex-shrink: 0;
+  width: 112rpx;
+  color: $text-muted;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.messages-page__meta-icon {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  line-height: 1.5;
+}
+
+.messages-page__meta-text {
+  display: -webkit-box;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  color: $text-secondary;
+  font-size: 26rpx;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .messages-page__empty {
@@ -256,6 +504,7 @@ onShow(async () => {
   color: $text-secondary;
   font-size: 26rpx;
   text-align: center;
+  box-shadow: 0 12rpx 36rpx rgba(15, 107, 214, 0.07);
 }
 
 .messages-page__empty-icon {

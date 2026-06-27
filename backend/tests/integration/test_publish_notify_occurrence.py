@@ -95,4 +95,4 @@ def test_publish_notifies_members_and_materializes_occurrences() -> None:
     )
     assert messages.status_code == 200
     items = messages.json()["data"]["items"]
-    assert any("实习每日打卡" in (item.get("content") or "") for item in items)
+    assert any(item.get("title") == "实习每日打卡" for item in items)

@@ -62,6 +62,53 @@ export function showSuccess(message: string) {
   uni.showToast({ title: message, icon: 'success' })
 }
 
+export interface CheckinFailureInfo {
+  message: string
+  recordId?: string
+}
+
+export function parseCheckinFailure(error: unknown, fallback: string): CheckinFailureInfo {
+  const response = error as { data?: { detail?: unknown } }
+  const detail = response?.data?.detail
+  if (typeof detail === 'object' && detail !== null) {
+    const payload = detail as Record<string, unknown>
+    const message = readMessage(payload.message) || fallback
+    const recordId = payload.record_id ?? payload.recordId
+    return {
+      message,
+      recordId: recordId !== undefined && recordId !== null ? String(recordId) : undefined,
+    }
+  }
+  return { message: errorMessage(error, fallback) }
+}
+
+export function showCheckinFailureActionModal(message: string): Promise<'appeal' | 'retry'> {
+  logError('签到失败', message)
+
+  if (typeof uni === 'undefined') {
+    return Promise.resolve('retry')
+  }
+
+  return new Promise((resolve) => {
+    if (typeof uni.showModal !== 'function') {
+      uni.showToast({ title: message, icon: 'none' })
+      resolve('retry')
+      return
+    }
+
+    uni.showModal({
+      title: '签到失败',
+      content: `${message}\n\n如为系统识别异常，可提交申诉由老师审核；也可返回重新签到。`,
+      cancelText: '重新签到',
+      confirmText: '异常申诉',
+      success: (result) => {
+        resolve(result.confirm ? 'appeal' : 'retry')
+      },
+      fail: () => resolve('retry'),
+    })
+  })
+}
+
 export function showCheckinErrorModal(message: string) {
   logError('签到失败', message)
 

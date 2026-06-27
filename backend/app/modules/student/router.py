@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.modules.auth.models import User
 from app.modules.auth.router import get_current_user
+from app.modules.records.checkin_errors import CheckinBlockedError
 from app.modules.records.schemas import AppealRequest, CheckinRequest
 from app.modules.records.service import RecordService
 from app.modules.tasks.schemas import JoinGroupRequest

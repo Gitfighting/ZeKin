@@ -3,7 +3,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 
 import LocationPicker from '@/components/LocationPicker.vue'
-import { logInfo, showCheckinErrorModal, showError, errorMessage } from '@/services/feedback'
+import { logInfo, parseCheckinFailure, showCheckinErrorModal, showCheckinFailureActionModal, showError } from '@/services/feedback'
 import { calcDistance } from '@/services/location'
 import {
   getStudentTaskDetail,
@@ -187,8 +187,38 @@ function toggleGestureCell(cell: number) {
   gesturePoints.value = [...gesturePoints.value, [Number(x.toFixed(2)), Number(y.toFixed(2))]]
 }
 
-function resetGesture() {
-  gesturePoints.value = []
+function formatNow(): string {
+  const now = new Date()
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+}
+
+function buildAppealUrl(recordId: string, taskTitle: string, reason: string) {
+  const query = [
+    `recordId=${encodeURIComponent(recordId)}`,
+    `taskTitle=${encodeURIComponent(taskTitle)}`,
+    `reason=${encodeURIComponent(reason)}`,
+    `time=${encodeURIComponent(formatNow())}`,
+  ].join('&')
+  return `/pages/student/appeal?${query}`
+}
+
+async function handleCheckinFailure(error: unknown) {
+  const failure = parseCheckinFailure(error, '签到失败，请稍后重试')
+  const action = await showCheckinFailureActionModal(failure.message)
+  if (action !== 'appeal') {
+    return
+  }
+  if (!failure.recordId) {
+    uni.showToast({ title: '请先提交签到后再申诉', icon: 'none' })
+    return
+  }
+  if (!task.value) {
+    return
+  }
+  uni.navigateTo({
+    url: buildAppealUrl(failure.recordId, task.value.title, failure.message),
+  })
 }
 
 async function handleSubmit() {
@@ -248,7 +278,7 @@ async function handleSubmit() {
       uni.navigateBack({ delta: 2 })
     }, 1600)
   } catch (error) {
-    showCheckinErrorModal(errorMessage(error, '签到失败，请稍后重试'))
+    await handleCheckinFailure(error)
   } finally {
     submitting.value = false
   }

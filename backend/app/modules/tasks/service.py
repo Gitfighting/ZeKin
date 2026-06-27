@@ -18,6 +18,7 @@ from app.modules.tasks.repository import TaskRepository
 from app.modules.qr_code.service import generate_token, render_qr_data_url
 from app.modules.tasks.schemas import CreateTaskRequest
 from app.shared.attendance import resolve_attendance_status
+from app.shared.datetime_utils import get_beijing_now
 from app.shared.enums import (
     AttendanceStatus,
     RecordStatus,
@@ -26,6 +27,59 @@ from app.shared.enums import (
 )
 
 MAX_MATERIALIZED_DAYS = 90
+
+CHECKIN_METHOD_LABELS = {
+    "face": "人脸识别",
+    "location": "地理位置",
+    "qr_code": "二维码",
+    "checkin_code": "签到码",
+    "attachment": "附件/日志",
+    "gesture": "手势签到",
+}
+
+
+def _resolve_task_method_labels(rules: dict | None) -> list[str]:
+    snapshot = rules or {}
+    verification = snapshot.get("verificationRule") or {}
+    methods = verification.get("methods") or []
+    labels = [
+        CHECKIN_METHOD_LABELS.get(str(method), str(method))
+        for method in methods
+        if method
+    ]
+    if labels:
+        return labels
+
+    legacy: list[str] = []
+    if (snapshot.get("faceRule") or {}).get("enabled"):
+        legacy.append(CHECKIN_METHOD_LABELS["face"])
+    location_rule = snapshot.get("locationRule") or {}
+    if location_rule.get("mode") not in (None, "", "none"):
+        legacy.append(CHECKIN_METHOD_LABELS["location"])
+    return legacy
+
+
+def _format_task_notify_message(
+    task: CheckinTask, *, group_names: list[str] | None = None
+) -> tuple[str, str]:
+    window = (
+        f"{task.starts_at.strftime('%m-%d %H:%M')} - "
+        f"{task.ends_at.strftime('%H:%M')}"
+    )
+    methods = _resolve_task_method_labels(task.rules_snapshot_jsonb)
+    methods_text = "、".join(methods) if methods else "按任务要求"
+    group_text = " / ".join(group_names) if group_names else ""
+    description = (task.description or "").strip() or (
+        "您有一条新的签到任务，请在规定时间内完成签到。"
+    )
+    lines = [
+        f"课群名称：{group_text}" if group_text else None,
+        f"任务说明：{description}",
+        f"打卡方式：{methods_text}",
+        f"打卡时间：{window}",
+    ]
+    content = "\n".join(line for line in lines if line)
+    return task.title, content
 
 
 class TaskService:
@@ -154,13 +208,9 @@ class TaskService:
 
     def _notify_group_members(self, task: CheckinTask) -> int:
         """向任务所属群组的学生推送消息（类钉钉通知）。"""
-        window = f"{task.starts_at.strftime('%m-%d %H:%M')} - {task.ends_at.strftime('%H:%M')}"
-        recurring = task.schedule_mode == ScheduleMode.RECURRING.value
-        title = "新打卡任务"
-        content = (
-            f"老师发布了{'每日' if recurring else ''}打卡任务「{task.title}」，"
-            f"请在 {window} 完成打卡。"
-        )
+        groups = self.repository.list_groups_for_task(task.id)
+        group_names = [group.name for group in groups]
+        title, content = _format_task_notify_message(task, group_names=group_names)
         count = 0
         seen_user_ids: set[int] = set()
         for student in self.repository.list_students_for_task(task.id):
@@ -168,7 +218,12 @@ class TaskService:
                 continue
             seen_user_ids.add(student.user_id)
             self.repository.add(
-                Message(user_id=student.user_id, title=title, content=content)
+                Message(
+                    user_id=student.user_id,
+                    title=title,
+                    content=content,
+                    created_at=get_beijing_now(),
+                )
             )
             count += 1
         self.repository.flush()

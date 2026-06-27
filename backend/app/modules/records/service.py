@@ -1,6 +1,5 @@
 from copy import deepcopy
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
@@ -25,12 +24,13 @@ from app.modules.records.repository import RecordRepository
 from app.modules.records.schemas import AppealRequest, CheckinRequest
 from app.modules.records.verifiers import CheckinContext, CheckinPipeline
 from app.shared.attendance import resolve_attendance_status
+from app.shared.datetime_utils import get_beijing_now, to_beijing_iso
 from app.shared.enums import AttendanceStatus, RecordStatus
 from app.shared.enums import ExceptionType
 
 
 def get_current_time() -> datetime:
-    return datetime.now(ZoneInfo("Asia/Shanghai"))
+    return get_beijing_now()
 
 
 class RecordService:
@@ -216,6 +216,7 @@ class RecordService:
                 user_id=current_user.id,
                 title="申诉已提交",
                 content=f"记录 {record.id} 的申诉已提交，等待教师审核。",
+                created_at=get_beijing_now(),
             )
         )
         self.repository.commit()
@@ -229,9 +230,7 @@ class RecordService:
                 "title": message.title,
                 "content": message.content,
                 "read_status": message.read_status,
-                "created_at": message.created_at.isoformat()
-                if message.created_at
-                else None,
+                "created_at": to_beijing_iso(message.created_at),
             }
             for message in messages
         ]
@@ -244,7 +243,7 @@ class RecordService:
             "title": message.title,
             "content": message.content,
             "read_status": message.read_status,
-            "created_at": message.created_at.isoformat() if message.created_at else None,
+            "created_at": to_beijing_iso(message.created_at),
         }
 
     def get_message_detail(self, current_user: User, message_id: int) -> dict:
@@ -327,6 +326,7 @@ class RecordService:
                     user_id=student_profile.user_id,
                     title="申诉审核结果",
                     content=f"您的异常申诉已处理，结果为{result_label}。{payload['comment'] or ''}".strip(),
+                    created_at=get_beijing_now(),
                 )
             )
         self.repository.commit()
@@ -434,12 +434,17 @@ class RecordService:
         }
 
     def _serialize_task(self, task) -> dict:
+        groups = self.repository.list_groups_for_task(task.id)
+        group_name = " / ".join(group.name for group in groups)
         return {
             "id": task.id,
             "title": task.title,
+            "description": task.description or "",
             "status": task.status,
             "starts_at": task.starts_at.isoformat(),
             "ends_at": task.ends_at.isoformat(),
+            "group_name": group_name,
+            "groupName": group_name,
             "rules_snapshot": self._sanitize_rules_for_student(
                 deepcopy(task.rules_snapshot_jsonb)
             ),

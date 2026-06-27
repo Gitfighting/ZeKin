@@ -1,5 +1,6 @@
 import { request } from '@/services/request'
 import type { ApiResponse } from '@/services/types'
+import { formatBeijingDateTime } from '@/utils/datetime'
 
 export type StatusTone = 'normal' | 'in-progress' | 'pending' | 'exception' | 'ended'
 export type ResultState = 'normal' | 'exception' | 'pending_review'
@@ -51,6 +52,7 @@ export interface StudentTask {
   status: StatusTone
   deadline: string
   actionText: string
+  groupName: string
   description: string
   timeWindow: string
   locationName: string
@@ -145,6 +147,12 @@ export interface MessageItem {
   type: 'reminder' | 'teacher_feedback' | 'appeal_result'
   title: string
   content: string
+  taskName?: string
+  groupName?: string
+  taskDescription?: string
+  checkinMethods?: string
+  checkinLocation?: string
+  timeWindow?: string
   time: string
   read: boolean
 }
@@ -179,6 +187,8 @@ interface BackendStudentTask {
   ends_at?: string
   type_id?: number
   description?: string
+  group_name?: string
+  groupName?: string
   rules_snapshot?: Record<string, unknown>
 }
 
@@ -455,6 +465,7 @@ function mapStudentTask(raw: BackendStudentTask): StudentTask {
     status,
     deadline: raw.ends_at ? `${formatDateTime(raw.ends_at)} 截止` : '按任务要求截止',
     actionText: mapActionText(status),
+    groupName: readString(raw.groupName ?? raw.group_name, ''),
     description: readString(raw.description, `请在${timeWindow || '规定时间'}内完成${locationName}打卡。`),
     timeWindow: timeWindow || '按任务要求',
     locationName,
@@ -556,13 +567,86 @@ function mapStudentRecord(raw: BackendStudentRecord): StudentRecord {
 
 function mapMessageType(message: BackendMessage): MessageItem['type'] {
   const text = `${message.title ?? ''} ${message.content ?? ''}`
-  if (text.includes('审核结果') || text.includes('申诉结果')) {
+  if (text.includes('审核结果') || text.includes('申诉结果') || text.includes('申诉审核')) {
     return 'appeal_result'
   }
-  if (text.includes('反馈')) {
+  if (text.includes('申诉已提交')) {
+    return 'reminder'
+  }
+  if (text.includes('反馈') || text.includes('老师') || text.includes('教师')) {
     return 'teacher_feedback'
   }
   return 'reminder'
+}
+
+function parseStructuredField(content: string, keys: string[]): string | undefined {
+  for (const key of keys) {
+    const match = content.match(new RegExp(`${key}：(.+?)(?:\\n|$)`))
+    const value = match?.[1]?.trim()
+    if (value) {
+      return value
+    }
+  }
+  return undefined
+}
+
+function parseStructuredMessageContent(content: string): Pick<
+  MessageItem,
+  'groupName' | 'taskDescription' | 'checkinMethods' | 'checkinLocation' | 'timeWindow'
+> {
+  return {
+    ...(parseStructuredField(content, ['课群名称']) ? { groupName: parseStructuredField(content, ['课群名称']) } : {}),
+    ...(parseStructuredField(content, ['任务说明']) ? { taskDescription: parseStructuredField(content, ['任务说明']) } : {}),
+    ...(parseStructuredField(content, ['打卡方式', '签到方式'])
+      ? { checkinMethods: parseStructuredField(content, ['打卡方式', '签到方式']) }
+      : {}),
+    ...(parseStructuredField(content, ['打卡地点', '签到地点'])
+      ? { checkinLocation: parseStructuredField(content, ['打卡地点', '签到地点']) }
+      : {}),
+    ...(parseStructuredField(content, ['打卡时间', '签到时间'])
+      ? { timeWindow: parseStructuredField(content, ['打卡时间', '签到时间']) }
+      : {}),
+  }
+}
+
+function normalizeTaskPublishMessage(
+  raw: BackendMessage,
+): Pick<
+  MessageItem,
+  'title' | 'content' | 'taskName' | 'groupName' | 'taskDescription' | 'checkinMethods' | 'checkinLocation' | 'timeWindow'
+> {
+  const title = readString(raw.title, '系统消息')
+  const content = readString(raw.content)
+  const structured = parseStructuredMessageContent(content)
+
+  if (
+    structured.groupName
+    || structured.taskDescription
+    || structured.checkinMethods
+    || structured.timeWindow
+  ) {
+    return {
+      title,
+      taskName: title,
+      content,
+      ...structured,
+    }
+  }
+
+  const legacyTaskMatch = content.match(/「([^」]+)」/)
+  const legacyTimeMatch = content.match(/请在\s*(.+?)\s*完成打卡/)
+  if (title === '新打卡任务' || legacyTaskMatch) {
+    const taskName = legacyTaskMatch?.[1] ?? title
+    const timeWindow = legacyTimeMatch?.[1]?.trim() ?? ''
+    return {
+      title: taskName,
+      taskName,
+      content: timeWindow ? `打卡时间：${timeWindow}` : content,
+      timeWindow: timeWindow || undefined,
+    }
+  }
+
+  return { title, taskName: title, content }
 }
 
 function isMessageRead(raw: BackendMessage): boolean {
@@ -573,13 +657,80 @@ function isMessageRead(raw: BackendMessage): boolean {
 }
 
 function mapMessage(raw: BackendMessage): MessageItem {
+  const normalized = normalizeTaskPublishMessage(raw)
   return {
     id: String(raw.id),
     type: mapMessageType(raw),
-    title: readString(raw.title, '系统消息'),
-    content: readString(raw.content),
-    time: formatDateTime(raw.created_at),
+    title: normalized.title,
+    taskName: normalized.taskName ?? normalized.title,
+    content: normalized.content,
+    groupName: normalized.groupName,
+    taskDescription: normalized.taskDescription,
+    checkinMethods: normalized.checkinMethods,
+    checkinLocation: normalized.checkinLocation,
+    timeWindow: normalized.timeWindow,
+    time: formatBeijingDateTime(raw.created_at),
     read: isMessageRead(raw),
+  }
+}
+
+export function isCheckinReminderMessage(message: Pick<MessageItem, 'type' | 'title' | 'content' | 'checkinMethods' | 'timeWindow'>): boolean {
+  if (message.type === 'appeal_result') {
+    return false
+  }
+  if (message.checkinMethods || message.timeWindow) {
+    return true
+  }
+  const text = `${message.title}${message.content}`
+  return /打卡|签到/.test(text) && !/申诉|审核结果/.test(text)
+}
+
+export async function resolveCheckinTaskIdByTitle(taskTitle: string): Promise<string | undefined> {
+  const task = await resolveCheckinTaskByTitle(taskTitle)
+  return task?.id
+}
+
+export async function resolveCheckinTaskByTitle(taskTitle: string): Promise<StudentTask | undefined> {
+  const tasks = await getStudentTasks()
+  const active = tasks.find(
+    (task) => task.title === taskTitle && (task.status === 'in-progress' || task.status === 'pending'),
+  )
+  if (active) {
+    return active
+  }
+  return tasks.find((task) => task.title === taskTitle)
+}
+
+export async function enrichMessageWithTask(message: MessageItem): Promise<MessageItem> {
+  if (!isCheckinReminderMessage(message)) {
+    return {
+      ...message,
+      taskName: message.taskName ?? message.title,
+      taskDescription: message.taskDescription ?? message.content,
+    }
+  }
+
+  const relatedTask = await resolveCheckinTaskByTitle(message.title)
+  if (!relatedTask) {
+    return {
+      ...message,
+      taskName: message.taskName ?? message.title,
+      taskDescription: message.taskDescription ?? message.content,
+    }
+  }
+
+  const methodsText = relatedTask.methods.length
+    ? relatedTask.methods.map((method) => METHOD_LABELS[method]).join(' + ')
+    : relatedTask.requirements.join(' + ')
+
+  return {
+    ...message,
+    taskName: message.taskName ?? relatedTask.title,
+    groupName: message.groupName || relatedTask.groupName || undefined,
+    taskDescription: message.taskDescription ?? relatedTask.description,
+    checkinMethods: message.checkinMethods ?? (methodsText || undefined),
+    checkinLocation: message.checkinLocation ?? (relatedTask.locationName !== '指定地点' ? relatedTask.locationName : undefined),
+    timeWindow: message.timeWindow ?? relatedTask.timeWindow,
   }
 }
 
