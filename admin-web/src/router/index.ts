@@ -23,6 +23,11 @@ const router = createRouter({
           component: () => import('../views/dashboard/DashboardView.vue'),
         },
         {
+          path: 'analytics',
+          name: 'analytics',
+          component: () => import('../views/analytics/AnalyticsView.vue'),
+        },
+        {
           path: 'organization',
           name: 'organization',
           component: () => import('../views/organization/OrganizationView.vue'),

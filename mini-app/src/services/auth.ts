@@ -36,6 +36,9 @@ export interface ActivateStudentPayload {
   code: string
   password: string
   confirmPassword?: string
+  dormitoryLongitude?: number
+  dormitoryLatitude?: number
+  dormitoryAddress?: string
 }
 
 export interface RegisterPayload {
@@ -183,16 +186,25 @@ export async function login(payload: LoginPayload): Promise<AuthSession> {
 }
 
 export async function activateStudent(payload: ActivateStudentPayload): Promise<AuthSession> {
+  const data: Record<string, string | number> = {
+    name: payload.name,
+    student_no: payload.studentNo,
+    phone: payload.phone,
+    code: payload.code,
+    password: payload.password,
+  }
+  if (payload.dormitoryLongitude != null && payload.dormitoryLatitude != null) {
+    data.dormitory_longitude = payload.dormitoryLongitude
+    data.dormitory_latitude = payload.dormitoryLatitude
+    if (payload.dormitoryAddress) {
+      data.dormitory_address = payload.dormitoryAddress
+    }
+  }
+
   const response = await request<ApiResponse<LoginResponse | LegacyLoginResponse>>({
     url: '/auth/student/activate',
     method: 'POST',
-    data: {
-      name: payload.name,
-      student_no: payload.studentNo,
-      phone: payload.phone,
-      code: payload.code,
-      password: payload.password,
-    },
+    data,
   })
 
   const session = normalizeSession(unwrap(response))

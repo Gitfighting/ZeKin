@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import VectorIcon from '@/components/VectorIcon.vue'
+import { UI_ICONS } from '@/constants/ui-icons'
 import type { StudentTask } from '@/services/student'
 
 const props = withDefaults(
@@ -12,10 +14,6 @@ const props = withDefaults(
     embedded: false,
   },
 )
-
-const emit = defineEmits<{
-  (event: 'click', task: StudentTask): void
-}>()
 
 const displayTime = computed(() => {
   const match = props.task.timeWindow.match(/(\d{2}:\d{2})\s*$/)
@@ -50,7 +48,6 @@ const statusClass = computed(() =>
   <view
     class="home-task-card"
     :class="{ 'home-task-card--embedded': embedded }"
-    @click="emit('click', task)"
   >
     <view class="home-task-card__time-col">
       <text class="home-task-card__time">{{ displayTime }}</text>
@@ -67,15 +64,15 @@ const statusClass = computed(() =>
         <text class="home-task-card__type-tag">{{ task.type }}</text>
       </view>
       <view class="home-task-card__meta-row">
-        <text class="home-task-card__meta-icon">📍</text>
+        <VectorIcon class="home-task-card__meta-icon" :src="UI_ICONS.location" size="28rpx" />
         <text class="home-task-card__meta">{{ task.locationName }}</text>
       </view>
       <view class="home-task-card__meta-row">
-        <text class="home-task-card__meta-icon">📋</text>
+        <VectorIcon class="home-task-card__meta-icon" :src="UI_ICONS.records" size="28rpx" />
         <text class="home-task-card__meta">{{ task.description }}</text>
       </view>
       <view class="home-task-card__meta-row">
-        <text class="home-task-card__meta-icon">⏰</text>
+        <VectorIcon class="home-task-card__meta-icon" :src="UI_ICONS.clock" size="28rpx" />
         <text class="home-task-card__meta">{{ deadlineText }}</text>
       </view>
     </view>
@@ -188,9 +185,6 @@ const statusClass = computed(() =>
 
 .home-task-card__meta-icon {
   flex-shrink: 0;
-  color: $text-muted;
-  font-size: 22rpx;
-  line-height: 1.5;
 }
 
 .home-task-card__meta {

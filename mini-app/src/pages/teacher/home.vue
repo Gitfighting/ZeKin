@@ -3,6 +3,8 @@ import { onShow } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 
 import TeacherTabBar from '@/components/TeacherTabBar.vue'
+import VectorIcon from '@/components/VectorIcon.vue'
+import { UI_ICONS } from '@/constants/ui-icons'
 import { readStoredSession } from '@/services/auth'
 import { logInfo, showError } from '@/services/feedback'
 import {
@@ -12,42 +14,47 @@ import {
   type TeacherTask,
 } from '@/services/teacher'
 
-const dailyQuote = '木叶飞舞之处，火亦生生不息。'
+const dailyQuoteLine1 = '吾日三省吾身'
+const dailyQuoteLine2 = '「省」「悟」'
 
-const quickEntries = [
+interface TeacherQuickEntry {
+  key: 'create' | 'tasks' | 'groups' | 'review'
+  label: string
+  sub: string
+  path: string
+  iconSrc: string
+}
+
+const quickEntries: TeacherQuickEntry[] = [
   {
     key: 'create',
     label: '发起签到',
     sub: '课堂/活动签到',
     path: '/pages/teacher/task-create',
-    tone: 'blue',
-    icon: '📅',
+    iconSrc: '/static/home-icons/task-calendar.svg',
   },
   {
     key: 'tasks',
     label: '考勤管理',
     sub: '查看考勤记录',
     path: '/pages/teacher/tasks',
-    tone: 'green',
-    icon: '📋',
+    iconSrc: '/static/home-icons/task-records.svg',
   },
   {
     key: 'groups',
     label: '班级管理',
     sub: '学生与班级',
     path: '/pages/teacher/groups',
-    tone: 'orange',
-    icon: '👥',
+    iconSrc: '/static/home-icons/my-classes.svg',
   },
   {
     key: 'review',
     label: '审核管理',
     sub: '缺勤/异常审核',
     path: '/pages/teacher/exceptions',
-    tone: 'purple',
-    icon: '⚠️',
+    iconSrc: '/static/home-icons/join-class.svg',
   },
-] as const
+]
 
 const displayName = ref('老师')
 const teacherRole = ref('思政教师 / 班主任')
@@ -68,7 +75,7 @@ interface TodayTodoItem {
   statusLabel: string
   statusTone: TodoStatusTone
   progress: string
-  icon: string
+  iconSrc: string
   iconTone: TodoIconTone
   task: TeacherTask
 }
@@ -133,7 +140,7 @@ function mapTaskToTodoItem(task: TeacherTask): TodayTodoItem {
     statusLabel: resolveStatusLabel(task, statusTone),
     statusTone,
     progress: resolveProgressText(task, statusTone),
-    icon: resolveTaskIcon(task, statusTone),
+    iconSrc: resolveTaskIconSrc(task, statusTone),
     iconTone,
     task,
   }
@@ -189,14 +196,14 @@ function resolveProgressText(task: TeacherTask, tone: TodoStatusTone) {
   return `完成率 ${task.completionRate}%`
 }
 
-function resolveTaskIcon(task: TeacherTask, tone: TodoStatusTone) {
+function resolveTaskIconSrc(task: TeacherTask, tone: TodoStatusTone) {
   if (tone === 'review') {
-    return '📝'
+    return UI_ICONS.records
   }
   if (task.taskType === 'location' || tone === 'progress') {
-    return '🛏️'
+    return UI_ICONS.daily
   }
-  return '📘'
+  return UI_ICONS.class
 }
 
 function resolveIconTone(task: TeacherTask): TodoIconTone {
@@ -277,91 +284,103 @@ onShow(async () => {
 <template>
   <view class="tab-page">
     <scroll-view scroll-y class="home-page tab-page__scroll">
-      <view class="home-page__hero">
-        <view class="home-page__hero-bg-box home-page__hero-bg-box--teacher" aria-hidden="true">
-          <image class="home-page__hero-bg" src="/static/teacher-home-hero.png" mode="aspectFill" />
-        </view>
-        <view class="home-page__hero-mask"></view>
-
-        <view class="home-page__brand-bar" :style="brandBarStyle">
-          <text class="home-page__brand">知勤</text>
-        </view>
-
-        <view class="home-page__hero-content" :style="heroContentStyle">
-          <text class="home-page__greeting">{{ greetingPrefix }}，{{ displayName }} 👋</text>
-          <text class="home-page__slogan">{{ teacherRole }}</text>
-        </view>
-      </view>
-
-      <view class="home-page__toolbar home-page__toolbar--four">
-        <view
-          v-for="entry in quickEntries"
-          :key="entry.key"
-          class="home-page__tool"
-          @click="openQuickEntry(entry.path)"
-        >
-          <view class="home-page__tool-icon" :class="`home-page__tool-icon--${entry.tone}`">
-            <text>{{ entry.icon }}</text>
+      <view class="home-page__hero-block">
+        <view class="home-page__hero">
+          <view class="home-page__hero-visual" aria-hidden="true">
+            <view class="home-page__hero-bg-window">
+              <image class="home-page__hero-bg" src="/static/home.png" mode="widthFix" />
+            </view>
           </view>
-          <text class="home-page__tool-label">{{ entry.label }}</text>
-          <text class="home-page__tool-sub">{{ entry.sub }}</text>
-        </view>
-      </view>
 
-      <view class="home-page__quote-spacer" aria-hidden="true"></view>
-    </scroll-view>
-
-    <view class="home-page__pinned-stack">
-      <view class="home-page__tasks-card home-page__tasks-card--pinned">
-        <view class="home-page__section-head">
-          <view class="home-page__section-title-wrap">
-            <text class="home-page__section-icon">✅</text>
-            <text class="home-page__section-title">今日待办</text>
+          <view class="home-page__brand-bar" :style="brandBarStyle">
+            <text class="home-page__brand">知勤</text>
           </view>
-          <text class="home-page__section-link" @click.stop="openAllTasks">全部任务 ›</text>
+
+          <view class="home-page__hero-content" :style="heroContentStyle">
+            <text class="home-page__greeting">{{ greetingPrefix }}，{{ displayName }}</text>
+            <text class="home-page__slogan">{{ teacherRole }}</text>
+          </view>
         </view>
 
-        <view v-if="loading" class="home-page__tasks-empty">加载中...</view>
-        <view v-else-if="todayTodos.length === 0" class="home-page__tasks-empty">今日暂无待办任务</view>
-        <view v-else class="home-page__todo-list">
+        <view class="home-page__toolbar-card home-page__panel-card home-page__toolbar home-page__toolbar--four">
           <view
-            v-for="item in todayTodos"
-            :key="item.id"
-            class="home-page__todo-item"
-            @click="openTask(item.task)"
+            v-for="entry in quickEntries"
+            :key="entry.key"
+            class="home-page__tool"
+            @click="openQuickEntry(entry.path)"
           >
-            <view class="home-page__todo-icon" :class="`home-page__todo-icon--${item.iconTone}`">
-              <text>{{ item.icon }}</text>
+            <view class="home-page__tool-icon home-page__tool-icon--image">
+              <image class="home-page__tool-icon-img" :src="entry.iconSrc" mode="aspectFit" />
             </view>
-            <view class="home-page__todo-main">
-              <text class="home-page__todo-title">{{ item.title }}</text>
-              <text class="home-page__todo-subtitle">{{ item.subtitle }}</text>
+            <text class="home-page__tool-label">{{ entry.label }}</text>
+            <text class="home-page__tool-sub">{{ entry.sub }}</text>
+          </view>
+        </view>
+
+        <view class="home-page__content-sheet">
+          <view class="home-page__sheet-body">
+            <view class="home-page__section home-page__section--in-sheet">
+              <view class="home-page__panel-card">
+                <view class="home-page__section-head">
+                  <view class="home-page__section-title-wrap">
+                    <image
+                      class="home-page__section-icon-img"
+                      src="/static/home-icons/task-calendar.svg"
+                      mode="aspectFit"
+                    />
+                    <text class="home-page__section-title">今日待办</text>
+                  </view>
+                  <text class="home-page__section-link" @click.stop="openAllTasks">全部任务 ›</text>
+                </view>
+
+                <view v-if="loading" class="home-page__tasks-empty">加载中...</view>
+                <view v-else-if="todayTodos.length === 0" class="home-page__tasks-empty">今日暂无待办任务</view>
+                <view v-else class="home-page__todo-list">
+                  <view
+                    v-for="item in todayTodos"
+                    :key="item.id"
+                    class="home-page__todo-item"
+                    @click="openTask(item.task)"
+                  >
+                    <view class="home-page__todo-icon" :class="`home-page__todo-icon--${item.iconTone}`">
+                      <VectorIcon :src="item.iconSrc" size="40rpx" />
+                    </view>
+                    <view class="home-page__todo-main">
+                      <text class="home-page__todo-title">{{ item.title }}</text>
+                      <text class="home-page__todo-subtitle">{{ item.subtitle }}</text>
+                    </view>
+                    <view class="home-page__todo-side">
+                      <text class="home-page__todo-status" :class="`home-page__todo-status--${item.statusTone}`">
+                        {{ item.statusLabel }}
+                      </text>
+                      <text class="home-page__todo-progress">{{ item.progress }}</text>
+                    </view>
+                    <text class="home-page__todo-arrow">›</text>
+                  </view>
+                </view>
+              </view>
             </view>
-            <view class="home-page__todo-side">
-              <text class="home-page__todo-status" :class="`home-page__todo-status--${item.statusTone}`">
-                {{ item.statusLabel }}
-              </text>
-              <text class="home-page__todo-progress">{{ item.progress }}</text>
+
+            <view class="home-page__section home-page__section--in-sheet">
+              <view class="home-page__panel-card home-page__quote-card">
+                <image
+                  class="home-page__quote-bg"
+                  src="/static/man-blue-daily.png"
+                  mode="aspectFill"
+                />
+                <view class="home-page__quote-content">
+                  <text class="home-page__quote-title">每日一言</text>
+                  <text class="home-page__quote-text">{{ dailyQuoteLine1 }}</text>
+                  <text class="home-page__quote-text">{{ dailyQuoteLine2 }}</text>
+                </view>
+              </view>
             </view>
-            <text class="home-page__todo-arrow">›</text>
           </view>
         </view>
       </view>
 
-      <view class="home-page__quote home-page__quote--stacked">
-        <view class="home-page__quote-bg-box" aria-hidden="true">
-          <image
-            class="home-page__quote-bg"
-            src="/static/man-blue-write.png"
-            mode="aspectFill"
-          />
-        </view>
-        <view class="home-page__quote-copy">
-          <text class="home-page__quote-title">每日一言</text>
-          <text class="home-page__quote-text">{{ dailyQuote }}</text>
-        </view>
-      </view>
-    </view>
+      <view class="home-page__bottom-spacer" aria-hidden="true"></view>
+    </scroll-view>
 
     <TeacherTabBar active="home" />
   </view>
@@ -369,190 +388,6 @@ onShow(async () => {
 
 <style scoped lang="scss">
 @use '@/styles/tokens.scss' as *;
-
-.home-page {
-  background: $page-bg;
-}
-
-.home-page__hero {
-  position: relative;
-  height: calc(420rpx + 30px);
-  overflow: hidden;
-}
-
-.home-page__hero-bg-box {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 175%;
-}
-
-.home-page__hero-bg-box--teacher {
-  left: -10%;
-  width: 118%;
-  height: 200%;
-}
-
-.home-page__hero-bg {
-  width: 100%;
-  height: 100%;
-}
-
-.home-page__hero-mask {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(15, 120, 255, 0.06) 0%,
-    rgba(15, 120, 255, 0.22) 55%,
-    rgba(15, 120, 255, 0.42) 100%
-  );
-}
-
-.home-page__hero-content {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-  color: #fff;
-}
-
-.home-page__brand-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  padding-left: 32rpx;
-  box-sizing: border-box;
-}
-
-.home-page__brand {
-  font-size: 42rpx;
-  font-weight: 700;
-  color: #fff;
-  line-height: 1;
-}
-
-.home-page__greeting {
-  margin-top: 8rpx;
-  font-size: 52rpx;
-  font-weight: 700;
-}
-
-.home-page__slogan {
-  font-size: 30rpx;
-  opacity: 0.92;
-}
-
-.home-page__toolbar {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16rpx;
-  margin: -56rpx 24rpx 0;
-  padding: 28rpx 20rpx;
-  border-radius: 28rpx;
-  background: $card-bg;
-  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.1);
-  position: relative;
-  z-index: 3;
-}
-
-.home-page__toolbar--four {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12rpx;
-  padding: 28rpx 16rpx;
-}
-
-.home-page__tool {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10rpx;
-}
-
-.home-page__tool-icon {
-  display: flex;
-  width: 88rpx;
-  height: 88rpx;
-  align-items: center;
-  justify-content: center;
-  border-radius: 24rpx;
-  font-size: 36rpx;
-}
-
-.home-page__tool-icon--blue {
-  background: linear-gradient(180deg, #4ca3ff 0%, #1677ff 100%);
-}
-
-.home-page__tool-icon--green {
-  background: linear-gradient(180deg, #5fe08d 0%, #20c55a 100%);
-}
-
-.home-page__tool-icon--orange {
-  background: linear-gradient(180deg, #ffb347 0%, #ff9f1a 100%);
-}
-
-.home-page__tool-icon--purple {
-  background: linear-gradient(180deg, #b794ff 0%, #7c3aed 100%);
-}
-
-.home-page__tool-label {
-  color: $text-primary;
-  font-size: 24rpx;
-  font-weight: 700;
-  text-align: center;
-}
-
-.home-page__tool-sub {
-  color: $text-secondary;
-  font-size: 20rpx;
-  text-align: center;
-}
-
-.home-page__section {
-  margin: 28rpx 24rpx 0;
-}
-
-.home-page__tasks-card {
-  padding: 28rpx 20rpx;
-  border-radius: 28rpx;
-  background: $card-bg;
-  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.1);
-}
-
-.home-page__section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20rpx;
-  padding-bottom: 20rpx;
-  border-bottom: 1rpx solid rgba(15, 23, 42, 0.06);
-}
-
-.home-page__section-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
-}
-
-.home-page__section-icon {
-  font-size: 34rpx;
-}
-
-.home-page__section-title {
-  color: $text-primary;
-  font-size: 34rpx;
-  font-weight: 700;
-}
-
-.home-page__section-link {
-  color: $text-secondary;
-  font-size: 26rpx;
-}
 
 .home-page__todo-list {
   display: flex;
@@ -655,90 +490,8 @@ onShow(async () => {
   font-weight: 600;
   line-height: 1;
 }
+</style>
 
-.home-page__tasks-empty {
-  padding: 8rpx 0;
-  color: $text-secondary;
-  font-size: 26rpx;
-  text-align: center;
-}
-
-.home-page__summary-line {
-  margin-top: 20rpx;
-  padding-top: 20rpx;
-  border-top: 1rpx solid rgba(15, 23, 42, 0.06);
-  color: $text-secondary;
-  font-size: 24rpx;
-  text-align: center;
-}
-
-.home-page__pinned-stack {
-  position: fixed;
-  right: 24rpx;
-  left: 24rpx;
-  bottom: calc(#{$tab-bar-height} + env(safe-area-inset-bottom) + 24rpx);
-  z-index: 900;
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-}
-
-.home-page__tasks-card--pinned {
-  margin: 0;
-  max-height: 360rpx;
-  overflow: hidden;
-}
-
-.home-page__quote {
-  position: relative;
-  overflow: hidden;
-  min-height: 200rpx;
-  margin: 28rpx 24rpx 0;
-  padding: 28rpx 20rpx;
-  border-radius: 28rpx;
-  background: linear-gradient(90deg, #eef6ff 0%, #f7fbff 48%, #fdfdfd 100%);
-  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.1);
-}
-
-.home-page__quote--stacked {
-  margin: 0;
-}
-
-.home-page__quote-spacer {
-  height: calc(200rpx + 16rpx + 360rpx + 56rpx + 24rpx);
-}
-
-.home-page__quote-bg-box {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 58%;
-}
-
-.home-page__quote-bg {
-  width: 100%;
-  height: 100%;
-}
-
-.home-page__quote-copy {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  max-width: 58%;
-  flex-direction: column;
-  gap: calc(10rpx + 2px);
-}
-
-.home-page__quote-title {
-  color: $primary;
-  font-size: 30rpx;
-  font-weight: 700;
-}
-
-.home-page__quote-text {
-  color: $text-primary;
-  font-size: 26rpx;
-  line-height: calc(1.7em + 2px);
-}
+<style lang="scss">
+@use '@/styles/home-hero.scss';
 </style>

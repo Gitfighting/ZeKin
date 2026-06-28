@@ -9,8 +9,9 @@ import sharp from 'sharp'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const outDir = path.join(root, 'src/static/tabbar')
 
-const GREY = '#667085'
+const GREY = '#98A2B3'
 const BLUE = '#1677FF'
+const SIZE = 81
 
 const ICONS = {
   home: (color) => `
@@ -41,7 +42,7 @@ fs.mkdirSync(outDir, { recursive: true })
 
 async function writeIcon(name, svg) {
   const outPath = path.join(outDir, `${name}.png`)
-  await sharp(Buffer.from(svg)).resize(81, 81).png().toFile(outPath)
+  await sharp(Buffer.from(svg)).resize(SIZE, SIZE).png().toFile(outPath)
   console.log('Wrote', outPath)
 }
 

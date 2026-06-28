@@ -3,6 +3,8 @@ import { onShow } from '@dcloudio/uni-app'
 import { ref } from 'vue'
 
 import { logInfo, showError } from '@/services/feedback'
+import VectorIcon from '@/components/VectorIcon.vue'
+import { UI_ICONS } from '@/constants/ui-icons'
 import { getStudentJoinedGroups, type StudentJoinedGroup } from '@/services/student'
 
 const loading = ref(false)
@@ -43,7 +45,7 @@ onShow(async () => {
 
     <view v-else class="my-classes-page__list">
       <view v-for="group in groups" :key="group.id" class="my-classes-page__card">
-        <view class="my-classes-page__card-icon">🏫</view>
+        <VectorIcon class="my-classes-page__card-icon" :src="UI_ICONS.classes" size="48rpx" />
         <view class="my-classes-page__card-body">
           <text class="my-classes-page__card-name">{{ group.name }}</text>
           <text class="my-classes-page__card-meta">
@@ -152,7 +154,6 @@ onShow(async () => {
   justify-content: center;
   border-radius: 24rpx;
   background: linear-gradient(180deg, #ffb347 0%, #ff9f1a 100%);
-  font-size: 40rpx;
 }
 
 .my-classes-page__card-body {

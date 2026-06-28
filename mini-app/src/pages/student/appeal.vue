@@ -3,6 +3,8 @@ import { onLoad } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 
 import { logInfo, showError, showSuccess } from '@/services/feedback'
+import VectorIcon from '@/components/VectorIcon.vue'
+import { UI_ICONS } from '@/constants/ui-icons'
 import { getStudentProfile, submitAppeal } from '@/services/student'
 
 const recordId = ref('')
@@ -105,7 +107,7 @@ onLoad((options) => {
     <scroll-view scroll-y class="appeal-page__scroll">
       <view class="appeal-page__alert">
         <view class="appeal-page__alert-main">
-          <text class="appeal-page__alert-icon">⚠️</text>
+          <VectorIcon class="appeal-page__alert-icon" :src="UI_ICONS.warning" size="36rpx" />
           <view class="appeal-page__alert-copy">
             <text class="appeal-page__alert-title">{{ taskTitle }}异常</text>
             <text class="appeal-page__alert-line">异常原因：{{ exceptionReason }}</text>

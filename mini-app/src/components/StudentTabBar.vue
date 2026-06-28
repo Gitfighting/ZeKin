@@ -56,7 +56,6 @@ onMounted(() => {
 
 <template>
   <view class="student-tab-bar">
-    <view class="student-tab-bar__halo" aria-hidden="true"></view>
     <view class="student-tab-bar__inner">
       <view
         v-for="item in items"
@@ -95,32 +94,12 @@ onMounted(() => {
   left: 0;
   z-index: 1000;
   padding-bottom: env(safe-area-inset-bottom);
-  background: #fdfdfd;
-  border-top: 1rpx solid rgba(15, 23, 42, 0.03);
-  box-shadow:
-    0 -28rpx 56rpx rgba(22, 119, 255, 0.1),
-    0 -14rpx 32rpx rgba(22, 119, 255, 0.07),
-    0 -6rpx 18rpx rgba(15, 23, 42, 0.04);
-}
-
-.student-tab-bar__halo {
-  position: absolute;
-  top: -48rpx;
-  right: 0;
-  left: 0;
-  height: 48rpx;
-  background: linear-gradient(
-    180deg,
-    rgba(243, 248, 255, 0) 0%,
-    rgba(22, 119, 255, 0.05) 45%,
-    rgba(255, 255, 255, 0.92) 100%
-  );
-  pointer-events: none;
+  background: #ffffff;
+  border-top: 1rpx solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 -4rpx 16rpx rgba(15, 23, 42, 0.04);
 }
 
 .student-tab-bar__inner {
-  position: relative;
-  z-index: 1;
   display: flex;
   height: $tab-bar-height;
   align-items: stretch;
@@ -132,30 +111,31 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6rpx;
+  gap: 4rpx;
 }
 
 .student-tab-bar__icon-wrap {
   position: relative;
-  width: 48rpx;
-  height: 48rpx;
+  width: 54rpx;
+  height: 54rpx;
 }
 
 .student-tab-bar__icon {
-  width: 48rpx;
-  height: 48rpx;
+  display: block;
+  width: 54rpx;
+  height: 54rpx;
 }
 
 .student-tab-bar__badge {
   position: absolute;
-  top: -8rpx;
-  right: -16rpx;
-  min-width: 32rpx;
-  height: 32rpx;
+  top: -6rpx;
+  right: -14rpx;
+  min-width: 30rpx;
+  height: 30rpx;
   padding: 0 8rpx;
+  border: 2rpx solid #ffffff;
   border-radius: 999rpx;
   background: #ff4d4f;
-  box-shadow: 0 4rpx 10rpx rgba(255, 77, 79, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -164,20 +144,20 @@ onMounted(() => {
 
 .student-tab-bar__badge-text {
   color: #fff;
-  font-size: 20rpx;
+  font-size: 18rpx;
   font-weight: 700;
   line-height: 1;
 }
 
 .student-tab-bar__label {
-  color: $text-secondary;
-  font-size: 26rpx;
+  color: #667085;
+  font-size: 22rpx;
+  font-weight: 500;
   line-height: 1.2;
-  letter-spacing: 1px;
 }
 
 .student-tab-bar__label--active {
-  color: $primary;
+  color: #1677ff;
   font-weight: 600;
 }
 </style>

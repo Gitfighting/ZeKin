@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.database import Base, SessionLocal, engine
+from app.core.schema_patch import ensure_student_location_columns
 from app.core.logging_config import setup_logging
 from app.modules.admin.router import router as admin_router
 from app.modules.auth.router import router as auth_router
@@ -25,6 +26,7 @@ logger = logging.getLogger("zeKin.app")
 
 def initialize_database() -> None:
     Base.metadata.create_all(bind=engine)
+    ensure_student_location_columns(engine)
     with SessionLocal() as session:
         seed_reference_data(session)
 

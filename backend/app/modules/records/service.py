@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import datetime
+import logging
 
 from sqlalchemy.orm import Session
 
@@ -22,15 +23,23 @@ from app.modules.records.evaluators import (
 from app.modules.records.models import Appeal, CheckinRecord
 from app.modules.records.repository import RecordRepository
 from app.modules.records.schemas import AppealRequest, CheckinRequest
+from app.modules.records.location_target import (
+    is_per_student_location_mode,
+    resolve_location_config_for_student,
+)
 from app.modules.records.verifiers import CheckinContext, CheckinPipeline
 from app.shared.attendance import resolve_attendance_status
 from app.shared.datetime_utils import get_beijing_now, to_beijing_iso
-from app.shared.enums import AttendanceStatus, RecordStatus
+from app.modules.tasks.lifecycle import TaskLifecycleService
+from app.shared.enums import AttendanceStatus, RecordStatus, TaskStatus
 from app.shared.enums import ExceptionType
 
 
 def get_current_time() -> datetime:
     return get_beijing_now()
+
+
+logger = logging.getLogger("zeKin.checkin")
 
 
 class RecordService:
@@ -40,6 +49,11 @@ class RecordService:
         self.time_evaluator = TimeRuleEvaluator()
         self.location_evaluator = LocationRuleEvaluator()
         self.face_service = FaceRecognitionService(db)
+        self.task_lifecycle = TaskLifecycleService(db)
+
+    def _ensure_task_fresh(self, task) -> None:
+        if self.task_lifecycle.refresh_task(task):
+            self.repository.commit()
 
     def student_dashboard(self, current_user: User) -> dict:
         profile = self._require_student_profile(current_user.id)
@@ -49,10 +63,9 @@ class RecordService:
 
     def list_student_tasks(self, current_user: User) -> dict:
         profile = self._require_student_profile(current_user.id)
-        items = [
-            self._serialize_task(task)
-            for task in self.repository.list_tasks_for_student(profile.id)
-        ]
+        tasks = self.repository.list_tasks_for_student(profile.id)
+        self.task_lifecycle.refresh_tasks(tasks)
+        items = [self._serialize_task(task, profile) for task in tasks]
         return {"items": items, "total": len(items)}
 
     def get_student_task(self, current_user: User, task_id: int) -> dict:
@@ -63,7 +76,8 @@ class RecordService:
         task = tasks.get(task_id)
         if task is None:
             raise ValueError("任务不存在")
-        return self._serialize_task(task)
+        self._ensure_task_fresh(task)
+        return self._serialize_task(task, profile)
 
     def submit_checkin(
         self, *, current_user: User, task_id: int, payload: CheckinRequest
@@ -72,6 +86,18 @@ class RecordService:
         task = self.repository.get_task(task_id)
         if task is None:
             raise ValueError("任务不存在")
+        self._ensure_task_fresh(task)
+        if task.status == TaskStatus.ENDED.value:
+            raise ValueError("任务已结束")
+
+        face_image_size = len(payload.face_image or "") if payload.face_image else 0
+        logger.info(
+            "提交打卡 task_id=%s student_profile_id=%s occurrence_date=%s face_image_chars=%s",
+            task_id,
+            profile.id,
+            payload.occurrence_date,
+            face_image_size,
+        )
 
         rules = deepcopy(task.rules_snapshot_jsonb)
         now = get_current_time()
@@ -87,6 +113,14 @@ class RecordService:
             occurrence_date=occurrence_date,
         )
         result = pipeline.run(ctx)
+        logger.info(
+            "打卡校验完成 task_id=%s student_profile_id=%s status=%s methods=%s face=%s",
+            task_id,
+            profile.id,
+            result.status,
+            result.enabled_methods,
+            result.verification_results.get("face"),
+        )
 
         blocking_error = get_blocking_checkin_failure(result)
         if blocking_error:
@@ -257,6 +291,49 @@ class RecordService:
 
     def profile(self, current_user: User) -> dict:
         profile = self._require_student_profile(current_user.id)
+        return self._serialize_student_profile(profile)
+
+    def update_dormitory_location(
+        self,
+        current_user: User,
+        *,
+        longitude: float,
+        latitude: float,
+        address: str | None = None,
+    ) -> dict:
+        profile = self._require_student_profile(current_user.id)
+        profile.dormitory_longitude = longitude
+        profile.dormitory_latitude = latitude
+        if address is not None:
+            profile.dormitory_address = address.strip() or None
+        self.repository.commit()
+        return self._serialize_student_profile(profile)
+
+    def update_internship_location(
+        self,
+        current_user: User,
+        *,
+        longitude: float,
+        latitude: float,
+        company: str | None = None,
+        address: str | None = None,
+    ) -> dict:
+        profile = self._require_student_profile(current_user.id)
+        profile.internship_longitude = longitude
+        profile.internship_latitude = latitude
+        if company is not None:
+            profile.internship_company = company.strip() or None
+        if address is not None:
+            profile.internship_address = address.strip() or None
+        self.repository.commit()
+        return self._serialize_student_profile(profile)
+
+    @staticmethod
+    def _serialize_student_profile(profile: StudentProfile) -> dict:
+        has_location = (
+            profile.dormitory_longitude is not None
+            and profile.dormitory_latitude is not None
+        )
         return {
             "student_no": profile.student_no,
             "name": profile.name,
@@ -265,6 +342,18 @@ class RecordService:
             "grade": profile.grade,
             "class_name": profile.class_name,
             "dormitory": profile.dormitory,
+            "dormitory_longitude": profile.dormitory_longitude,
+            "dormitory_latitude": profile.dormitory_latitude,
+            "dormitory_address": profile.dormitory_address,
+            "dormitory_location_configured": has_location,
+            "internship_company": profile.internship_company,
+            "internship_longitude": profile.internship_longitude,
+            "internship_latitude": profile.internship_latitude,
+            "internship_address": profile.internship_address,
+            "internship_location_configured": (
+                profile.internship_longitude is not None
+                and profile.internship_latitude is not None
+            ),
         }
 
     def growth_summary(self, current_user: User) -> dict:
@@ -433,9 +522,16 @@ class RecordService:
             "need_review": result.need_review,
         }
 
-    def _serialize_task(self, task) -> dict:
+    def _serialize_task(self, task, profile: StudentProfile | None = None) -> dict:
         groups = self.repository.list_groups_for_task(task.id)
         group_name = " / ".join(group.name for group in groups)
+        rules = self._sanitize_rules_for_student(deepcopy(task.rules_snapshot_jsonb))
+        if profile is not None and is_per_student_location_mode(rules):
+            resolved = resolve_location_config_for_student(rules, profile)
+            rules["locationRule"] = resolved
+            verification = rules.get("verificationRule")
+            if isinstance(verification, dict):
+                verification["location"] = {**resolved}
         return {
             "id": task.id,
             "title": task.title,
@@ -445,9 +541,7 @@ class RecordService:
             "ends_at": task.ends_at.isoformat(),
             "group_name": group_name,
             "groupName": group_name,
-            "rules_snapshot": self._sanitize_rules_for_student(
-                deepcopy(task.rules_snapshot_jsonb)
-            ),
+            "rules_snapshot": rules,
         }
 
     @staticmethod

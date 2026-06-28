@@ -52,12 +52,16 @@
     "mp-weixin" : {
         "appid" : "",
         "permission" : {
-            "scope.userLocation" : {
-                "desc" : "用于获取当前位置完成打卡范围校验"
-            }
+        "scope.userLocation" : {
+            "desc" : "用于获取当前位置完成打卡范围校验"
+        },
+        "scope.userLocationBackground" : {
+            "desc" : "用于在地图上选择签到位置"
+        }
         },
         "requiredPrivateInfos" : [
-            "getLocation"
+            "getLocation",
+            "chooseLocation"
         ],
         "setting" : {
             "urlCheck" : false

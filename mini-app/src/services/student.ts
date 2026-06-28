@@ -1,6 +1,6 @@
 import { request } from '@/services/request'
 import type { ApiResponse } from '@/services/types'
-import { formatBeijingDateTime } from '@/utils/datetime'
+import { formatBeijingDateTime, formatBeijingDateTimeNow, formatBeijingClock } from '@/utils/datetime'
 
 export type StatusTone = 'normal' | 'in-progress' | 'pending' | 'exception' | 'ended'
 export type ResultState = 'normal' | 'exception' | 'pending_review'
@@ -163,6 +163,16 @@ export interface StudentProfile {
   className: string
   phone: string
   counselor: string
+  dormitory: string
+  dormitoryAddress?: string
+  dormitoryLongitude?: number
+  dormitoryLatitude?: number
+  dormitoryLocationConfigured: boolean
+  internshipCompany?: string
+  internshipAddress?: string
+  internshipLongitude?: number
+  internshipLatitude?: number
+  internshipLocationConfigured: boolean
   activationState: 'activated' | 'pending'
   privacyEntryText: string
 }
@@ -241,6 +251,16 @@ interface BackendStudentProfile {
   class_name?: string
   phone?: string
   counselor?: string
+  dormitory?: string
+  dormitory_address?: string
+  dormitory_longitude?: number
+  dormitory_latitude?: number
+  dormitory_location_configured?: boolean
+  internship_company?: string
+  internship_address?: string
+  internship_longitude?: number
+  internship_latitude?: number
+  internship_location_configured?: boolean
 }
 
 interface BackendGrowthSummary {
@@ -293,35 +313,15 @@ function readNumber(value: unknown): number | undefined {
 }
 
 function formatDateTime(value?: string | null): string {
-  if (!value) {
-    return ''
-  }
-
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/)
-  if (match) {
-    return `${match[1]}-${match[2]}-${match[3]} ${match[4]}:${match[5]}`
-  }
-
-  return value
+  return formatBeijingDateTime(value)
 }
 
 function formatTime(value?: string | null): string {
-  if (!value) {
-    return ''
-  }
-
-  const match = value.match(/[T ](\d{2}):(\d{2})/)
-  if (match) {
-    return `${match[1]}:${match[2]}`
-  }
-
-  return value
+  return formatBeijingClock(value)
 }
 
 function formatNow(): string {
-  const now = new Date()
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+  return formatBeijingDateTimeNow()
 }
 
 function normalizeTaskStatus(status?: string): StatusTone {
@@ -447,6 +447,18 @@ function mapStudentTask(raw: BackendStudentTask): StudentTask {
   const status = normalizeTaskStatus(raw.status)
   const locationName = readString(locationRule.placeName, '指定地点')
   const radius = readNumber(locationRule.radius)
+  const locationSource = readString(locationRule.source)
+  const isPersonalDorm = locationSource === 'student_dorm'
+  const isPersonalInternship = locationSource === 'student_internship'
+  const isPersonalLocation = isPersonalDorm || isPersonalInternship
+  const hasTargetCoords =
+    Math.abs(readNumber(locationRule.latitude) ?? 0) > 0.0001
+    && Math.abs(readNumber(locationRule.longitude) ?? 0) > 0.0001
+  const locationHint = isPersonalLocation
+    ? (hasTargetCoords
+      ? `需在本人${isPersonalInternship ? '实习单位' : '寝室'}「${locationName}」${radius || (isPersonalInternship ? 500 : 200)} 米范围内定位`
+      : `请先在个人资料中完善${isPersonalInternship ? '实习单位' : '寝室'}位置后再打卡`)
+    : (radius ? `需在${radius} 米范围内完成定位` : '')
   const timeWindow = [formatTime(raw.starts_at), formatTime(raw.ends_at)].filter(Boolean).join(' - ')
   const requirements = [
     ...(methods.length ? methods.map((method) => METHOD_LABELS[method]) : ['上传当前位置']),
@@ -469,7 +481,7 @@ function mapStudentTask(raw: BackendStudentTask): StudentTask {
     description: readString(raw.description, `请在${timeWindow || '规定时间'}内完成${locationName}打卡。`),
     timeWindow: timeWindow || '按任务要求',
     locationName,
-    locationHint: radius ? `需在${radius} 米范围内完成定位` : '',
+    locationHint,
     targetLat: readNumber(locationRule.latitude),
     targetLng: readNumber(locationRule.longitude),
     targetRadius: radius,
@@ -741,6 +753,16 @@ function mapProfile(raw: BackendStudentProfile): StudentProfile {
     className: readString(raw.class_name),
     phone: readString(raw.phone),
     counselor: readString(raw.counselor),
+    dormitory: readString(raw.dormitory),
+    dormitoryAddress: readString(raw.dormitory_address) || undefined,
+    dormitoryLongitude: raw.dormitory_longitude,
+    dormitoryLatitude: raw.dormitory_latitude,
+    dormitoryLocationConfigured: Boolean(raw.dormitory_location_configured),
+    internshipCompany: readString(raw.internship_company) || undefined,
+    internshipAddress: readString(raw.internship_address) || undefined,
+    internshipLongitude: raw.internship_longitude,
+    internshipLatitude: raw.internship_latitude,
+    internshipLocationConfigured: Boolean(raw.internship_location_configured),
     activationState: 'activated',
     privacyEntryText: '查看定位与照片使用说明',
   }
@@ -879,6 +901,42 @@ export async function getStudentProfile(): Promise<StudentProfile> {
   const response = await request<ApiResponse<BackendStudentProfile>>({
     url: '/student/profile',
     method: 'GET',
+  })
+  return mapProfile(unwrapData(response))
+}
+
+export async function updateStudentDormitoryLocation(payload: {
+  longitude: number
+  latitude: number
+  address?: string
+}): Promise<StudentProfile> {
+  const response = await request<ApiResponse<BackendStudentProfile>>({
+    url: '/student/profile/dormitory-location',
+    method: 'PUT',
+    data: {
+      longitude: payload.longitude,
+      latitude: payload.latitude,
+      address: payload.address,
+    },
+  })
+  return mapProfile(unwrapData(response))
+}
+
+export async function updateStudentInternshipLocation(payload: {
+  longitude: number
+  latitude: number
+  company?: string
+  address?: string
+}): Promise<StudentProfile> {
+  const response = await request<ApiResponse<BackendStudentProfile>>({
+    url: '/student/profile/internship-location',
+    method: 'PUT',
+    data: {
+      longitude: payload.longitude,
+      latitude: payload.latitude,
+      company: payload.company,
+      address: payload.address,
+    },
   })
   return mapProfile(unwrapData(response))
 }

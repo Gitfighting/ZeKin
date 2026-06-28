@@ -1,0 +1,283 @@
+@use '@/styles/tokens.scss' as *;
+@use '@/styles/student-page-hero.scss' as hero;
+
+$home-card-radius: hero.$student-hero-radius;
+$home-hero-image-w: hero.$student-hero-image-w;
+$home-hero-image-h: hero.$student-hero-image-h;
+$home-hero-sky-cut-ratio: hero.$student-hero-sky-cut-ratio;
+$home-hero-height: hero.$student-hero-height;
+$home-hero-toolbar-height: hero.$student-hero-overlap-card-height;
+$home-quote-image-w: 1491;
+$home-quote-image-h: 1055;
+$home-quote-height-trim: 30px;
+$home-quote-bg-shift-y: 5px;
+$home-quote-top-cut: 0.3;
+$home-quote-visible-ratio: 0.46;
+
+.home-page {
+  background: $page-bg;
+}
+
+.home-page__hero-block {
+  position: relative;
+}
+
+.home-page__hero {
+  position: relative;
+  z-index: 3;
+  height: $home-hero-height;
+  overflow: hidden;
+}
+
+.home-page__hero-visual {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #4da3ff 0%, #7ec8ff 52%, #cfefff 100%);
+}
+
+.home-page__hero-bg-window {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.home-page__hero-bg {
+  display: block;
+  width: 100%;
+  flex-shrink: 0;
+  margin-top: calc(-1 * 100vw * #{$home-hero-image-h} / #{$home-hero-image-w} * #{$home-hero-sky-cut-ratio});
+}
+
+.home-page__hero-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  color: #fff;
+}
+
+.home-page__brand-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  padding-left: 32rpx;
+  box-sizing: border-box;
+}
+
+.home-page__brand {
+  font-size: 42rpx;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 2rpx 12rpx rgba(15, 60, 120, 0.35);
+}
+
+.home-page__greeting {
+  margin-top: 8rpx;
+  color: #fff;
+  font-size: 52rpx;
+  font-weight: 700;
+  text-shadow: 0 2rpx 16rpx rgba(15, 60, 120, 0.4);
+}
+
+.home-page__slogan {
+  color: #fff;
+  font-size: 30rpx;
+  opacity: 0.96;
+  text-shadow: 0 2rpx 12rpx rgba(15, 60, 120, 0.32);
+}
+
+.home-page__toolbar-card {
+  position: absolute;
+  right: 24rpx;
+  left: 24rpx;
+  top: $home-hero-height;
+  z-index: 4;
+  transform: translateY(calc(#{$home-hero-toolbar-height} * -0.25 - 5px));
+  margin: 0;
+}
+
+.home-page__panel-card {
+  padding: 28rpx 20rpx;
+  border-radius: $home-card-radius;
+  background: $card-bg;
+  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.1);
+}
+
+.home-page__toolbar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.home-page__toolbar--four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12rpx;
+}
+
+.home-page__tool {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.home-page__tool-icon {
+  display: flex;
+  width: 96rpx;
+  height: 96rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 28rpx;
+  font-size: 40rpx;
+}
+
+.home-page__tool-icon--image {
+  background: transparent;
+}
+
+.home-page__tool-icon-img {
+  width: 96rpx;
+  height: 96rpx;
+}
+
+.home-page__tool-label {
+  color: $text-primary;
+  font-size: 24rpx;
+  font-weight: 700;
+  text-align: center;
+}
+
+.home-page__tool-sub {
+  color: $text-secondary;
+  font-size: 20rpx;
+  text-align: center;
+}
+
+.home-page__content-sheet {
+  position: relative;
+  z-index: 1;
+  margin-top: -32rpx;
+  min-height: calc(100vh - #{$home-hero-height} + 32rpx);
+  padding: hero.$student-hero-content-padding-top 24rpx 24rpx;
+  border-radius: $home-card-radius $home-card-radius 0 0;
+  background: $page-bg;
+  box-sizing: border-box;
+}
+
+.home-page__sheet-body {
+  padding-top: 0;
+}
+
+.home-page__section {
+  margin: 28rpx 24rpx 0;
+}
+
+.home-page__section--in-sheet {
+  margin: 28rpx 0 0;
+}
+
+.home-page__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid rgba(15, 23, 42, 0.06);
+}
+
+.home-page__section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.home-page__section-icon-img {
+  width: 34rpx;
+  height: 34rpx;
+  flex-shrink: 0;
+}
+
+.home-page__section-title {
+  color: $text-primary;
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.home-page__section-link {
+  color: $text-secondary;
+  font-size: 26rpx;
+}
+
+.home-page__tasks-empty {
+  padding: 8rpx 0;
+  color: $text-secondary;
+  font-size: 26rpx;
+  text-align: center;
+}
+
+.home-page__quote-card {
+  position: relative;
+  height: 0;
+  padding: 0;
+  padding-bottom: calc(
+    100% * #{$home-quote-image-h} / #{$home-quote-image-w} * #{$home-quote-visible-ratio} - #{$home-quote-height-trim}
+  );
+  overflow: hidden;
+  background: transparent;
+}
+
+.home-page__quote-bg {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: calc(100% / #{$home-quote-visible-ratio});
+  top: calc(-100% * #{$home-quote-top-cut} / #{$home-quote-visible-ratio});
+  transform: translateY($home-quote-bg-shift-y);
+}
+
+.home-page__quote-content {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  width: 58%;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12rpx;
+  padding: 20rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.home-page__quote-title {
+  color: $primary-deep;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.home-page__quote-text {
+  color: $text-primary;
+  font-size: 26rpx;
+  line-height: 1.7;
+}
+
+.home-page__bottom-spacer {
+  height: $tab-bar-safe-bottom;
+}
+
+.home-page__hero-block--subpage {
+  .home-page__content-sheet {
+    padding-top: 24rpx;
+    min-height: calc(100vh - #{$home-hero-height} + 32rpx);
+  }
+}

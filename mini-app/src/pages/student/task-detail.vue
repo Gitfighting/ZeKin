@@ -10,6 +10,52 @@ import { getStudentTaskDetail, type StudentTask } from '@/services/student'
 const task = ref<StudentTask | null>(null)
 const checkinDone = ref(false)
 
+const navBarStyle = ref<Record<string, string>>({
+  height: '88px',
+})
+const navRowStyle = ref<Record<string, string>>({
+  top: '48px',
+  height: '32px',
+})
+const backButtonStyle = ref<Record<string, string>>({
+  width: '32px',
+  height: '32px',
+})
+const navRightStyle = ref<Record<string, string>>({
+  width: '96px',
+  height: '32px',
+})
+
+function syncNavLayout() {
+  if (typeof uni === 'undefined') {
+    return
+  }
+
+  try {
+    const menuButton = uni.getMenuButtonBoundingClientRect()
+    const systemInfo = uni.getSystemInfoSync()
+    const gapBelow = 10
+
+    navBarStyle.value = {
+      height: `${menuButton.bottom + gapBelow}px`,
+    }
+    navRowStyle.value = {
+      top: `${menuButton.top}px`,
+      height: `${menuButton.height}px`,
+    }
+    backButtonStyle.value = {
+      width: `${menuButton.height}px`,
+      height: `${menuButton.height}px`,
+    }
+    navRightStyle.value = {
+      width: `${(systemInfo.windowWidth ?? 375) - menuButton.left}px`,
+      height: `${menuButton.height}px`,
+    }
+  } catch {
+    // 非小程序环境保留默认占位
+  }
+}
+
 const hasException = computed(() => task.value?.status === 'exception')
 const isCompleted = computed(
   () => checkinDone.value || task.value?.status === 'normal' || task.value?.status === 'ended',
@@ -81,6 +127,7 @@ function handlePrimaryAction() {
 }
 
 onLoad((options) => {
+  syncNavLayout()
   checkinDone.value = options?.done === '1'
   void loadTask(options?.id)
 })
@@ -88,12 +135,15 @@ onLoad((options) => {
 
 <template>
   <scroll-view scroll-y class="detail-page">
-    <view class="detail-page__nav">
-      <button class="detail-page__back" aria-label="返回" @click="handleBack"></button>
-      <text class="detail-page__nav-title">打卡详情</text>
-      <view class="detail-page__nav-spacer"></view>
+    <view class="detail-page__nav" :style="navBarStyle">
+      <view class="detail-page__nav-row" :style="navRowStyle">
+        <button class="detail-page__back" :style="backButtonStyle" aria-label="返回" @click="handleBack"></button>
+        <text class="detail-page__nav-title">打卡详情</text>
+        <view class="detail-page__nav-right" :style="navRightStyle"></view>
+      </view>
     </view>
 
+    <view class="detail-page__body">
     <view v-if="!task" class="detail-page__card">
       <text class="detail-page__section-title">暂无任务详情</text>
       <text class="detail-page__status-text">请返回任务列表重新进入，或检查后端服务是否正常。</text>
@@ -163,6 +213,7 @@ onLoad((options) => {
       </button>
     </view>
     </template>
+    </view>
   </scroll-view>
 </template>
 
@@ -170,25 +221,36 @@ onLoad((options) => {
 @use '@/styles/tokens.scss' as *;
 
 .detail-page {
-  min-height: 100vh;
-  padding: 0 24rpx 24rpx;
+  height: 100vh;
+  box-sizing: border-box;
   background: $page-bg;
 }
 
+.detail-page__body {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 24rpx 24rpx calc(24rpx + env(safe-area-inset-bottom));
+}
+
 .detail-page__nav {
-  display: grid;
-  grid-template-columns: 72rpx 1fr 72rpx;
-  align-items: center;
-  height: 112rpx;
-  margin: 0 -24rpx 24rpx;
-  padding: 0 24rpx;
+  position: relative;
+  flex-shrink: 0;
+  box-sizing: border-box;
   background: $page-bg;
+}
+
+.detail-page__nav-row {
+  position: absolute;
+  right: 0;
+  left: 24rpx;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
 }
 
 .detail-page__back {
   position: relative;
-  width: 64rpx;
-  height: 64rpx;
+  flex-shrink: 0;
   margin: 0;
   padding: 0;
   border: 0;
@@ -197,10 +259,12 @@ onLoad((options) => {
   &::before {
     content: '';
     position: absolute;
-    top: 18rpx;
-    left: 22rpx;
-    width: 22rpx;
-    height: 22rpx;
+    top: 50%;
+    left: 50%;
+    width: 20rpx;
+    height: 20rpx;
+    margin-top: -11rpx;
+    margin-left: -7rpx;
     border-left: 4rpx solid $text-primary;
     border-bottom: 4rpx solid $text-primary;
     transform: rotate(45deg);
@@ -208,18 +272,22 @@ onLoad((options) => {
 }
 
 .detail-page__nav-title {
+  flex: 1;
+  min-width: 0;
   color: $text-primary;
   font-size: 34rpx;
   font-weight: 700;
   text-align: center;
 }
 
-.detail-page__nav-spacer {
-  width: 72rpx;
+.detail-page__nav-right {
+  flex-shrink: 0;
 }
 
 .detail-page__card {
   display: flex;
+  box-sizing: border-box;
+  width: 100%;
   flex-direction: column;
   gap: 20rpx;
   margin-bottom: 24rpx;
@@ -227,6 +295,12 @@ onLoad((options) => {
   border-radius: 24rpx;
   background: $card-bg;
   box-shadow: 0 18rpx 40rpx rgba(15, 107, 214, 0.08);
+}
+
+:deep(.rule-card) {
+  box-sizing: border-box;
+  width: 100%;
+  margin-bottom: 24rpx;
 }
 
 .detail-page__header,
@@ -279,11 +353,15 @@ onLoad((options) => {
 .detail-page__footer {
   position: sticky;
   bottom: 0;
-  padding: 24rpx 0 calc(24rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  width: 100%;
+  padding: 24rpx 0 0;
   background: linear-gradient(180deg, rgba($page-bg, 0) 0%, $page-bg 28%);
 }
 
 .detail-page__button {
+  box-sizing: border-box;
+  width: 100%;
   border: none;
   border-radius: 999rpx;
   background: $primary;

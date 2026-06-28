@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -30,6 +30,34 @@ def get_admin_service(db: Session = Depends(get_db)) -> AdminService:
 @router.get("/dashboard")
 def dashboard(_: User = Depends(require_admin), service: AdminService = Depends(get_admin_service)):
     return success_response(service.dashboard())
+
+
+@router.get("/analytics")
+def analytics(_: User = Depends(require_admin), service: AdminService = Depends(get_admin_service)):
+    return success_response(service.analytics())
+
+
+@router.get("/analytics/scenario")
+def scenario_analytics(
+    scenario: str = Query("all"),
+    range: str = Query("week", alias="range"),
+    college: str | None = Query(None),
+    major: str | None = Query(None),
+    class_name: str | None = Query(None),
+    grade: str | None = Query(None),
+    _: User = Depends(require_admin),
+    service: AdminService = Depends(get_admin_service),
+):
+    return success_response(
+        service.scenario_analytics(
+            scenario=scenario,
+            range_key=range,
+            college=college,
+            major=major,
+            class_name=class_name,
+            grade=grade,
+        )
+    )
 
 
 @router.get("/org/tree")

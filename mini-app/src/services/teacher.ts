@@ -1,5 +1,6 @@
 import { request } from './request'
 import type { ApiResponse, TaskStatus } from './types'
+import { formatBeijingDateTime, formatBeijingClock } from '@/utils/datetime'
 
 export type TeacherTaskStatus = TaskStatus | 'pending_review'
 export type TeacherExceptionStatus = 'pending' | 'approved' | 'rejected' | 'need_more'
@@ -10,7 +11,13 @@ export type ScheduleMode = 'one_time' | 'recurring'
 
 export interface MethodConfig {
   face?: { tolerance?: number }
-  location?: { placeName?: string; longitude?: number; latitude?: number; radius?: number }
+  location?: {
+    mode?: 'fixed_area' | 'student_dorm' | 'student_internship'
+    placeName?: string
+    longitude?: number
+    latitude?: number
+    radius?: number
+  }
   qr_code?: { expireSeconds?: number; refreshIntervalSeconds?: number }
   checkin_code?: { code?: string }
   attachment?: { required?: boolean; minTextLength?: number; label?: string }
@@ -40,6 +47,9 @@ export interface TeacherGroup {
   recentTaskCount: number
   courseName?: string
   inviteCode?: string
+  grade?: string
+  major?: string
+  createdAt?: string
 }
 
 export interface TeacherTask {
@@ -112,6 +122,7 @@ export interface CreateTeacherTaskPayload {
   templateName: TeacherTaskTemplate
   startsAt: string
   endsAt: string
+  checkinScene?: 'class' | 'dorm' | 'internship' | 'custom'
   methods?: CheckinMethod[]
   methodConfig?: MethodConfig
   scheduleMode?: ScheduleMode
@@ -157,6 +168,10 @@ interface BackendTeacherGroup {
   recentTaskCount?: number
   course_name?: string
   courseName?: string
+  grade?: string
+  major?: string
+  created_at?: string
+  createdAt?: string
 }
 
 interface BackendTeacherTask {
@@ -270,29 +285,11 @@ function readNumber(value: unknown, fallback = 0): number {
 }
 
 function formatDateTime(value?: string | null): string {
-  if (!value) {
-    return ''
-  }
-
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/)
-  if (match) {
-    return `${match[1]}-${match[2]}-${match[3]} ${match[4]}:${match[5]}`
-  }
-
-  return value
+  return formatBeijingDateTime(value)
 }
 
 function formatTime(value?: string | null): string {
-  if (!value) {
-    return ''
-  }
-
-  const match = value.match(/[T ](\d{2}):(\d{2})/)
-  if (match) {
-    return `${match[1]}:${match[2]}`
-  }
-
-  return value
+  return formatBeijingClock(value)
 }
 
 function normalizeTaskStatus(status?: string): TeacherTaskStatus {
@@ -359,6 +356,11 @@ function mapTeacherGroup(raw: BackendTeacherGroup): TeacherGroup {
     recentTaskCount: raw.recentTaskCount ?? raw.recent_task_count ?? 0,
     courseName: raw.courseName ?? raw.course_name ?? raw.group_type,
     inviteCode: raw.inviteCode ?? raw.invite_code,
+    grade: readString(raw.grade),
+    major: readString(raw.major),
+    createdAt: raw.createdAt ?? raw.created_at
+      ? formatDateTime(raw.createdAt ?? raw.created_at)
+      : undefined,
   }
 }
 
@@ -476,12 +478,21 @@ function buildVerificationRule(methods: CheckinMethod[], cfg: MethodConfig) {
     }
   }
   if (methods.includes('location')) {
-    verificationRule.location = {
-      placeName: cfg.location?.placeName ?? '指定签到地点',
-      longitude: cfg.location?.longitude ?? 0,
-      latitude: cfg.location?.latitude ?? 0,
-      radius: cfg.location?.radius ?? 300,
-    }
+    const locationMode = cfg.location?.mode
+    const isStudentDorm = locationMode === 'student_dorm'
+    const isStudentInternship = locationMode === 'student_internship'
+    verificationRule.location = isStudentDorm || isStudentInternship
+      ? {
+          mode: locationMode,
+          radius: cfg.location?.radius ?? (isStudentInternship ? 500 : 200),
+        }
+      : {
+          mode: 'fixed_area',
+          placeName: cfg.location?.placeName ?? '指定签到地点',
+          longitude: cfg.location?.longitude ?? 0,
+          latitude: cfg.location?.latitude ?? 0,
+          radius: cfg.location?.radius ?? 300,
+        }
   }
   if (methods.includes('qr_code')) {
     verificationRule.qr_code = {
@@ -510,7 +521,7 @@ function buildVerificationRule(methods: CheckinMethod[], cfg: MethodConfig) {
   if (methods.includes('gesture')) {
     verificationRule.gesture = {
       mode: 'preset',
-      presetPattern: cfg.gesture?.presetPattern ?? 'Z',
+      presetPattern: cfg.gesture?.presetPattern ?? '12369',
       tolerance: 0.15,
       challengeEnabled: false,
     }
@@ -526,6 +537,16 @@ function buildRulesSnapshot(payload: CreateTeacherTaskPayload) {
     ? payload.methods
     : (needsPhoto ? ['location', 'face'] : ['location'])
   const locationCfg = cfg.location ?? {}
+  const isPerStudentLocationScene =
+    (payload.checkinScene === 'dorm' || payload.checkinScene === 'internship')
+    && methods.includes('location')
+  const perStudentMode = payload.checkinScene === 'internship' ? 'student_internship' : 'student_dorm'
+  const locationMode = !methods.includes('location')
+    ? 'none'
+    : isPerStudentLocationScene
+      ? perStudentMode
+      : 'fixed_area'
+  const defaultRadius = payload.checkinScene === 'internship' ? 500 : 200
 
   return {
     templateName: payload.templateName,
@@ -541,14 +562,27 @@ function buildRulesSnapshot(payload: CreateTeacherTaskPayload) {
       makeupNeedReview: true,
     },
     locationRule: {
-      mode: methods.includes('location') ? 'fixed_area' : 'none',
-      placeName: locationCfg.placeName ?? '指定签到地点',
-      longitude: locationCfg.longitude ?? 0,
-      latitude: locationCfg.latitude ?? 0,
-      radius: locationCfg.radius ?? 300,
+      mode: locationMode,
+      placeName: isPerStudentLocationScene
+        ? (payload.checkinScene === 'internship' ? '实习单位' : '学生寝室')
+        : (locationCfg.placeName ?? '指定签到地点'),
+      longitude: isPerStudentLocationScene ? undefined : (locationCfg.longitude ?? 0),
+      latitude: isPerStudentLocationScene ? undefined : (locationCfg.latitude ?? 0),
+      radius: locationCfg.radius ?? (isPerStudentLocationScene ? defaultRadius : 300),
       allowExceptionSubmit: true,
     },
-    verificationRule: buildVerificationRule(methods, cfg),
+    verificationRule: buildVerificationRule(
+      methods,
+      isPerStudentLocationScene
+        ? {
+            ...cfg,
+            location: {
+              ...locationCfg,
+              mode: perStudentMode,
+            },
+          }
+        : cfg,
+    ),
     submitRule: {
       fields: [
         {

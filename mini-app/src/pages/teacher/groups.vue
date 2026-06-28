@@ -2,8 +2,10 @@
 import { onShow } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 
+import TeacherHeroShell from '@/components/TeacherHeroShell.vue'
 import TeacherTabBar from '@/components/TeacherTabBar.vue'
-import { readStoredSession } from '@/services/auth'
+import VectorIcon from '@/components/VectorIcon.vue'
+import { UI_ICONS } from '@/constants/ui-icons'
 import { logInfo, showError } from '@/services/feedback'
 import {
   getTeacherDashboard,
@@ -17,18 +19,17 @@ import {
 interface GroupCardItem extends TeacherGroup {
   attendanceRate: number
   checkedCount: number
-  icon: string
+  iconSrc: string
   iconTone: 'blue' | 'purple' | 'cyan' | 'green'
 }
 
-const GROUP_ICONS: Array<{ icon: string; tone: GroupCardItem['iconTone'] }> = [
-  { icon: '💻', tone: 'blue' },
-  { icon: '🤖', tone: 'purple' },
-  { icon: '💼', tone: 'cyan' },
-  { icon: '📚', tone: 'green' },
+const GROUP_ICONS: Array<{ iconSrc: string; tone: GroupCardItem['iconTone'] }> = [
+  { iconSrc: UI_ICONS.class, tone: 'blue' },
+  { iconSrc: UI_ICONS.activity, tone: 'purple' },
+  { iconSrc: UI_ICONS.internship, tone: 'cyan' },
+  { iconSrc: UI_ICONS.daily, tone: 'green' },
 ]
 
-const displayName = ref('老师')
 const loading = ref(false)
 const groups = ref<GroupCardItem[]>([])
 const riskStudents = ref<TeacherRiskStudent[]>([])
@@ -37,22 +38,12 @@ const exceptionCount = ref(0)
 
 const topRiskStudent = computed(() => riskStudents.value[0] ?? null)
 
-const heroContentStyle = ref<Record<string, string>>({
-  paddingTop: '112rpx',
-  paddingLeft: '32rpx',
-  paddingRight: '32rpx',
-})
-
-const greetingPrefix = computed(() => {
-  const hour = new Date().getHours()
-  if (hour < 12) {
-    return '上午好'
-  }
-  if (hour < 18) {
-    return '下午好'
-  }
-  return '晚上好'
-})
+const stats = computed(() => [
+  { key: 'groups', label: '管理班级', value: String(groups.value.length), tone: 'blue', iconSrc: UI_ICONS.classes },
+  { key: 'tasks', label: '今日任务', value: String(todayTasks.value), tone: 'green', iconSrc: UI_ICONS.records },
+  { key: 'rate', label: '出勤率', value: `${overallAttendance.value}%`, tone: 'orange', iconSrc: UI_ICONS.chart },
+  { key: 'risk', label: '异常人数', value: String(exceptionCount.value), tone: 'red', iconSrc: UI_ICONS.bell },
+])
 
 const overallAttendance = computed(() => {
   if (!groups.value.length) {
@@ -61,37 +52,6 @@ const overallAttendance = computed(() => {
   const total = groups.value.reduce((sum, group) => sum + group.attendanceRate, 0)
   return Math.round((total / groups.value.length) * 10) / 10
 })
-
-const stats = computed(() => [
-  { key: 'groups', label: '管理班级', value: String(groups.value.length), tone: 'blue', icon: '👥' },
-  { key: 'tasks', label: '今日任务', value: String(todayTasks.value), tone: 'green', icon: '📋' },
-  { key: 'rate', label: '出勤率', value: `${overallAttendance.value}%`, tone: 'orange', icon: '📊' },
-  { key: 'risk', label: '异常人数', value: String(exceptionCount.value), tone: 'red', icon: '🔔' },
-])
-
-function syncHeroLayout() {
-  if (typeof uni === 'undefined') {
-    return
-  }
-
-  try {
-    const menuButton = uni.getMenuButtonBoundingClientRect()
-    heroContentStyle.value = {
-      paddingTop: `${menuButton.bottom + 12}px`,
-      paddingLeft: '32rpx',
-      paddingRight: '32rpx',
-    }
-  } catch {
-    // 非小程序环境保留默认占位
-  }
-}
-
-function loadProfileMeta() {
-  const session = readStoredSession()
-  if (session?.user.displayName) {
-    displayName.value = session.user.displayName.replace(/^用户/, '') || session.user.displayName
-  }
-}
 
 async function loadGroups() {
   if (typeof uni === 'undefined' || typeof uni.request !== 'function') {
@@ -122,7 +82,7 @@ async function loadGroups() {
             ...group,
             attendanceRate: rate,
             checkedCount,
-            icon: iconCfg.icon,
+            iconSrc: iconCfg.iconSrc,
             iconTone: iconCfg.tone,
           }
         } catch {
@@ -130,7 +90,7 @@ async function loadGroups() {
             ...group,
             attendanceRate: 0,
             checkedCount: 0,
-            icon: iconCfg.icon,
+            iconSrc: iconCfg.iconSrc,
             iconTone: iconCfg.tone,
           }
         }
@@ -171,38 +131,25 @@ function avatarText(name: string) {
 }
 
 onShow(() => {
-  syncHeroLayout()
-  loadProfileMeta()
   void loadGroups()
 })
 </script>
 
 <template>
   <view class="tab-page">
-    <scroll-view scroll-y class="groups-page tab-page__scroll">
-      <view class="groups-page__hero">
-        <view class="groups-page__hero-bg-box" aria-hidden="true">
-          <image class="groups-page__hero-bg" src="/static/teacher-home-hero.png" mode="aspectFill" />
-        </view>
-        <view class="groups-page__hero-mask"></view>
-        <view class="groups-page__hero-content" :style="heroContentStyle">
-          <text class="groups-page__title">班级管理</text>
-          <text class="groups-page__greeting">{{ greetingPrefix }}，{{ displayName }} 👋</text>
-          <text class="groups-page__subtitle">用心管理，助力每一位学生成长</text>
-        </view>
-      </view>
-
-      <view class="groups-page__stats-card">
-        <view v-for="item in stats" :key="item.key" class="groups-page__stat">
-          <view class="groups-page__stat-icon" :class="`groups-page__stat-icon--${item.tone}`">
-            <text>{{ item.icon }}</text>
+    <scroll-view scroll-y class="home-page tab-page__scroll">
+      <TeacherHeroShell title="班级管理" slogan="用心管理，助力每一位学生成长">
+        <view class="groups-page__stats-card home-page__panel-card">
+          <view v-for="item in stats" :key="item.key" class="groups-page__stat">
+            <view class="groups-page__stat-icon" :class="`groups-page__stat-icon--${item.tone}`">
+              <VectorIcon :src="item.iconSrc" size="36rpx" />
+            </view>
+            <text class="groups-page__stat-value">{{ item.value }}</text>
+            <text class="groups-page__stat-label">{{ item.label }}</text>
           </view>
-          <text class="groups-page__stat-value">{{ item.value }}</text>
-          <text class="groups-page__stat-label">{{ item.label }}</text>
         </view>
-      </view>
 
-      <view class="groups-page__section-head">
+        <view class="groups-page__section-head">
         <text class="groups-page__section-title">我的班级</text>
         <view class="groups-page__create-link" @click="openCreate">
           <text class="groups-page__create-icon">+</text>
@@ -220,7 +167,7 @@ onShow(() => {
         >
           <view class="group-card__head">
             <view class="group-card__icon" :class="`group-card__icon--${group.iconTone}`">
-              <text>{{ group.icon }}</text>
+              <VectorIcon :src="group.iconSrc" size="40rpx" />
             </view>
             <view class="group-card__info">
               <view class="group-card__title-row">
@@ -259,7 +206,7 @@ onShow(() => {
       <view v-if="topRiskStudent" class="groups-page__risk-card">
         <view class="groups-page__risk-head">
           <view class="groups-page__risk-title-wrap">
-            <text class="groups-page__risk-icon">⚠️</text>
+            <VectorIcon class="groups-page__risk-icon" :src="UI_ICONS.warning" size="34rpx" />
             <text class="groups-page__risk-title">风险提醒</text>
           </view>
           <text class="groups-page__risk-link" @click.stop="openAllRiskStudents">
@@ -278,6 +225,9 @@ onShow(() => {
           </view>
         </view>
       </view>
+      </TeacherHeroShell>
+
+      <view class="home-page__bottom-spacer" aria-hidden="true"></view>
     </scroll-view>
 
     <TeacherTabBar active="groups" />
@@ -287,80 +237,11 @@ onShow(() => {
 <style scoped lang="scss">
 @use '@/styles/tokens.scss' as *;
 
-.groups-page {
-  min-height: 100%;
-  padding-bottom: $tab-bar-safe-bottom;
-  background: $page-bg;
-  box-sizing: border-box;
-}
-
-.groups-page__hero {
-  position: relative;
-  height: calc(380rpx + 30px);
-  overflow: hidden;
-}
-
-.groups-page__hero-bg-box {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: -10%;
-  width: 118%;
-  height: 200%;
-}
-
-.groups-page__hero-bg {
-  width: 100%;
-  height: 100%;
-}
-
-.groups-page__hero-mask {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(15, 120, 255, 0.06) 0%,
-    rgba(15, 120, 255, 0.28) 100%
-  );
-}
-
-.groups-page__hero-content {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 10rpx;
-  color: #fff;
-}
-
-.groups-page__title {
-  font-size: 52rpx;
-  font-weight: 700;
-}
-
-.groups-page__greeting {
-  margin-top: 4rpx;
-  font-size: 34rpx;
-  font-weight: 600;
-}
-
-.groups-page__subtitle {
-  font-size: 26rpx;
-  opacity: 0.92;
-  line-height: 1.5;
-}
-
 .groups-page__stats-card {
-  position: relative;
-  z-index: 3;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12rpx;
-  margin: -56rpx 24rpx 0;
-  padding: 28rpx 16rpx;
-  border-radius: 28rpx;
-  background: $card-bg;
-  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.1);
+  margin-bottom: 28rpx;
 }
 
 .groups-page__stat {
@@ -377,7 +258,6 @@ onShow(() => {
   align-items: center;
   justify-content: center;
   border-radius: 22rpx;
-  font-size: 32rpx;
 }
 
 .groups-page__stat-icon--blue {
@@ -413,7 +293,7 @@ onShow(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 32rpx 24rpx 20rpx;
+  margin: 8rpx 0 20rpx;
 }
 
 .groups-page__section-title {
@@ -447,11 +327,11 @@ onShow(() => {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
-  padding: 0 24rpx 24rpx;
+  padding: 0 0 24rpx;
 }
 
 .groups-page__risk-card {
-  margin: 0 24rpx 32rpx;
+  margin: 28rpx 0 0;
   padding: 24rpx 20rpx;
   border-radius: 24rpx;
   background: #fffaf3;
@@ -473,7 +353,7 @@ onShow(() => {
 }
 
 .groups-page__risk-icon {
-  font-size: 30rpx;
+  flex-shrink: 0;
 }
 
 .groups-page__risk-title {
@@ -667,4 +547,8 @@ onShow(() => {
   font-size: 24rpx;
   line-height: 1.5;
 }
+</style>
+
+<style lang="scss">
+@use '@/styles/home-hero.scss';
 </style>

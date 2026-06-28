@@ -1,0 +1,31 @@
+/** 小程序内统一的 SVG 图标路径 */
+export const UI_ICONS = {
+  class: '/static/task-icons/category-class.svg',
+  daily: '/static/task-icons/category-daily.svg',
+  internship: '/static/task-icons/category-internship.svg',
+  activity: '/static/task-icons/category-activity.svg',
+  default: '/static/task-icons/category-default.svg',
+  clock: '/static/task-icons/meta-clock.svg',
+  location: '/static/task-icons/meta-location.svg',
+  calendar: '/static/home-icons/task-calendar.svg',
+  records: '/static/home-icons/task-records.svg',
+  classes: '/static/home-icons/my-classes.svg',
+  joinClass: '/static/home-icons/join-class.svg',
+  warning: '/static/message-icons/warning.svg',
+  bell: '/static/message-icons/system.svg',
+  checkin: '/static/message-icons/checkin.svg',
+  teacher: '/static/message-icons/teacher.svg',
+  appeal: '/static/message-icons/appeal.svg',
+  empty: '/static/message-icons/empty.svg',
+  search: '/static/common-icons/search.svg',
+  info: '/static/common-icons/info.svg',
+  check: '/static/common-icons/check.svg',
+  close: '/static/common-icons/close.svg',
+  document: '/static/common-icons/document.svg',
+  chart: '/static/common-icons/chart.svg',
+  camera: '/static/common-icons/camera.svg',
+  folder: '/static/common-icons/folder.svg',
+  grid: '/static/common-icons/grid.svg',
+} as const
+
+export type UiIconKey = keyof typeof UI_ICONS

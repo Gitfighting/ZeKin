@@ -3,6 +3,8 @@ import { onLoad } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 
 import { refreshStudentUnreadMessageCount } from '@/composables/useStudentUnreadMessages'
+import VectorIcon from '@/components/VectorIcon.vue'
+import { UI_ICONS } from '@/constants/ui-icons'
 import { logInfo, showError } from '@/services/feedback'
 import {
   enrichMessageWithTask,
@@ -149,7 +151,7 @@ onLoad((options) => {
   <scroll-view scroll-y class="message-detail-page">
     <view class="message-detail-page__hero">
       <view class="message-detail-page__hero-bg-box" aria-hidden="true">
-        <image class="message-detail-page__hero-bg" src="/static/student-home-hero.png" mode="aspectFill" />
+        <image class="message-detail-page__hero-bg" src="/static/home.png" mode="aspectFill" />
       </view>
       <view class="message-detail-page__hero-mask" aria-hidden="true"></view>
       <view class="message-detail-page__nav" @click="handleBack">
@@ -170,7 +172,7 @@ onLoad((options) => {
         <view class="message-detail-page__card">
           <view class="message-detail-page__header">
             <view class="message-detail-page__icon" aria-hidden="true">
-              <text class="message-detail-page__icon-text">🔔</text>
+              <VectorIcon :src="UI_ICONS.bell" size="40rpx" />
             </view>
             <view class="message-detail-page__header-main">
               <text class="message-detail-page__card-title">{{ displayTaskName }}</text>
@@ -180,24 +182,24 @@ onLoad((options) => {
 
           <view class="message-detail-page__info-list">
             <view class="message-detail-page__info-row">
-              <text class="message-detail-page__info-icon">📋</text>
+              <VectorIcon class="message-detail-page__info-icon" :src="UI_ICONS.records" size="28rpx" />
               <text class="message-detail-page__info-label">任务名称</text>
               <text class="message-detail-page__info-value">{{ displayTaskName }}</text>
             </view>
             <view class="message-detail-page__info-row">
-              <text class="message-detail-page__info-icon">👥</text>
+              <VectorIcon class="message-detail-page__info-icon" :src="UI_ICONS.classes" size="28rpx" />
               <text class="message-detail-page__info-label">课群名称</text>
               <text class="message-detail-page__info-value">{{ displayGroupName }}</text>
             </view>
             <view class="message-detail-page__info-row">
-              <text class="message-detail-page__info-icon">🕒</text>
+              <VectorIcon class="message-detail-page__info-icon" :src="UI_ICONS.clock" size="28rpx" />
               <text class="message-detail-page__info-label">发送时间</text>
               <text class="message-detail-page__info-value">{{ displaySendTime }}</text>
             </view>
           </view>
 
           <view class="message-detail-page__delivered">
-            <text class="message-detail-page__delivered-icon">✓</text>
+            <VectorIcon class="message-detail-page__delivered-icon" :src="UI_ICONS.check" size="28rpx" />
             <text>{{ message.read ? '已读' : '系统已送达' }}</text>
           </view>
         </view>
@@ -205,7 +207,7 @@ onLoad((options) => {
         <view class="message-detail-page__card">
           <view class="message-detail-page__section-head">
             <view class="message-detail-page__section-icon" aria-hidden="true">
-              <text class="message-detail-page__section-icon-text">📝</text>
+              <VectorIcon :src="UI_ICONS.document" size="32rpx" />
             </view>
             <text class="message-detail-page__section-title">任务说明</text>
           </view>
@@ -214,21 +216,21 @@ onLoad((options) => {
 
           <view v-if="showCheckinAction" class="message-detail-page__detail-list">
             <view v-if="message.checkinMethods" class="message-detail-page__detail-row">
-              <text class="message-detail-page__detail-icon">📍</text>
+              <VectorIcon class="message-detail-page__detail-icon" :src="UI_ICONS.checkin" size="28rpx" />
               <view class="message-detail-page__detail-body">
                 <text class="message-detail-page__detail-label">签到方式</text>
                 <text class="message-detail-page__detail-value">{{ message.checkinMethods }}</text>
               </view>
             </view>
             <view v-if="message.checkinLocation" class="message-detail-page__detail-row">
-              <text class="message-detail-page__detail-icon">📌</text>
+              <VectorIcon class="message-detail-page__detail-icon" :src="UI_ICONS.location" size="28rpx" />
               <view class="message-detail-page__detail-body">
                 <text class="message-detail-page__detail-label">签到地点</text>
                 <text class="message-detail-page__detail-value">{{ message.checkinLocation }}</text>
               </view>
             </view>
             <view v-if="message.timeWindow" class="message-detail-page__detail-row">
-              <text class="message-detail-page__detail-icon">⏰</text>
+              <VectorIcon class="message-detail-page__detail-icon" :src="UI_ICONS.clock" size="28rpx" />
               <view class="message-detail-page__detail-body">
                 <text class="message-detail-page__detail-label">签到时间</text>
                 <text class="message-detail-page__detail-value">{{ message.timeWindow }}</text>
@@ -416,10 +418,7 @@ onLoad((options) => {
 }
 
 .message-detail-page__info-icon {
-  width: 36rpx;
   flex-shrink: 0;
-  font-size: 24rpx;
-  text-align: center;
 }
 
 .message-detail-page__info-label {

@@ -99,7 +99,9 @@
 		{
 			"path": "pages/teacher/task-create",
 			"style": {
-				"navigationBarTitleText": "创建任务"
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "",
+				"backgroundColor": "#F5F8FC"
 			}
 		},
 		{

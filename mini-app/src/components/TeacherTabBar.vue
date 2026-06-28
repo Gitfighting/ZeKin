@@ -44,7 +44,6 @@ function navigate(path: string, key: typeof props.active) {
 
 <template>
   <view class="teacher-tab-bar">
-    <view class="teacher-tab-bar__halo" aria-hidden="true"></view>
     <view class="teacher-tab-bar__inner">
       <view
         v-for="item in items"
@@ -52,11 +51,13 @@ function navigate(path: string, key: typeof props.active) {
         class="teacher-tab-bar__item"
         @tap="navigate(item.path, item.key)"
       >
-        <image
-          class="teacher-tab-bar__icon"
-          :src="active === item.key ? item.activeIcon : item.icon"
-          mode="aspectFit"
-        />
+        <view class="teacher-tab-bar__icon-wrap">
+          <image
+            class="teacher-tab-bar__icon"
+            :src="active === item.key ? item.activeIcon : item.icon"
+            mode="aspectFit"
+          />
+        </view>
         <text class="teacher-tab-bar__label" :class="{ 'teacher-tab-bar__label--active': active === item.key }">
           {{ item.label }}
         </text>
@@ -75,32 +76,12 @@ function navigate(path: string, key: typeof props.active) {
   left: 0;
   z-index: 1000;
   padding-bottom: env(safe-area-inset-bottom);
-  background: #fdfdfd;
-  border-top: 1rpx solid rgba(15, 23, 42, 0.03);
-  box-shadow:
-    0 -28rpx 56rpx rgba(22, 119, 255, 0.1),
-    0 -14rpx 32rpx rgba(22, 119, 255, 0.07),
-    0 -6rpx 18rpx rgba(15, 23, 42, 0.04);
-}
-
-.teacher-tab-bar__halo {
-  position: absolute;
-  top: -48rpx;
-  right: 0;
-  left: 0;
-  height: 48rpx;
-  background: linear-gradient(
-    180deg,
-    rgba(243, 248, 255, 0) 0%,
-    rgba(22, 119, 255, 0.05) 45%,
-    rgba(255, 255, 255, 0.92) 100%
-  );
-  pointer-events: none;
+  background: #ffffff;
+  border-top: 1rpx solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 -4rpx 16rpx rgba(15, 23, 42, 0.04);
 }
 
 .teacher-tab-bar__inner {
-  position: relative;
-  z-index: 1;
   display: flex;
   height: $tab-bar-height;
   align-items: stretch;
@@ -112,23 +93,30 @@ function navigate(path: string, key: typeof props.active) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6rpx;
+  gap: 4rpx;
+}
+
+.teacher-tab-bar__icon-wrap {
+  position: relative;
+  width: 54rpx;
+  height: 54rpx;
 }
 
 .teacher-tab-bar__icon {
-  width: 48rpx;
-  height: 48rpx;
+  display: block;
+  width: 54rpx;
+  height: 54rpx;
 }
 
 .teacher-tab-bar__label {
-  color: $text-secondary;
-  font-size: 26rpx;
+  color: #667085;
+  font-size: 22rpx;
+  font-weight: 500;
   line-height: 1.2;
-  letter-spacing: 1px;
 }
 
 .teacher-tab-bar__label--active {
-  color: $primary;
+  color: #1677ff;
   font-weight: 600;
 }
 </style>

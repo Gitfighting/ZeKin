@@ -25,6 +25,21 @@ function readMessage(value: unknown): string | null {
 }
 
 export function errorMessage(error: unknown, fallback: string): string {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const code = (error as { code?: string }).code
+    if (code === 'ECONNABORTED') {
+      return '请求超时：人脸特征提取耗时较长，请稍后重试或上传更小、更清晰的照片'
+    }
+  }
+
+  if (typeof error === 'object' && error !== null && 'response' in error) {
+    const response = (error as { response?: { data?: unknown } }).response
+    const fromResponse = readMessage(response?.data)
+    if (fromResponse) {
+      return fromResponse
+    }
+  }
+
   return readMessage(error) ?? fallback
 }
 

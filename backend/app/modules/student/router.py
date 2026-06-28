@@ -5,7 +5,12 @@ from app.core.database import get_db
 from app.modules.auth.models import User
 from app.modules.auth.router import get_current_user
 from app.modules.records.checkin_errors import CheckinBlockedError
-from app.modules.records.schemas import AppealRequest, CheckinRequest
+from app.modules.records.schemas import (
+    AppealRequest,
+    CheckinRequest,
+    DormitoryLocationUpdateRequest,
+    InternshipLocationUpdateRequest,
+)
 from app.modules.records.service import RecordService
 from app.modules.tasks.schemas import JoinGroupRequest
 from app.modules.tasks.service import TaskService
@@ -120,6 +125,43 @@ def message_detail(
 def profile(current_user: User = Depends(require_student), service: RecordService = Depends(get_record_service)):
     try:
         result = service.profile(current_user)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return success_response(result)
+
+
+@router.put("/profile/dormitory-location")
+def update_dormitory_location(
+    payload: DormitoryLocationUpdateRequest,
+    current_user: User = Depends(require_student),
+    service: RecordService = Depends(get_record_service),
+):
+    try:
+        result = service.update_dormitory_location(
+            current_user,
+            longitude=payload.longitude,
+            latitude=payload.latitude,
+            address=payload.address,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return success_response(result)
+
+
+@router.put("/profile/internship-location")
+def update_internship_location(
+    payload: InternshipLocationUpdateRequest,
+    current_user: User = Depends(require_student),
+    service: RecordService = Depends(get_record_service),
+):
+    try:
+        result = service.update_internship_location(
+            current_user,
+            longitude=payload.longitude,
+            latitude=payload.latitude,
+            company=payload.company,
+            address=payload.address,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return success_response(result)

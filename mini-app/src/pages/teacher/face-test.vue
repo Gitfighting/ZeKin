@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onUnmounted, ref } from 'vue'
 
+import VectorIcon from '@/components/VectorIcon.vue'
+import { UI_ICONS } from '@/constants/ui-icons'
 import { registerFace, verifyFace } from '@/services/face'
 import { showError, showSuccess } from '@/services/feedback'
 
@@ -252,12 +254,12 @@ async function doVerify() {
 
       <view class="button-row">
         <template v-if="!streaming && !currentPhoto">
-          <button class="btn-primary" @click="startCamera">📷 拍照录入</button>
-          <button class="btn-secondary" @click="uploadImage">📁 上传照片</button>
+          <button class="btn-primary" @click="startCamera">拍照录入</button>
+          <button class="btn-secondary" @click="uploadImage">上传照片</button>
         </template>
         <template v-if="streaming && !currentPhoto">
           <button class="btn-primary" :disabled="!videoReady" @click="captureFrame">
-            {{ videoReady ? '📷 拍照' : '等待摄像头...' }}
+            {{ videoReady ? '拍照' : '等待摄像头...' }}
           </button>
           <button class="btn-secondary" @click="stopCamera">取消</button>
         </template>
@@ -277,7 +279,7 @@ async function doVerify() {
     <!-- ====== 录入成功，下一步 ====== -->
     <view v-if="activeStep === 'register-done'" class="section-card">
       <view class="success-header">
-        <text class="success-icon">✓</text>
+        <VectorIcon class="success-icon" :src="UI_ICONS.check" size="48rpx" />
         <text class="success-title">人脸录入成功</text>
       </view>
       <text class="field-label" style="text-align: center;">特征已提取并存储，可以进行验证测试了。</text>
@@ -296,12 +298,12 @@ async function doVerify() {
 
       <view class="button-row">
         <template v-if="!streaming && !verifyPhoto">
-          <button class="btn-primary" @click="startCamera">📷 拍照验证</button>
-          <button class="btn-secondary" @click="uploadImage">📁 上传照片</button>
+          <button class="btn-primary" @click="startCamera">拍照验证</button>
+          <button class="btn-secondary" @click="uploadImage">上传照片</button>
         </template>
         <template v-if="streaming && !verifyPhoto">
           <button class="btn-primary" :disabled="!videoReady" @click="captureFrame">
-            {{ videoReady ? '📷 拍照' : '等待摄像头...' }}
+            {{ videoReady ? '拍照' : '等待摄像头...' }}
           </button>
           <button class="btn-secondary" @click="stopCamera">取消</button>
         </template>
@@ -315,7 +317,11 @@ async function doVerify() {
 
       <!-- 验证结果 -->
       <view v-if="verifyResult" :class="['verify-result', verifyResult.matched ? 'result-pass' : 'result-fail']">
-        <text class="verify-icon">{{ verifyResult.matched ? '✓' : '✗' }}</text>
+        <VectorIcon
+          class="verify-icon"
+          :src="verifyResult.matched ? UI_ICONS.check : UI_ICONS.close"
+          size="48rpx"
+        />
         <text class="verify-title">{{ verifyResult.matched ? '验证通过' : '验证不通过' }}</text>
         <text class="verify-msg">{{ verifyResult.message }}</text>
         <text v-if="verifyResult.similarity !== undefined" class="verify-score">

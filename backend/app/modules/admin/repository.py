@@ -37,6 +37,9 @@ class AdminRepository:
     def list_checkin_types(self) -> list[CheckinType]:
         return list(self.db.scalars(select(CheckinType).order_by(CheckinType.id)))
 
+    def get_checkin_type(self, type_id: int) -> CheckinType | None:
+        return self.db.get(CheckinType, type_id)
+
     def list_rule_templates(self) -> list[RuleTemplate]:
         return list(self.db.scalars(select(RuleTemplate).order_by(RuleTemplate.id)))
 

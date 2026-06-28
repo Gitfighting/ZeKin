@@ -1,7 +1,11 @@
+from collections import Counter, defaultdict
+from datetime import date, timedelta
+
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
 from app.modules.admin.repository import AdminRepository
+from app.modules.admin.scenario_analytics import ScenarioAnalyticsBuilder
 from app.modules.admin.schemas import (
     GroupImportRequest,
     RuleTemplateUpdateRequest,
@@ -11,8 +15,10 @@ from app.modules.admin.schemas import (
 from app.modules.auth.models import StudentProfile, TeacherProfile, User
 from app.modules.groups.invite import generate_unique_invite_code
 from app.modules.groups.models import Group, GroupMember
+from app.modules.records.models import CheckinRecord
+from app.modules.tasks.lifecycle import TaskLifecycleService
 from app.modules.tasks.models import CheckinTask
-from app.shared.enums import RecordStatus, UserType
+from app.shared.enums import ExceptionType, RecordStatus, UserType
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 DEFAULT_STUDENT_PASSWORD = "123456"
@@ -22,10 +28,15 @@ class AdminService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.repository = AdminRepository(db)
+        self.task_lifecycle = TaskLifecycleService(db)
+
+    def _ensure_tasks_fresh(self, tasks: list[CheckinTask]) -> None:
+        self.task_lifecycle.refresh_tasks(tasks)
 
     def dashboard(self) -> dict:
         students = self.repository.list_students()
         tasks = self.repository.list_tasks()
+        self._ensure_tasks_fresh(tasks)
         exceptions = self.repository.list_exceptions()
         submitted_count = sum(
             len(
@@ -49,6 +60,69 @@ class AdminService:
             "exception_count": len(exceptions),
             "pending_appeal_count": pending_appeal_count,
             "completion_rate": completion_rate,
+        }
+
+    def scenario_analytics(
+        self,
+        scenario: str = "all",
+        range_key: str = "week",
+        college: str | None = None,
+        major: str | None = None,
+        class_name: str | None = None,
+        grade: str | None = None,
+    ) -> dict:
+        return ScenarioAnalyticsBuilder(self.db, self.repository).build(
+            scenario=scenario,
+            range_key=range_key,
+            college=college,
+            major=major,
+            class_name=class_name,
+            grade=grade,
+        )
+
+    def analytics(self) -> dict:
+        students = self.repository.list_students()
+        groups = self.repository.list_groups()
+        tasks = self.repository.list_tasks()
+        exceptions = self.repository.list_exceptions()
+        task_items = [self._task_item(task) for task in tasks]
+        records_by_task = {
+            task.id: self.repository.list_records_for_task(task.id) for task in tasks
+        }
+        expected_total = sum(item["student_count"] for item in task_items)
+        submitted_total = sum(item["submitted_count"] for item in task_items)
+        pending_appeal_count = sum(
+            1 for item in exceptions if item.status == RecordStatus.PENDING_REVIEW.value
+        )
+        return {
+            "summary": {
+                "expected_students": len(students),
+                "checked_students": len(
+                    {
+                        record.student_profile_id
+                        for records in records_by_task.values()
+                        for record in records
+                    }
+                ),
+                "completion_rate": self._completion_rate(submitted_total, expected_total),
+                "exception_count": len(exceptions),
+                "pending_appeal_count": pending_appeal_count,
+                "task_count": len(tasks),
+                "covered_class_count": len(groups),
+                "checkin_count": sum(len(records) for records in records_by_task.values()),
+            },
+            "trend": self._analytics_trend(tasks, records_by_task),
+            "college_rates": self._analytics_college_rates(students, tasks, records_by_task),
+            "exception_types": self._analytics_exception_types(exceptions),
+            "class_exception_ranking": self._analytics_class_exception_ranking(exceptions),
+            "overview": {
+                "task_count": len(tasks),
+                "covered_class_count": len(groups),
+                "covered_student_count": len(students),
+                "checkin_count": sum(len(records) for records in records_by_task.values()),
+                "exception_count": len(exceptions),
+                "appeal_count": pending_appeal_count,
+            },
         }
 
     def org_tree(self) -> list[dict]:
@@ -82,6 +156,13 @@ class AdminService:
                 grade=item.grade,
                 class_name=item.class_name,
                 dormitory=item.dormitory,
+                dormitory_longitude=item.dormitory_longitude,
+                dormitory_latitude=item.dormitory_latitude,
+                dormitory_address=item.dormitory_address,
+                internship_company=item.internship_company,
+                internship_longitude=item.internship_longitude,
+                internship_latitude=item.internship_latitude,
+                internship_address=item.internship_address,
                 activated=True,
                 status="active",
             )
@@ -191,7 +272,9 @@ class AdminService:
         return {"updated": True, "id": template.id}
 
     def list_tasks(self) -> dict:
-        items = [self._task_item(task) for task in self.repository.list_tasks()]
+        tasks = self.repository.list_tasks()
+        self._ensure_tasks_fresh(tasks)
+        items = [self._task_item(task) for task in tasks]
         return {"items": items, "total": len(items)}
 
     def list_exceptions(self) -> dict:
@@ -216,6 +299,21 @@ class AdminService:
             "grade": profile.grade,
             "class_name": profile.class_name,
             "dormitory": profile.dormitory,
+            "dormitory_longitude": profile.dormitory_longitude,
+            "dormitory_latitude": profile.dormitory_latitude,
+            "dormitory_address": profile.dormitory_address,
+            "dormitory_location_configured": (
+                profile.dormitory_longitude is not None
+                and profile.dormitory_latitude is not None
+            ),
+            "internship_company": profile.internship_company,
+            "internship_longitude": profile.internship_longitude,
+            "internship_latitude": profile.internship_latitude,
+            "internship_address": profile.internship_address,
+            "internship_location_configured": (
+                profile.internship_longitude is not None
+                and profile.internship_latitude is not None
+            ),
             "activated": profile.activated,
             "status": profile.status,
             "user_id": profile.user_id,
@@ -320,3 +418,121 @@ class AdminService:
         if expected_count == 0:
             return 0
         return round(submitted_count / expected_count * 100)
+
+    def _analytics_trend(
+        self,
+        tasks: list[CheckinTask],
+        records_by_task: dict[int, list[CheckinRecord]],
+    ) -> list[dict]:
+        today = date.today()
+        days = [today - timedelta(days=offset) for offset in range(6, -1, -1)]
+        result = []
+        for day in days:
+            day_tasks = [task for task in tasks if task.starts_at.date() == day]
+            expected = sum(
+                len(self.repository.list_students_for_task(task.id)) for task in day_tasks
+            )
+            checked = sum(
+                len({record.student_profile_id for record in records_by_task.get(task.id, [])})
+                for task in day_tasks
+            )
+            result.append(
+                {
+                    "date": day.isoformat(),
+                    "label": f"{day.month}/{day.day}",
+                    "expected": expected,
+                    "checked": checked,
+                    "completion_rate": self._completion_rate(checked, expected),
+                }
+            )
+        return result
+
+    def _analytics_college_rates(
+        self,
+        students: list[StudentProfile],
+        tasks: list[CheckinTask],
+        records_by_task: dict[int, list[CheckinRecord]],
+    ) -> list[dict]:
+        student_by_id = {student.id: student for student in students}
+        expected_by_college: Counter[str] = Counter()
+        checked_by_college: Counter[str] = Counter()
+        for task in tasks:
+            for student in self.repository.list_students_for_task(task.id):
+                expected_by_college[student.college or "未设置学院"] += 1
+            checked_student_ids = {
+                record.student_profile_id for record in records_by_task.get(task.id, [])
+            }
+            for student_id in checked_student_ids:
+                student = student_by_id.get(student_id)
+                if student is not None:
+                    checked_by_college[student.college or "未设置学院"] += 1
+        if not expected_by_college:
+            expected_by_college.update(
+                Counter(student.college or "未设置学院" for student in students)
+            )
+        rows = [
+            {
+                "name": college,
+                "expected": expected,
+                "checked": checked_by_college[college],
+                "completion_rate": self._completion_rate(
+                    checked_by_college[college], expected
+                ),
+            }
+            for college, expected in expected_by_college.items()
+        ]
+        return sorted(rows, key=lambda item: item["completion_rate"], reverse=True)[:6]
+
+    def _analytics_exception_types(self, exceptions: list) -> list[dict]:
+        label_map = {
+            ExceptionType.MISSING.value: "未打卡",
+            ExceptionType.LATE.value: "迟到",
+            ExceptionType.LOCATION_ERROR.value: "位置异常",
+            ExceptionType.DYNAMIC_CODE_ERROR.value: "验证码异常",
+            ExceptionType.FACE_FAILED.value: "人脸失败",
+            ExceptionType.SAFETY_RISK.value: "安全风险",
+            ExceptionType.LOG_MISSING.value: "缺卡",
+            ExceptionType.APPEAL_PENDING.value: "申诉中",
+        }
+        counter: Counter[str] = Counter()
+        for item in exceptions:
+            for exception_type in item.exception_types_jsonb or ["unknown"]:
+                counter[label_map.get(exception_type, str(exception_type))] += 1
+        total = sum(counter.values())
+        if total == 0:
+            return []
+        return [
+            {
+                "label": label,
+                "value": value,
+                "percent": round(value / total * 100, 1),
+            }
+            for label, value in counter.most_common()
+        ]
+
+    def _analytics_class_exception_ranking(self, exceptions: list) -> list[dict]:
+        count_by_group: Counter[str] = Counter()
+        student_ids_by_group: dict[str, set[int]] = defaultdict(set)
+        for item in exceptions:
+            groups = self.repository.list_groups_for_task(item.task_id)
+            group_names = [group.name for group in groups] or ["未关联班级"]
+            for group_name in group_names:
+                count_by_group[group_name] += 1
+                student_ids_by_group[group_name].add(item.student_profile_id)
+        rows = []
+        for group_name, count in count_by_group.most_common(5):
+            student_count = len(student_ids_by_group[group_name])
+            group = self.repository.get_group_by_name(group_name)
+            total_students = (
+                len(self.repository.list_students_for_group(group.id)) if group else count
+            )
+            rows.append(
+                {
+                    "rank": len(rows) + 1,
+                    "class_name": group_name,
+                    "exception_count": count,
+                    "exception_student_count": student_count,
+                    "exception_rate": self._completion_rate(student_count, total_students),
+                }
+            )
+        return rows

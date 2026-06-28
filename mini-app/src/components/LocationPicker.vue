@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 
+import VectorIcon from '@/components/VectorIcon.vue'
+import MiniMap from '@/components/MiniMap.vue'
+import { UI_ICONS } from '@/constants/ui-icons'
 import {
   calcDistance,
   getCurrentLocation,
@@ -20,6 +23,7 @@ const emit = defineEmits<{
 
 const loading = ref(false)
 const errorMsg = ref('')
+const mapReady = ref(false)
 
 const DEFAULT_CENTER = { latitude: 30.000001, longitude: 120.000001 }
 
@@ -92,9 +96,11 @@ const mapScale = computed(() => {
 })
 
 const mapMarkers = computed(() => {
-  const markers: Array<Record<string, unknown>> = []
-  if (hasTarget.value && props.target) {
-    markers.push({
+  if (!hasTarget.value || !props.target) {
+    return []
+  }
+  return [
+    {
       id: 1,
       latitude: props.target.latitude,
       longitude: props.target.longitude,
@@ -103,26 +109,15 @@ const mapMarkers = computed(() => {
       height: 36,
       callout: {
         content: props.placeName || '签到地点',
-        display: 'ALWAYS',
+        display: 'BYCLICK',
         padding: 8,
         borderRadius: 8,
         fontSize: 12,
         color: '#1f2937',
         bgColor: '#ffffff',
       },
-    })
-  }
-  if (props.modelValue) {
-    markers.push({
-      id: 2,
-      latitude: props.modelValue.latitude,
-      longitude: props.modelValue.longitude,
-      title: '我的位置',
-      width: 24,
-      height: 24,
-    })
-  }
-  return markers
+    },
+  ]
 })
 
 const mapCircles = computed(() => {
@@ -164,27 +159,27 @@ async function handlePick() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   if (!props.modelValue) {
-    void handlePick()
+    await handlePick()
   }
+  mapReady.value = true
 })
 </script>
 
 <template>
   <view class="location-card">
     <view class="location-card__map-wrap">
-      <map
+      <MiniMap
+        v-if="mapReady"
         class="location-card__map"
         :latitude="mapCenter.latitude"
         :longitude="mapCenter.longitude"
         :scale="mapScale"
         :markers="mapMarkers"
         :circles="mapCircles"
-        show-location
-        enable-zoom
-        enable-scroll
       />
+      <view v-else class="location-card__map-loading">正在加载地图…</view>
       <view class="location-card__legend">
         <view class="location-card__legend-dot" />
         <text class="location-card__legend-text">{{ rangeLabel }}</text>
@@ -208,8 +203,14 @@ onMounted(() => {
 
     <view class="location-card__status">
       <view v-if="distanceInfo" :class="['location-card__badge', distanceInfo.inside ? 'badge-ok' : 'badge-far']">
-        <text v-if="distanceInfo.inside">✓ 在打卡范围内</text>
-        <text v-else>✗ 超出 {{ Math.round(distanceInfo.distance - distanceInfo.radius) }}m</text>
+        <view v-if="distanceInfo.inside" class="location-card__badge-row">
+          <VectorIcon :src="UI_ICONS.check" size="24rpx" />
+          <text>在打卡范围内</text>
+        </view>
+        <view v-else class="location-card__badge-row">
+          <VectorIcon :src="UI_ICONS.close" size="24rpx" />
+          <text>超出 {{ Math.round(distanceInfo.distance - distanceInfo.radius) }}m</text>
+        </view>
       </view>
       <text v-else class="location-card__status-text" :style="{ color: statusText.color }">
         {{ statusText.label }}
@@ -242,6 +243,16 @@ onMounted(() => {
 .location-card__map {
   width: 100%;
   height: 480rpx;
+}
+
+.location-card__map-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 480rpx;
+  color: #667085;
+  font-size: 24rpx;
+  background: #eef5ff;
 }
 
 .location-card__legend {
@@ -330,6 +341,12 @@ onMounted(() => {
   border-radius: 999rpx;
   font-size: 22rpx;
   font-weight: 600;
+}
+
+.location-card__badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
 }
 
 .badge-ok {

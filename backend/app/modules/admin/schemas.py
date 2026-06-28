@@ -10,6 +10,13 @@ class StudentImportItem(BaseModel):
     grade: str
     class_name: str
     dormitory: str
+    dormitory_longitude: float | None = None
+    dormitory_latitude: float | None = None
+    dormitory_address: str | None = None
+    internship_company: str | None = None
+    internship_longitude: float | None = None
+    internship_latitude: float | None = None
+    internship_address: str | None = None
     password: str | None = None
 
 

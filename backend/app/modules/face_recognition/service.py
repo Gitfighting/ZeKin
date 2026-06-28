@@ -4,6 +4,7 @@ import base64
 from dataclasses import dataclass
 from enum import StrEnum
 from io import BytesIO
+import logging
 from math import sqrt
 import struct
 import warnings
@@ -13,6 +14,32 @@ from sqlalchemy.orm import Session
 
 from app.modules.auth.models import StudentProfile
 from app.modules.face_recognition.models import FaceEncoding
+
+logger = logging.getLogger("zeKin.face_recognition")
+
+MAX_FACE_IMAGE_EDGE = 640
+FACE_UPLOAD_TIMEOUT_MS = 120_000
+FACE_BATCH_UPLOAD_TIMEOUT_MS = 600_000
+
+
+def preprocess_face_image(image_bytes: bytes, max_edge: int = MAX_FACE_IMAGE_EDGE) -> bytes:
+    try:
+        from PIL import Image
+
+        image = Image.open(BytesIO(image_bytes)).convert("RGB")
+        width, height = image.size
+        longest = max(width, height)
+        if longest > max_edge:
+            ratio = max_edge / longest
+            image = image.resize(
+                (max(1, int(width * ratio)), max(1, int(height * ratio))),
+                Image.Resampling.LANCZOS,
+            )
+        buffer = BytesIO()
+        image.save(buffer, format="JPEG", quality=85)
+        return buffer.getvalue()
+    except Exception:
+        return image_bytes
 
 
 class FaceRecognitionError(RuntimeError):
@@ -59,6 +86,7 @@ class FaceRecognitionExtractor:
     def extract_single_encoding(
         self, image_bytes: bytes, detection_model: str = "hog"
     ) -> list[float]:
+        image_bytes = preprocess_face_image(image_bytes)
         # 优先使用 face_recognition（需要 dlib）
         try:
             import face_recognition as face_recognition_lib
@@ -73,11 +101,18 @@ class FaceRecognitionExtractor:
             encodings = face_recognition_lib.face_encodings(image, locations)
             if not encodings:
                 raise FaceImageError("人脸特征提取失败，请重新拍照")
-            return [float(value) for value in encodings[0]]
+            vector = [float(value) for value in encodings[0]]
+            logger.info(
+                "face_recognition 特征提取成功 provider=face_recognition model=%s dimension=%s",
+                detection_model,
+                len(vector),
+            )
+            return vector
         except ImportError:
             pass  # 回退到 OpenCV 方案
 
         # 回退方案：使用 OpenCV Haar Cascade 检测人脸 + 像素特征
+        logger.info("face_recognition 库不可用，回退 OpenCV 方案 model=%s", detection_model)
         return self._extract_with_opencv(image_bytes, detection_model)
 
     def _extract_with_opencv(
@@ -123,7 +158,13 @@ class FaceRecognitionExtractor:
         face_normalized = face_resized.astype(np.float32) / 255.0
 
         # 返回 64×64=4096 维特征向量
-        return face_normalized.flatten().tolist()
+        vector = face_normalized.flatten().tolist()
+        logger.info(
+            "OpenCV 特征提取成功 model=%s dimension=%s",
+            detection_model,
+            len(vector),
+        )
+        return vector
 
 
 class FaceRecognitionService:
@@ -136,13 +177,21 @@ class FaceRecognitionService:
         self.extractor = extractor or FaceRecognitionExtractor()
 
     def register_face(self, student_profile_id: int, image_bytes: bytes) -> dict:
+        logger.info(
+            "开始录入学生人脸 student_profile_id=%s image_bytes=%s",
+            student_profile_id,
+            len(image_bytes),
+        )
         student = self.db.get(StudentProfile, student_profile_id)
         if student is None:
+            logger.warning("学生档案不存在 student_profile_id=%s", student_profile_id)
             raise ValueError("学生档案不存在")
 
-        encoding = self.extractor.extract_single_encoding(image_bytes, "cnn")
+        encoding = self.extractor.extract_single_encoding(image_bytes, "hog")
+        deactivated = 0
         for existing in self._list_active_encodings(student_profile_id):
             existing.is_active = False
+            deactivated += 1
 
         record = FaceEncoding(
             student_profile_id=student_profile_id,
@@ -150,16 +199,76 @@ class FaceRecognitionService:
             dimension=len(encoding),
             model_name="face_recognition",
             source="admin_upload",
-            quality_jsonb={"detection_model": "cnn"},
+            quality_jsonb={"detection_model": "hog"},
             is_active=True,
         )
         self.db.add(record)
         self.db.commit()
-        return {
+        result = {
             "student_profile_id": student_profile_id,
             "encoding_count": self._active_encoding_count(student_profile_id),
             "dimension": len(encoding),
             "model": record.model_name,
+        }
+        logger.info(
+            "学生人脸录入成功 student_profile_id=%s deactivated=%s result=%s",
+            student_profile_id,
+            deactivated,
+            result,
+        )
+        return result
+
+    def batch_register_faces(self, uploads: list[tuple[str, bytes]]) -> dict:
+        items: list[dict] = []
+        for filename, image_bytes in uploads:
+            from pathlib import Path
+
+            student_no = Path(filename).stem.strip()
+            row: dict = {
+                "filename": filename,
+                "student_no": student_no,
+                "success": False,
+                "message": "",
+            }
+            if not student_no:
+                row["message"] = "文件名无效，请使用“学号.jpg”命名"
+                items.append(row)
+                continue
+
+            profile = self.db.scalar(
+                select(StudentProfile).where(StudentProfile.student_no == student_no)
+            )
+            if profile is None:
+                row["message"] = f"未找到学号 {student_no} 对应的学生"
+                items.append(row)
+                continue
+
+            row["student_profile_id"] = profile.id
+            row["student_name"] = profile.name
+            try:
+                result = self.register_face(profile.id, image_bytes)
+                row["success"] = True
+                row["message"] = "录入成功"
+                row["encoding_count"] = result["encoding_count"]
+                row["dimension"] = result["dimension"]
+            except ValueError as exc:
+                row["message"] = str(exc)
+            except FaceImageError as exc:
+                row["message"] = str(exc)
+            items.append(row)
+
+        success_count = sum(1 for item in items if item["success"])
+        logger.info(
+            "批量人脸录入完成 total=%s success=%s failed=%s",
+            len(items),
+            success_count,
+            len(items) - success_count,
+        )
+        return {
+            "total": len(items),
+            "success_count": success_count,
+            "failed_count": len(items) - success_count,
+            "items": items,
         }
 
     def get_profile_status(self, student_profile_id: int) -> dict:
@@ -170,17 +279,50 @@ class FaceRecognitionService:
             "registered": bool(encodings),
             "encoding_count": len(encodings),
             "model": latest.model_name if latest else None,
+            "dimension": latest.dimension if latest else None,
+            "source": latest.source if latest else None,
             "updated_at": latest.updated_at.isoformat() if latest and latest.updated_at else None,
         }
+
+    def clear_face(self, student_profile_id: int) -> dict:
+        student = self.db.get(StudentProfile, student_profile_id)
+        if student is None:
+            raise ValueError("学生档案不存在")
+
+        cleared = 0
+        for existing in self._list_active_encodings(student_profile_id):
+            existing.is_active = False
+            cleared += 1
+
+        self.db.commit()
+        result = {
+            "student_profile_id": student_profile_id,
+            "cleared": cleared,
+            "registered": False,
+        }
+        logger.info(
+            "学生人脸已清除 student_profile_id=%s cleared=%s",
+            student_profile_id,
+            cleared,
+        )
+        return result
 
     def verify_face(
         self, student_profile_id: int, verification: FaceVerificationInput
     ) -> FaceVerificationResult:
+        logger.info(
+            "开始人脸比对 student_profile_id=%s image_bytes=%s tolerance=%s detection_model=%s",
+            student_profile_id,
+            len(verification.image_bytes),
+            verification.tolerance,
+            verification.detection_model,
+        )
         known_encodings = [
             _decode_vector(record.encoding, record.dimension)
             for record in self._list_active_encodings(student_profile_id)
         ]
         if not known_encodings:
+            logger.warning("人脸比对失败：尚未录入 student_profile_id=%s", student_profile_id)
             return FaceVerificationResult(
                 passed=False,
                 reason=FaceEncodingUnavailable.NOT_REGISTERED.value,
@@ -196,6 +338,11 @@ class FaceRecognitionService:
         except FaceRecognitionLibraryMissing:
             raise
         except FaceImageError as exc:
+            logger.warning(
+                "人脸比对失败：照片无效 student_profile_id=%s reason=%s",
+                student_profile_id,
+                exc,
+            )
             return FaceVerificationResult(
                 passed=False,
                 reason=FaceEncodingUnavailable.NO_FACE_DETECTED.value,
@@ -218,13 +365,21 @@ class FaceRecognitionService:
 
         distance = min(distances)
         passed = distance <= verification.tolerance
-        return FaceVerificationResult(
+        result = FaceVerificationResult(
             passed=passed,
             reason=None if passed else FaceEncodingUnavailable.NOT_MATCHED.value,
             message="人脸验证通过" if passed else "人脸验证失败，请确认是否本人操作",
             distance=round(distance, 6),
             tolerance=verification.tolerance,
         )
+        logger.info(
+            "人脸比对完成 student_profile_id=%s passed=%s distance=%s tolerance=%s",
+            student_profile_id,
+            result.passed,
+            result.distance,
+            result.tolerance,
+        )
+        return result
 
     # ========== 用户级（非学生）人脸操作，用于 face-test ==========
 

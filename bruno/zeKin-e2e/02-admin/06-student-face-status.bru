@@ -1,0 +1,25 @@
+meta {
+  name: 06 查询学生人脸状态
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{base_url}}/api/admin/students/{{student_profile_id}}/face
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{admin_token}}
+}
+
+tests {
+  test("状态码 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("返回 registered 字段", function() {
+    const body = res.getBody();
+    expect(body.data).to.have.property("registered");
+  });
+}

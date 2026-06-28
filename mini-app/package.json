@@ -37,7 +37,8 @@
     "type-check": "vue-tsc --noEmit",
     "test:unit": "vitest --config vitest.config.ts",
     "gen:iconfont": "node scripts/gen-iconfont-base64.mjs",
-    "gen:tabbar": "node scripts/gen-tabbar-icons.mjs"
+    "gen:tabbar": "node scripts/gen-tabbar-icons.mjs",
+    "compress:static": "node scripts/compress-static-images.mjs"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-4080420251103001",

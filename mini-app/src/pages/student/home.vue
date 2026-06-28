@@ -16,77 +16,49 @@ import { getStudentProfile, getStudentTasks, type StudentTask } from '@/services
 
 
 
-const dailyQuote = '木叶飞舞之处，火亦生生不息'
+const dailyQuoteLine1 = '吾日三省吾身'
+const dailyQuoteLine2 = '「省」「悟」'
 
 
 
-const quickEntries = [
+interface HomeQuickEntry {
+  key: 'tasks' | 'records' | 'join' | 'classes'
+  label: string
+  sub: string
+  path: string
+  iconSrc: string
+}
 
+const quickEntries: HomeQuickEntry[] = [
   {
-
     key: 'tasks',
-
     label: '打卡任务',
-
     sub: '立即完成',
-
     path: '/pages/student/tasks',
-
-    tone: 'blue',
-
-    icon: '📅',
-
+    iconSrc: '/static/home-icons/task-calendar.svg',
   },
-
   {
-
     key: 'records',
-
     label: '打卡记录',
-
     sub: '查看历史',
-
     path: '/pages/student/records',
-
-    tone: 'green',
-
-    icon: '📋',
-
+    iconSrc: '/static/home-icons/task-records.svg',
   },
-
   {
-
     key: 'join',
-
     label: '加入班群',
-
     sub: '输入邀请码',
-
     path: '/pages/student/join-class',
-
-    tone: 'purple',
-
-    icon: '👥',
-
+    iconSrc: '/static/home-icons/join-class.svg',
   },
-
   {
-
     key: 'classes',
-
     label: '我的班级',
-
     sub: '已加入班级',
-
     path: '/pages/student/my-classes',
-
-    tone: 'orange',
-
-    icon: '🏫',
-
+    iconSrc: '/static/home-icons/my-classes.svg',
   },
-
-] as const
+]
 
 /** 首页「今天的任务」仅展示一条 */
 const SHOW_HOME_TODAY_TASKS = true
@@ -177,13 +149,10 @@ function openQuickEntry(path: string) {
 
 
 function openTask(task: StudentTask) {
-
+  logInfo('打开任务详情', { taskId: task.id, title: task.title })
   uni.navigateTo({
-
     url: `/pages/student/task-detail?id=${task.id}`,
-
   })
-
 }
 
 
@@ -262,108 +231,89 @@ onShow(async () => {
 
   <scroll-view scroll-y class="home-page student-tab-page__scroll">
 
-    <view class="home-page__hero">
-
-      <view class="home-page__hero-bg-box" aria-hidden="true">
-        <image class="home-page__hero-bg" src="/static/student-home-hero.png" mode="aspectFill" />
-      </view>
-
-      <view class="home-page__hero-mask"></view>
-
-      <view class="home-page__brand-bar" :style="brandBarStyle">
-        <text class="home-page__brand">知勤</text>
-      </view>
-
-      <view class="home-page__hero-content" :style="heroContentStyle">
-
-        <text class="home-page__greeting">{{ greetingPrefix }}，{{ displayName }} 👋</text>
-
-        <text class="home-page__slogan">诚信打卡，安全成长</text>
-
-      </view>
-
-    </view>
-
-
-
-    <view class="home-page__toolbar home-page__toolbar--four">
-
-      <view
-
-        v-for="entry in quickEntries"
-
-        :key="entry.key"
-
-        class="home-page__tool"
-
-        @click="openQuickEntry(entry.path)"
-
-      >
-
-        <view class="home-page__tool-icon" :class="`home-page__tool-icon--${entry.tone}`">
-
-          <text>{{ entry.icon }}</text>
-
+    <view class="home-page__hero-block">
+      <view class="home-page__hero">
+        <view class="home-page__hero-visual" aria-hidden="true">
+          <view class="home-page__hero-bg-window">
+            <image class="home-page__hero-bg" src="/static/home.png" mode="widthFix" />
+          </view>
         </view>
 
-        <text class="home-page__tool-label">{{ entry.label }}</text>
+        <view class="home-page__brand-bar" :style="brandBarStyle">
+          <text class="home-page__brand">知勤</text>
+        </view>
 
-        <text class="home-page__tool-sub">{{ entry.sub }}</text>
-
+        <view class="home-page__hero-content" :style="heroContentStyle">
+          <text class="home-page__greeting">{{ greetingPrefix }}，{{ displayName }}</text>
+          <text class="home-page__slogan">知以明志，勤以立身</text>
+        </view>
       </view>
 
-    </view>
+      <view class="home-page__toolbar-card home-page__panel-card home-page__toolbar home-page__toolbar--four">
+        <view
+          v-for="entry in quickEntries"
+          :key="entry.key"
+          class="home-page__tool"
+          @click="openQuickEntry(entry.path)"
+        >
+          <view class="home-page__tool-icon home-page__tool-icon--image">
+            <image class="home-page__tool-icon-img" :src="entry.iconSrc" mode="aspectFit" />
+          </view>
+          <text class="home-page__tool-label">{{ entry.label }}</text>
+          <text class="home-page__tool-sub">{{ entry.sub }}</text>
+        </view>
+      </view>
 
+      <view class="home-page__content-sheet">
+        <view class="home-page__sheet-body">
+          <view v-if="SHOW_HOME_TODAY_TASKS" class="home-page__section home-page__section--in-sheet">
+            <view class="home-page__panel-card">
+              <view class="home-page__section-head">
+                <view class="home-page__section-title-wrap">
+                  <image
+                    class="home-page__section-icon-img"
+                    src="/static/home-icons/task-calendar.svg"
+                    mode="aspectFit"
+                  />
+                  <text class="home-page__section-title">今天的任务</text>
+                </view>
+                <text class="home-page__section-link" @click.stop="openAllTasks">全部任务 ›</text>
+              </view>
 
-
-    <view v-if="SHOW_HOME_TODAY_TASKS" class="home-page__section">
-
-      <view class="home-page__tasks-card">
-
-        <view class="home-page__section-head">
-
-          <view class="home-page__section-title-wrap">
-
-            <text class="home-page__section-icon">📅</text>
-
-            <text class="home-page__section-title">今天的任务</text>
-
+              <view v-if="loading" class="home-page__tasks-empty">加载中...</view>
+              <view v-else-if="!featuredTask" class="home-page__tasks-empty">今日暂无打卡任务</view>
+              <view
+                v-else
+                class="home-page__task-entry"
+                hover-class="home-page__task-entry--active"
+                @tap="openTask(featuredTask)"
+              >
+                <HomeTaskCard embedded :task="featuredTask" />
+              </view>
+            </view>
           </view>
 
-          <text class="home-page__section-link" @click.stop="openAllTasks">全部任务 ›</text>
-
+          <view class="home-page__section home-page__section--in-sheet">
+            <view class="home-page__panel-card home-page__quote-card">
+              <image
+                class="home-page__quote-bg"
+                src="/static/man-blue-daily.png"
+                mode="aspectFill"
+              />
+              <view class="home-page__quote-content">
+                <text class="home-page__quote-title">每日一言</text>
+                <text class="home-page__quote-text">{{ dailyQuoteLine1 }}</text>
+                <text class="home-page__quote-text">{{ dailyQuoteLine2 }}</text>
+              </view>
+            </view>
+          </view>
         </view>
-
-
-
-        <view v-if="loading" class="home-page__tasks-empty">加载中...</view>
-
-        <view v-else-if="!featuredTask" class="home-page__tasks-empty">今日暂无打卡任务</view>
-
-        <HomeTaskCard v-else embedded :task="featuredTask" @click="openTask" />
-
       </view>
-
     </view>
 
-
-
-    <view class="home-page__quote-spacer" aria-hidden="true"></view>
+    <view class="home-page__bottom-spacer" aria-hidden="true"></view>
 
   </scroll-view>
-
-  <view class="home-page__quote home-page__quote--pinned">
-    <image
-      class="home-page__quote-bg"
-      src="/static/man-blue-daily.png"
-      mode="aspectFill"
-      aria-hidden="true"
-    />
-    <view class="home-page__quote-copy">
-      <text class="home-page__quote-title">每日一言</text>
-      <text class="home-page__quote-text">{{ dailyQuote }}</text>
-    </view>
-  </view>
 
   <StudentTabBar active="home" />
 
@@ -374,452 +324,17 @@ onShow(async () => {
 
 
 <style scoped lang="scss">
-
-@use '@/styles/tokens.scss' as *;
-
-
-
-.home-page {
-  background: $page-bg;
+.home-page__task-entry {
+  display: block;
 }
 
-
-
-.home-page__hero {
-
-  position: relative;
-
-  height: calc(420rpx + 30px);
-
-  overflow: hidden;
-
-}
-
-
-
-.home-page__hero-bg-box {
-
-  position: absolute;
-
-  right: 0;
-
-  bottom: 0;
-
-  left: 0;
-
-  height: 175%;
-
-}
-
-
-
-.home-page__hero-bg {
-
-  width: 100%;
-
-  height: 100%;
-
-}
-
-
-
-.home-page__hero-mask {
-
-  position: absolute;
-
-  inset: 0;
-
-  background: linear-gradient(180deg, rgba(15, 120, 255, 0.1) 0%, rgba(15, 120, 255, 0.38) 100%);
-
-}
-
-
-
-.home-page__hero-content {
-
-  position: relative;
-
-  z-index: 2;
-
-  display: flex;
-
-  flex-direction: column;
-
-  gap: 12rpx;
-
-  color: #fff;
-
-}
-
-
-
-.home-page__brand-bar {
-
-  position: absolute;
-
-  left: 0;
-
-  right: 0;
-
-  z-index: 3;
-
-  display: flex;
-
-  align-items: center;
-
-  padding-left: 32rpx;
-
-  box-sizing: border-box;
-
-}
-
-
-
-.home-page__brand {
-
-  font-size: 42rpx;
-
-  font-weight: 700;
-
-  color: #fff;
-
-  line-height: 1;
-
-}
-
-
-
-.home-page__greeting {
-
-  margin-top: 8rpx;
-
-  font-size: 52rpx;
-
-  font-weight: 700;
-
-}
-
-
-
-.home-page__slogan {
-
-  font-size: 30rpx;
-
+.home-page__task-entry--active {
   opacity: 0.92;
-
 }
+</style>
 
-
-
-.home-page__toolbar {
-
-  display: grid;
-
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-
-  gap: 16rpx;
-
-  margin: -56rpx 24rpx 0;
-
-  padding: 28rpx 20rpx;
-
-  border-radius: 28rpx;
-
-  background: $card-bg;
-
-  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.1);
-
-  position: relative;
-
-  z-index: 3;
-
-}
-
-.home-page__toolbar--four {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12rpx;
-  padding: 28rpx 16rpx;
-}
-
-
-
-.home-page__tool {
-
-  display: flex;
-
-  flex-direction: column;
-
-  align-items: center;
-
-  gap: 10rpx;
-
-}
-
-
-
-.home-page__tool-icon {
-
-  display: flex;
-
-  width: 96rpx;
-
-  height: 96rpx;
-
-  align-items: center;
-
-  justify-content: center;
-
-  border-radius: 28rpx;
-
-  font-size: 40rpx;
-
-}
-
-
-
-.home-page__tool-icon--blue {
-
-  background: linear-gradient(180deg, #4ca3ff 0%, #1677ff 100%);
-
-}
-
-
-
-.home-page__tool-icon--green {
-
-  background: linear-gradient(180deg, #5fe08d 0%, #20c55a 100%);
-
-}
-
-
-
-.home-page__tool-icon--purple {
-
-  background: linear-gradient(180deg, #b794ff 0%, #7c3aed 100%);
-
-}
-
-.home-page__tool-icon--orange {
-  background: linear-gradient(180deg, #ffb347 0%, #ff9f1a 100%);
-}
-
-.home-page__tool-label {
-
-  color: $text-primary;
-
-  font-size: 24rpx;
-
-  font-weight: 700;
-
-  text-align: center;
-
-}
-
-
-
-.home-page__tool-sub {
-
-  color: $text-secondary;
-
-  font-size: 20rpx;
-
-  text-align: center;
-
-}
-
-
-
-.home-page__section {
-
-  margin: 28rpx 24rpx 0;
-
-}
-
-
-
-.home-page__tasks-card {
-
-  padding: 28rpx 20rpx;
-
-  border-radius: 28rpx;
-
-  background: $card-bg;
-
-  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.1);
-
-}
-
-
-
-.home-page__section-head {
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: space-between;
-
-  margin-bottom: 20rpx;
-
-  padding-bottom: 20rpx;
-
-  border-bottom: 1rpx solid rgba(15, 23, 42, 0.06);
-
-}
-
-
-
-.home-page__section-title-wrap {
-
-  display: flex;
-
-  align-items: center;
-
-  gap: 10rpx;
-
-}
-
-
-
-.home-page__section-icon {
-
-  font-size: 34rpx;
-
-}
-
-
-
-.home-page__section-title {
-
-  color: $text-primary;
-
-  font-size: 34rpx;
-
-  font-weight: 700;
-
-}
-
-
-
-.home-page__section-link {
-
-  color: $text-secondary;
-
-  font-size: 26rpx;
-
-}
-
-
-
-.home-page__tasks-empty {
-
-  padding: 8rpx 0;
-
-  color: $text-secondary;
-
-  font-size: 26rpx;
-
-  text-align: center;
-
-}
-
-
-
-.home-page__task-list {
-
-  display: flex;
-
-  flex-direction: column;
-
-  gap: 18rpx;
-
-}
-
-
-
-.home-page__empty {
-
-  padding: 40rpx 24rpx;
-
-  border-radius: 24rpx;
-
-  background: $card-bg;
-
-  color: $text-secondary;
-
-  font-size: 26rpx;
-
-  text-align: center;
-
-}
-
-
-
-.home-page__quote {
-  position: relative;
-  overflow: hidden;
-  min-height: 200rpx;
-  margin: 28rpx 24rpx 0;
-  padding: 28rpx 20rpx;
-  border-radius: 28rpx;
-  background: $card-bg;
-  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.1);
-}
-
-.home-page__quote--pinned {
-  position: fixed;
-  right: 24rpx;
-  left: 24rpx;
-  bottom: calc(#{$tab-bar-height} + env(safe-area-inset-bottom) + 24rpx);
-  z-index: 900;
-  margin: 0;
-}
-
-.home-page__quote-spacer {
-  height: calc(200rpx + 56rpx + 24rpx + 320rpx);
-}
-
-.home-page__quote-bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.home-page__quote-copy {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  max-width: 58%;
-  flex-direction: column;
-  gap: calc(10rpx + 2px);
-}
-
-
-
-.home-page__quote-title {
-
-  color: $primary;
-
-  font-size: 30rpx;
-
-  font-weight: 700;
-
-}
-
-
-
-.home-page__quote-text {
-
-  color: $text-primary;
-
-  font-size: 26rpx;
-
-  line-height: calc(1.7em + 2px);
-
-}
-
+<style lang="scss">
+@use '@/styles/home-hero.scss';
 </style>
 
 

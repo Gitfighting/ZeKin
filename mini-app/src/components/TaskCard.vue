@@ -14,21 +14,25 @@ const emit = defineEmits<{
 
 type TaskTone = 'blue' | 'green' | 'orange' | 'purple'
 
-function inferCategory(task: StudentTask): { label: string; tone: TaskTone; icon: string } {
+function inferCategory(task: StudentTask): { label: string; tone: TaskTone; iconSrc: string } {
   const haystack = `${task.title}${task.type}${task.description}`
   if (/宿舍|查寝|晚间/.test(haystack)) {
-    return { label: '日常任务', tone: 'blue', icon: '🏠' }
+    return { label: '日常任务', tone: 'blue', iconSrc: '/static/task-icons/category-daily.svg' }
   }
   if (/课堂|课程|上课/.test(haystack)) {
-    return { label: '课堂类', tone: 'green', icon: '🎓' }
+    return { label: '课堂类', tone: 'green', iconSrc: '/static/task-icons/category-class.svg' }
   }
   if (/实习|实践|校外/.test(haystack)) {
-    return { label: '实习类', tone: 'orange', icon: '💼' }
+    return { label: '实习类', tone: 'orange', iconSrc: '/static/task-icons/category-internship.svg' }
   }
   if (/活动|班团|会议/.test(haystack)) {
-    return { label: '活动类', tone: 'purple', icon: '👥' }
+    return { label: '活动类', tone: 'purple', iconSrc: '/static/task-icons/category-activity.svg' }
   }
-  return { label: task.type || '打卡任务', tone: 'blue', icon: '📋' }
+  return {
+    label: task.type || '打卡任务',
+    tone: 'blue',
+    iconSrc: '/static/task-icons/category-default.svg',
+  }
 }
 
 const category = computed(() => inferCategory(props.task))
@@ -53,11 +57,16 @@ const statusInfo = computed(() => {
   }
 })
 
-const requirementsText = computed(() => {
+const timeLabel = computed(() => {
+  const value = props.task.timeWindow.replace(/\s*-\s*/g, '-')
+  return `时间：${value}`
+})
+
+const requirementsLabel = computed(() => {
   if (props.task.requirements.length) {
-    return props.task.requirements.slice(0, 3).join('+')
+    return `要求：${props.task.requirements.slice(0, 3).join('+')}`
   }
-  return '按任务要求'
+  return '要求：按任务要求'
 })
 
 const isPrimaryAction = computed(() =>
@@ -68,7 +77,7 @@ const isPrimaryAction = computed(() =>
 <template>
   <view class="task-card" @click="emit('click', task)">
     <view class="task-card__icon" :class="`task-card__icon--${category.tone}`">
-      <text class="task-card__icon-text">{{ category.icon }}</text>
+      <image class="task-card__icon-img" :src="category.iconSrc" mode="aspectFit" />
     </view>
 
     <view class="task-card__body">
@@ -82,16 +91,18 @@ const isPrimaryAction = computed(() =>
         </text>
       </view>
 
-      <view class="task-card__meta">
-        <text class="task-card__meta-icon">🕐</text>
-        <text class="task-card__meta-text">{{ task.timeWindow }}</text>
-      </view>
-      <view class="task-card__meta">
-        <text class="task-card__meta-icon">📍</text>
-        <text class="task-card__meta-text">{{ requirementsText }}</text>
-      </view>
+      <view class="task-card__detail">
+        <view class="task-card__meta-list">
+          <view class="task-card__meta">
+            <image class="task-card__meta-icon" src="/static/task-icons/meta-clock.svg" mode="aspectFit" />
+            <text class="task-card__meta-text">{{ timeLabel }}</text>
+          </view>
+          <view class="task-card__meta">
+            <image class="task-card__meta-icon" src="/static/task-icons/meta-location.svg" mode="aspectFit" />
+            <text class="task-card__meta-text">{{ requirementsLabel }}</text>
+          </view>
+        </view>
 
-      <view class="task-card__footer">
         <button
           class="task-card__action"
           :class="{ 'task-card__action--primary': isPrimaryAction, 'task-card__action--outline': !isPrimaryAction }"
@@ -110,7 +121,7 @@ const isPrimaryAction = computed(() =>
 .task-card {
   display: flex;
   gap: 20rpx;
-  padding: 28rpx;
+  padding: 28rpx 24rpx;
   border-radius: 24rpx;
   background: $card-bg;
   box-shadow: 0 12rpx 36rpx rgba(15, 107, 214, 0.07);
@@ -142,9 +153,9 @@ const isPrimaryAction = computed(() =>
   background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
 }
 
-.task-card__icon-text {
-  font-size: 40rpx;
-  line-height: 1;
+.task-card__icon-img {
+  width: 44rpx;
+  height: 44rpx;
 }
 
 .task-card__body {
@@ -152,7 +163,7 @@ const isPrimaryAction = computed(() =>
   min-width: 0;
   flex: 1;
   flex-direction: column;
-  gap: 12rpx;
+  gap: 16rpx;
 }
 
 .task-card__header {
@@ -208,25 +219,46 @@ const isPrimaryAction = computed(() =>
 
 .task-card__status {
   flex-shrink: 0;
-  font-size: 24rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
   font-weight: 600;
   white-space: nowrap;
 }
 
 .task-card__status--pending {
+  background: rgba($warning, 0.14);
   color: $warning;
 }
 
 .task-card__status--done {
+  background: rgba($success, 0.14);
   color: $success;
 }
 
 .task-card__status--ended {
+  background: rgba($text-muted, 0.12);
   color: $text-muted;
 }
 
 .task-card__status--exception {
+  background: rgba($danger, 0.12);
   color: $danger;
+}
+
+.task-card__detail {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.task-card__meta-list {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8rpx;
 }
 
 .task-card__meta {
@@ -237,8 +269,9 @@ const isPrimaryAction = computed(() =>
 
 .task-card__meta-icon {
   flex-shrink: 0;
-  font-size: 22rpx;
-  line-height: 1.5;
+  width: 28rpx;
+  height: 28rpx;
+  margin-top: 2rpx;
 }
 
 .task-card__meta-text {
@@ -249,19 +282,14 @@ const isPrimaryAction = computed(() =>
   line-height: 1.5;
 }
 
-.task-card__footer {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 4rpx;
-}
-
 .task-card__action {
+  flex-shrink: 0;
   margin: 0;
-  padding: 0 28rpx;
-  height: 64rpx;
-  line-height: 64rpx;
-  border-radius: 999rpx;
-  font-size: 26rpx;
+  padding: 0 24rpx;
+  height: 56rpx;
+  line-height: 56rpx;
+  border-radius: 16rpx;
+  font-size: 24rpx;
   font-weight: 600;
 }
 

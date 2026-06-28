@@ -2,7 +2,10 @@
 import { onShow } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 
+import TeacherHeroShell from '@/components/TeacherHeroShell.vue'
 import TeacherTabBar from '@/components/TeacherTabBar.vue'
+import VectorIcon from '@/components/VectorIcon.vue'
+import { UI_ICONS } from '@/constants/ui-icons'
 import { readStoredSession } from '@/services/auth'
 import { logInfo, showError } from '@/services/feedback'
 import { getTeacherTasks, type TeacherTask } from '@/services/teacher'
@@ -20,12 +23,6 @@ const keyword = ref('')
 const activeFilter = ref<FilterKey>('all')
 const tasks = ref<TeacherTask[]>([])
 const teacherName = ref('老师')
-
-const heroContentStyle = ref<Record<string, string>>({
-  paddingTop: '112rpx',
-  paddingLeft: '32rpx',
-  paddingRight: '32rpx',
-})
 
 const tabCounts = computed(() => ({
   in_progress: tasks.value.filter(
@@ -66,23 +63,6 @@ const visibleTasks = computed(() => {
   })
 })
 
-function syncHeroLayout() {
-  if (typeof uni === 'undefined') {
-    return
-  }
-
-  try {
-    const menuButton = uni.getMenuButtonBoundingClientRect()
-    heroContentStyle.value = {
-      paddingTop: `${menuButton.bottom + 12}px`,
-      paddingLeft: '32rpx',
-      paddingRight: '32rpx',
-    }
-  } catch {
-    // 非小程序环境保留默认占位
-  }
-}
-
 function statusLabel(task: TeacherTask) {
   if (task.pendingReviewCount > 0 || task.status === 'pending_review') {
     return '待审核'
@@ -119,14 +99,14 @@ function taskIconTone(task: TeacherTask) {
   return 'blue'
 }
 
-function taskIcon(task: TeacherTask) {
+function taskIconSrc(task: TeacherTask) {
   if (task.taskType === 'location') {
-    return '🛏️'
+    return UI_ICONS.daily
   }
   if (task.taskType === 'photo') {
-    return '📝'
+    return UI_ICONS.records
   }
-  return '📘'
+  return UI_ICONS.class
 }
 
 function taskTypeLabel(task: TeacherTask) {
@@ -189,7 +169,6 @@ function createTask() {
 }
 
 onShow(() => {
-  syncHeroLayout()
   loadProfileMeta()
   void loadTasks()
 })
@@ -197,21 +176,11 @@ onShow(() => {
 
 <template>
   <view class="tab-page">
-    <scroll-view scroll-y class="tasks-page tab-page__scroll">
-      <view class="tasks-page__hero">
-        <view class="tasks-page__hero-bg-box" aria-hidden="true">
-          <image class="tasks-page__hero-bg" src="/static/teacher-home-hero.png" mode="aspectFill" />
-        </view>
-        <view class="tasks-page__hero-mask"></view>
-        <view class="tasks-page__hero-content" :style="heroContentStyle">
-          <text class="tasks-page__title">考勤管理</text>
-          <text class="tasks-page__subtitle">高效管理考勤任务，轻松掌握出勤情况</text>
-        </view>
-      </view>
-
-      <view class="tasks-page__panel">
+    <scroll-view scroll-y class="home-page tab-page__scroll">
+      <TeacherHeroShell title="考勤管理" slogan="高效管理考勤任务，轻松掌握出勤情况">
+        <view class="tasks-page__panel home-page__panel-card">
         <view class="tasks-page__search">
-          <text class="tasks-page__search-icon">🔍</text>
+          <VectorIcon class="tasks-page__search-icon" :src="UI_ICONS.search" size="32rpx" />
           <input
             v-model="keyword"
             class="tasks-page__search-input"
@@ -255,7 +224,7 @@ onShow(() => {
           >
             <view class="task-card__head">
               <view class="task-card__icon" :class="`task-card__icon--${taskIconTone(task)}`">
-                <text>{{ taskIcon(task) }}</text>
+                <VectorIcon :src="taskIconSrc(task)" size="40rpx" />
               </view>
               <view class="task-card__main">
                 <view class="task-card__title-row">
@@ -273,9 +242,18 @@ onShow(() => {
             </view>
 
             <view class="task-card__meta">
-              <text class="task-card__meta-line">🕐 {{ formatTaskTime(task) }}</text>
-              <text class="task-card__meta-line">👥 {{ task.groupName }}</text>
-              <text class="task-card__meta-line">📊 {{ completionText(task) }}</text>
+              <view class="task-card__meta-line">
+                <VectorIcon :src="UI_ICONS.clock" size="28rpx" />
+                <text>{{ formatTaskTime(task) }}</text>
+              </view>
+              <view class="task-card__meta-line">
+                <VectorIcon :src="UI_ICONS.classes" size="28rpx" />
+                <text>{{ task.groupName }}</text>
+              </view>
+              <view class="task-card__meta-line">
+                <VectorIcon :src="UI_ICONS.chart" size="28rpx" />
+                <text>{{ completionText(task) }}</text>
+              </view>
             </view>
 
             <view class="task-card__progress-row">
@@ -295,7 +273,10 @@ onShow(() => {
             <text class="tasks-page__empty-sub">调整筛选条件，或创建一个新的考勤任务</text>
           </view>
         </view>
-      </view>
+        </view>
+      </TeacherHeroShell>
+
+      <view class="home-page__bottom-spacer" aria-hidden="true"></view>
     </scroll-view>
 
     <TeacherTabBar active="tasks" />
@@ -305,71 +286,8 @@ onShow(() => {
 <style scoped lang="scss">
 @use '@/styles/tokens.scss' as *;
 
-.tasks-page {
-  min-height: 100%;
-  padding-bottom: $tab-bar-safe-bottom;
-  background: $page-bg;
-  box-sizing: border-box;
-}
-
-.tasks-page__hero {
-  position: relative;
-  height: calc(360rpx + 30px);
-  overflow: hidden;
-}
-
-.tasks-page__hero-bg-box {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: -10%;
-  width: 118%;
-  height: 200%;
-}
-
-.tasks-page__hero-bg {
-  width: 100%;
-  height: 100%;
-}
-
-.tasks-page__hero-mask {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(15, 120, 255, 0.06) 0%,
-    rgba(15, 120, 255, 0.28) 100%
-  );
-}
-
-.tasks-page__hero-content {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-  color: #fff;
-}
-
-.tasks-page__title {
-  font-size: 52rpx;
-  font-weight: 700;
-}
-
-.tasks-page__subtitle {
-  font-size: 28rpx;
-  opacity: 0.92;
-  line-height: 1.5;
-}
-
 .tasks-page__panel {
-  position: relative;
-  z-index: 3;
-  margin: -48rpx 24rpx 0;
-  padding: 24rpx 20rpx 32rpx;
-  border-radius: 28rpx;
-  background: $card-bg;
-  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.1);
+  padding: 4rpx 0 8rpx;
 }
 
 .tasks-page__search {
@@ -598,6 +516,9 @@ onShow(() => {
 }
 
 .task-card__meta-line {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
   color: $text-secondary;
   font-size: 24rpx;
   line-height: 1.5;
@@ -664,4 +585,8 @@ onShow(() => {
   font-size: 24rpx;
   line-height: 1.5;
 }
+</style>
+
+<style lang="scss">
+@use '@/styles/home-hero.scss';
 </style>

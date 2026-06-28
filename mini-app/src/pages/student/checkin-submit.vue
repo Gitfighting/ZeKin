@@ -3,6 +3,11 @@ import { onLoad } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 
 import LocationPicker from '@/components/LocationPicker.vue'
+import GestureGridPicker from '@/components/GestureGridPicker.vue'
+import { patternDisplayLabel, patternIdToSequence } from '@/constants/gesture-patterns'
+import { formatBeijingDateTimeNow } from '@/utils/datetime'
+import VectorIcon from '@/components/VectorIcon.vue'
+import { UI_ICONS } from '@/constants/ui-icons'
 import { logInfo, parseCheckinFailure, showCheckinErrorModal, showCheckinFailureActionModal, showError } from '@/services/feedback'
 import { calcDistance } from '@/services/location'
 import {
@@ -25,7 +30,7 @@ const qrPayload = ref('')
 const checkinCode = ref('')
 const attachmentText = ref('')
 const attachmentFiles = ref<string[]>([])
-const gesturePoints = ref<number[][]>([])
+const gesturePattern = ref('')
 
 const methods = computed<CheckinMethod[]>(() => task.value?.methods ?? [])
 const totalSteps = computed(() => methods.value.length)
@@ -39,6 +44,14 @@ const METHOD_TITLES: Record<CheckinMethod, string> = {
   checkin_code: '签到码',
   attachment: '日志/附件',
   gesture: '手势签到',
+}
+
+function locationErrorMessage(fallback: string): string {
+  const hint = task.value?.locationHint?.trim()
+  if (hint) {
+    return `${hint}。位置不符时可重新定位签到，或提交异常申诉。`
+  }
+  return fallback
 }
 
 function todayDate(): string {
@@ -101,7 +114,7 @@ function stepCompleted(method: CheckinMethod | null): boolean {
       return attachmentText.value.length >= (task.value?.attachmentRule.minTextLength ?? 0)
         && (!task.value?.attachmentRule.required || attachmentText.value.length > 0 || attachmentFiles.value.length > 0)
     case 'gesture':
-      return gesturePoints.value.length >= 3
+      return gesturePattern.value.length >= 3
     default:
       return false
   }
@@ -114,7 +127,7 @@ function goNext() {
       return
     }
     if (!isLocationValid()) {
-      showCheckinErrorModal('当前位置不在签到范围内，请到老师指定的地点附近后重新定位')
+      showCheckinErrorModal(locationErrorMessage('当前位置不在签到范围内，请到指定地点附近后重新定位'))
       return
     }
   }
@@ -147,6 +160,7 @@ function pathToBase64(path: string): Promise<string> {
 
 async function captureFace() {
   try {
+    logInfo('开始采集人脸照片')
     const result = await uni.chooseImage({ count: 1, sizeType: ['compressed'], sourceType: ['camera'] })
     const path = result.tempFilePaths[0]
     if (!path) {
@@ -154,6 +168,10 @@ async function captureFace() {
     }
     facePreview.value = path
     faceImage.value = await pathToBase64(path)
+    logInfo('人脸照片采集成功', {
+      path,
+      base64Length: faceImage.value.length,
+    })
     uni.showToast({ title: '人脸照片已采集', icon: 'success' })
   } catch (error) {
     showError(error, '人脸采集失败')
@@ -180,17 +198,17 @@ async function pickAttachment() {
   }
 }
 
-function toggleGestureCell(cell: number) {
-  const total = 3
-  const x = (cell % total) / (total - 1)
-  const y = Math.floor(cell / total) / (total - 1)
-  gesturePoints.value = [...gesturePoints.value, [Number(x.toFixed(2)), Number(y.toFixed(2))]]
+function gesturePointsFromPattern(pattern: string): number[][] {
+  return patternIdToSequence(pattern).map((index) => {
+    const cell = index - 1
+    const col = cell % 3
+    const row = Math.floor(cell / 3)
+    return [Number((col / 2).toFixed(2)), Number((row / 2).toFixed(2))]
+  })
 }
 
 function formatNow(): string {
-  const now = new Date()
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+  return formatBeijingDateTimeNow()
 }
 
 function buildAppealUrl(recordId: string, taskTitle: string, reason: string) {
@@ -227,7 +245,7 @@ async function handleSubmit() {
   }
 
   if (methods.value.includes('location') && !isLocationValid()) {
-    showCheckinErrorModal('当前位置不在签到范围内，请到老师指定的地点附近后重新定位')
+    showCheckinErrorModal(locationErrorMessage('当前位置不在签到范围内，请到指定地点附近后重新定位'))
     return
   }
 
@@ -235,7 +253,7 @@ async function handleSubmit() {
   for (const method of methods.value) {
     if (!stepCompleted(method)) {
       if (method === 'location') {
-        showCheckinErrorModal('当前位置不在签到范围内，请到老师指定的地点附近后重新定位')
+        showCheckinErrorModal(locationErrorMessage('当前位置不在签到范围内，请到指定地点附近后重新定位'))
       } else if (method === 'checkin_code') {
         showCheckinErrorModal('请输入正确的签到码')
       } else if (method === 'face') {
@@ -249,6 +267,12 @@ async function handleSubmit() {
 
   submitting.value = true
   try {
+    logInfo('开始提交打卡', {
+      taskId: task.value.id,
+      methods: methods.value,
+      hasFaceImage: Boolean(faceImage.value),
+      faceImageLength: faceImage.value.length,
+    })
     const result = await submitCheckin({
       taskId: task.value.id,
       ...(location.value
@@ -264,14 +288,18 @@ async function handleSubmit() {
       ...(methods.value.includes('gesture')
         ? {
             gesture: {
-              pattern_id: task.value.gestureRule.presetPattern || 'custom',
-              points: gesturePoints.value,
+              pattern_id: gesturePattern.value,
+              points: gesturePointsFromPattern(gesturePattern.value),
             },
           }
         : {}),
       occurrenceDate: todayDate(),
     })
-    logInfo('学生打卡提交成功', { taskId: task.value.id, state: result.state })
+    logInfo('学生打卡提交成功', {
+      taskId: task.value.id,
+      state: result.state,
+      faceVerified: Boolean(faceImage.value),
+    })
     uni.setStorageSync('latest_checkin_result', result)
     uni.showToast({ title: '打卡完成', icon: 'success', duration: 1800 })
     setTimeout(() => {
@@ -352,7 +380,10 @@ onLoad((options) => {
         <!-- 二维码 -->
         <view v-else-if="currentMethod === 'qr_code'">
           <text class="submit-page__note">请扫描老师展示的签到二维码。</text>
-          <text v-if="qrPayload" class="submit-page__note submit-page__note--ok">二维码已扫描 ✓</text>
+          <view v-if="qrPayload" class="submit-page__note submit-page__note--ok">
+            <VectorIcon :src="UI_ICONS.check" size="24rpx" />
+            <text>二维码已扫描</text>
+          </view>
           <button class="submit-page__face-button" @click="scanQrCode">
             {{ qrPayload ? '重新扫码' : '扫一扫' }}
           </button>
@@ -388,20 +419,12 @@ onLoad((options) => {
         <!-- 手势 -->
         <view v-else-if="currentMethod === 'gesture'">
           <text class="submit-page__note">
-            请按顺序点击九宫格绘制手势<text v-if="task.gestureRule.presetPattern">（参考图案：{{ task.gestureRule.presetPattern }}）</text>
+            请按顺序在九宫格上一笔绘制手势
+            <text v-if="task.gestureRule.presetPattern">
+              （参考：{{ patternDisplayLabel(task.gestureRule.presetPattern) }}）
+            </text>
           </text>
-          <view class="submit-page__grid">
-            <view
-              v-for="cell in 9"
-              :key="cell"
-              class="submit-page__grid-cell"
-              @click="toggleGestureCell(cell - 1)"
-            >
-              {{ cell }}
-            </view>
-          </view>
-          <text class="submit-page__note">已记录 {{ gesturePoints.length }} 个轨迹点</text>
-          <button class="submit-page__face-button" @click="resetGesture">重置手势</button>
+          <GestureGridPicker v-model="gesturePattern" canvas-id="studentGestureCanvas" />
         </view>
       </view>
 
@@ -454,6 +477,9 @@ onLoad((options) => {
 }
 
 .submit-page__note--ok {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
   color: $primary;
   font-weight: 600;
 }

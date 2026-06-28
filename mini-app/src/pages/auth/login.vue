@@ -4,6 +4,8 @@ import { computed, nextTick, reactive, ref } from 'vue'
 
 import CaptchaImage from '@/components/CaptchaImage.vue'
 import IconFont from '@/components/IconFont.vue'
+import VectorIcon from '@/components/VectorIcon.vue'
+import { UI_ICONS } from '@/constants/ui-icons'
 import { login, loadLoginDraft, redirectToHome, registerAccount, saveLoginDraft, type LoginPayload, type RegisterPayload } from '@/services/auth'
 import { logInfo, logError, showError } from '@/services/feedback'
 import type { UserType } from '@/services/types'
@@ -284,7 +286,7 @@ onLoad((options) => {
           <view class="options-row">
             <view class="remember" @click="toggleRememberLogin">
               <view class="checkbox" :class="{ 'checkbox--checked': rememberLogin }">
-                <text v-if="rememberLogin">✓</text>
+                <VectorIcon v-if="rememberLogin" :src="UI_ICONS.check" size="22rpx" />
               </view>
               <text>记住登录</text>
             </view>

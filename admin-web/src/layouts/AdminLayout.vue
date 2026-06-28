@@ -2,6 +2,7 @@
 import {
   Bell,
   Connection,
+  DataAnalysis,
   Expand,
   Fold,
   Grid,
@@ -45,6 +46,7 @@ type MenuEntry = MenuLeaf | MenuSubmenu
 
 const menuItems: MenuEntry[] = [
   { type: 'item', label: '工作台', routeName: 'dashboard', icon: Grid },
+  { type: 'item', label: '场景化统计分析', routeName: 'analytics', icon: DataAnalysis },
   { type: 'item', label: '数据大屏', routeName: 'dataScreen', icon: TrendCharts },
   { type: 'item', label: '组织管理', routeName: 'organization', icon: School },
   {

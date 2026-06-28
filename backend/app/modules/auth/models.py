@@ -1,4 +1,4 @@
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, TimestampMixin
@@ -35,6 +35,13 @@ class StudentProfile(Base, TimestampMixin):
     grade: Mapped[str] = mapped_column(String(20))
     class_name: Mapped[str] = mapped_column(String(100))
     dormitory: Mapped[str] = mapped_column(String(100))
+    dormitory_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    dormitory_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    dormitory_address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    internship_company: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    internship_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    internship_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    internship_address: Mapped[str | None] = mapped_column(String(255), nullable=True)
     activated: Mapped[bool] = mapped_column(default=False)
     status: Mapped[str] = mapped_column(String(20), default="imported")
 

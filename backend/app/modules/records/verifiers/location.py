@@ -3,6 +3,11 @@ from __future__ import annotations
 
 from math import asin, cos, radians, sin, sqrt
 
+from app.modules.auth.models import StudentProfile
+from app.modules.records.location_target import (
+    PER_STUDENT_LOCATION_MODES,
+    resolve_profile_location_for_mode,
+)
 from app.modules.records.verifiers.base import (
     CheckinContext,
     CheckinVerifier,
@@ -26,13 +31,11 @@ class LocationVerifier(CheckinVerifier):
     method = "location"
 
     def evaluate(self, ctx: CheckinContext) -> VerifierResult:
-        rule = self.config
-        payload = ctx.payload
-
-        # mode == none 视为不校验（兼容旧 schema）
+        rule = dict(self.config)
         if rule.get("mode") == "none":
             return VerifierResult(self.method, True, "无需位置校验")
 
+        payload = ctx.payload
         if payload.longitude is None or payload.latitude is None:
             return VerifierResult(
                 method=self.method,
@@ -42,26 +45,74 @@ class LocationVerifier(CheckinVerifier):
                 exception_type=ExceptionType.LOCATION_ERROR.value,
             )
 
+        mode = rule.get("mode", "fixed_area")
+        if mode in PER_STUDENT_LOCATION_MODES:
+            if ctx.db is None:
+                return VerifierResult(
+                    method=self.method,
+                    passed=False,
+                    message="无法读取学生档案位置",
+                    need_review=True,
+                    exception_type=ExceptionType.LOCATION_ERROR.value,
+                )
+            profile = ctx.db.get(StudentProfile, ctx.student_profile_id)
+            if profile is None:
+                return VerifierResult(
+                    method=self.method,
+                    passed=False,
+                    message="学生档案不存在，无法校验签到位置",
+                    need_review=True,
+                    exception_type=ExceptionType.LOCATION_ERROR.value,
+                )
+            target_lng, target_lat, place_name, missing_message = resolve_profile_location_for_mode(
+                mode,
+                profile,
+            )
+            if missing_message:
+                return VerifierResult(
+                    method=self.method,
+                    passed=False,
+                    message=missing_message,
+                    need_review=True,
+                    exception_type=ExceptionType.LOCATION_ERROR.value,
+                )
+            target_lng = float(target_lng)
+            target_lat = float(target_lat)
+            retry_hint = "请到实习单位附近后重新定位" if mode == "student_internship" else "请到寝室附近后重新定位"
+        else:
+            if rule.get("longitude") is None or rule.get("latitude") is None:
+                return VerifierResult(
+                    method=self.method,
+                    passed=False,
+                    message="任务未配置有效签到位置",
+                    need_review=True,
+                    exception_type=ExceptionType.LOCATION_ERROR.value,
+                )
+            target_lng = float(rule["longitude"])
+            target_lat = float(rule["latitude"])
+            place_name = str(rule.get("placeName") or "签到地点")
+            retry_hint = "请到指定地点附近后重新定位"
+
         distance = haversine_distance(
             payload.longitude,
             payload.latitude,
-            float(rule["longitude"]),
-            float(rule["latitude"]),
+            target_lng,
+            target_lat,
         )
-        radius = float(rule["radius"])
+        radius = float(rule.get("radius") or 300)
         if distance <= radius:
             return VerifierResult(
                 method=self.method,
                 passed=True,
-                message="在围栏内",
-                detail={"distance_m": round(distance, 1)},
+                message=f"已在{place_name}打卡范围内",
+                detail={"distance_m": round(distance, 1), "place_name": place_name},
             )
 
         return VerifierResult(
             method=self.method,
             passed=False,
-            message="当前位置不在签到范围内，请到指定地点后重新定位",
+            message=f"当前位置不在{place_name}签到范围内，{retry_hint}，也可提交异常申诉",
             need_review=True,
             exception_type=ExceptionType.LOCATION_ERROR.value,
-            detail={"distance_m": round(distance, 1)},
+            detail={"distance_m": round(distance, 1), "place_name": place_name},
         )

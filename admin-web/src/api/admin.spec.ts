@@ -74,7 +74,7 @@ describe('admin api mapping', () => {
       })
 
     await expect(getStudents()).resolves.toMatchObject({
-      items: [{ studentNo: '20260001', className: '软件2601', status: '已启用' }],
+      items: [{ studentNo: '20260001', className: '软件2601', faceRegistered: false }],
     })
     await expect(getGroups()).resolves.toMatchObject({
       items: [{ name: '软件2601', studentCount: 3, teacherCount: 2 }],

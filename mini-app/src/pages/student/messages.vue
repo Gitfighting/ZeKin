@@ -3,6 +3,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 
 import StudentTabBar from '@/components/StudentTabBar.vue'
+import { useStudentPageHeroLayout } from '@/composables/useStudentPageHeroLayout'
 import { refreshStudentUnreadMessageCount } from '@/composables/useStudentUnreadMessages'
 import { logInfo, showError } from '@/services/feedback'
 import { getStudentMessages, type MessageItem } from '@/services/student'
@@ -20,6 +21,9 @@ const filterTabs: { key: MessageFilter; label: string }[] = [
 const messages = ref<MessageItem[]>([])
 const unreadCount = ref(0)
 const activeFilter = ref<MessageFilter>('all')
+const { brandBarStyle, heroContentStyle } = useStudentPageHeroLayout()
+
+const pageSlogan = '以知铸魂，以勤立身'
 
 function isTaskPublishMessage(item: MessageItem): boolean {
   return Boolean(item.checkinMethods || item.timeWindow)
@@ -37,20 +41,20 @@ function isSystemMessage(item: MessageItem): boolean {
   return !isTeacherMessage(item)
 }
 
-function messageIcon(item: MessageItem): { icon: string; tone: MessageTone } {
+function messageIcon(item: MessageItem): { iconSrc: string; tone: MessageTone } {
   if (item.type === 'teacher_feedback') {
-    return { icon: '👨‍🏫', tone: 'blue' }
+    return { iconSrc: '/static/message-icons/teacher.svg', tone: 'blue' }
   }
   if (item.type === 'appeal_result') {
-    return { icon: '📋', tone: 'blue' }
+    return { iconSrc: '/static/message-icons/appeal.svg', tone: 'blue' }
   }
   if (/异常|申诉/.test(`${item.title}${item.content}`)) {
-    return { icon: '⚠️', tone: 'orange' }
+    return { iconSrc: '/static/message-icons/warning.svg', tone: 'orange' }
   }
   if (/系统|维护|通知/.test(`${item.title}${item.content}`)) {
-    return { icon: '🔔', tone: 'blue' }
+    return { iconSrc: '/static/message-icons/system.svg', tone: 'blue' }
   }
-  return { icon: '📅', tone: 'blue' }
+  return { iconSrc: '/static/message-icons/checkin.svg', tone: 'blue' }
 }
 
 function messageCategory(item: MessageItem): string {
@@ -85,13 +89,6 @@ function matchFilter(item: MessageItem, filter: MessageFilter): boolean {
 const visibleMessages = computed(() =>
   messages.value.filter((item) => matchFilter(item, activeFilter.value)),
 )
-
-const subtitleText = computed(() => {
-  if (unreadCount.value > 0) {
-    return `${unreadCount.value} 条未读消息 · 打卡提醒、教师反馈与申诉通知`
-  }
-  return '查看打卡提醒、教师反馈与申诉相关消息'
-})
 
 function displayTime(time: string): string {
   const match = time.match(/(\d{2}:\d{2})$/)
@@ -128,37 +125,39 @@ onShow(async () => {
 <template>
   <view class="student-tab-page">
     <scroll-view scroll-y class="messages-page student-tab-page__scroll">
-      <view class="messages-page__hero">
-        <view class="messages-page__hero-bg-box" aria-hidden="true">
-          <image class="messages-page__hero-bg" src="/static/student-home-hero.png" mode="aspectFill" />
-        </view>
-        <view class="messages-page__hero-mask" aria-hidden="true"></view>
-        <view class="messages-page__hero-content">
-          <view class="messages-page__title-row">
-            <text class="messages-page__title">消息</text>
-            <view v-if="unreadCount > 0" class="messages-page__unread-pill">
-              <text>{{ unreadCount }} 条未读</text>
+      <view class="student-page-header-block">
+        <view class="student-page-hero">
+          <view class="student-page-hero__visual">
+            <view class="student-page-hero__bg-window">
+              <image class="student-page-hero__bg" src="/static/home.png" mode="widthFix" />
             </view>
           </view>
-          <text class="messages-page__subtitle">{{ subtitleText }}</text>
+          <view class="student-page-hero__brand-bar" :style="brandBarStyle">
+            <text class="student-page-hero__brand">知勤</text>
+          </view>
+          <view class="student-page-hero__content" :style="heroContentStyle">
+            <text class="student-page-hero__title">消息</text>
+            <text class="student-page-hero__slogan">{{ pageSlogan }}</text>
+          </view>
         </view>
-      </view>
 
-      <view class="messages-page__panel">
-        <view class="messages-page__tabs">
-          <view
-            v-for="tab in filterTabs"
-            :key="tab.key"
-            class="messages-page__tab"
-            :class="{ 'messages-page__tab--active': activeFilter === tab.key }"
-            @click="activeFilter = tab.key"
-          >
-            <text>{{ tab.label }}</text>
+        <view class="messages-page__panel student-page-overlap-card">
+          <view class="messages-page__tabs">
+            <view
+              v-for="tab in filterTabs"
+              :key="tab.key"
+              class="messages-page__tab"
+              :class="{ 'messages-page__tab--active': activeFilter === tab.key }"
+              @click="activeFilter = tab.key"
+            >
+              <text>{{ tab.label }}</text>
+            </view>
           </view>
         </view>
       </view>
 
-      <view class="messages-page__list">
+      <view class="student-page-content-sheet">
+        <view class="messages-page__list">
         <view
           v-for="item in visibleMessages"
           :key="item.id"
@@ -170,7 +169,11 @@ onShow(async () => {
             class="messages-page__icon"
             :class="`messages-page__icon--${messageIcon(item).tone}`"
           >
-            <text class="messages-page__icon-text">{{ messageIcon(item).icon }}</text>
+            <image
+              class="messages-page__icon-img"
+              :src="messageIcon(item).iconSrc"
+              mode="aspectFit"
+            />
           </view>
 
           <view class="messages-page__body">
@@ -202,7 +205,11 @@ onShow(async () => {
                 </view>
               </template>
               <view v-else class="messages-page__meta-line">
-                <text class="messages-page__meta-icon">💬</text>
+                <image
+                  class="messages-page__meta-icon-img"
+                  src="/static/message-icons/chat.svg"
+                  mode="aspectFit"
+                />
                 <text class="messages-page__meta-text">{{ item.content }}</text>
               </view>
             </view>
@@ -210,8 +217,13 @@ onShow(async () => {
         </view>
 
         <view v-if="visibleMessages.length === 0" class="messages-page__empty">
-          <text class="messages-page__empty-icon">💬</text>
+          <image
+            class="messages-page__empty-icon-img"
+            src="/static/message-icons/empty.svg"
+            mode="aspectFit"
+          />
           <text>暂无{{ filterTabs.find((tab) => tab.key === activeFilter)?.label }}消息</text>
+        </view>
         </view>
       </view>
 
@@ -225,86 +237,11 @@ onShow(async () => {
 @use '@/styles/tokens.scss' as *;
 
 .messages-page {
-  background: #f5f8fc;
-}
-
-.messages-page__hero {
-  position: relative;
-  height: 360rpx;
-  overflow: hidden;
-}
-
-.messages-page__hero-bg-box {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 175%;
-}
-
-.messages-page__hero-bg {
-  width: 100%;
-  height: 100%;
-}
-
-.messages-page__hero-mask {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(15, 120, 255, 0.08) 0%, rgba(15, 120, 255, 0.42) 100%);
-}
-
-.messages-page__hero-content {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-  padding: 112rpx 32rpx 48rpx;
-}
-
-.messages-page__title-row {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-}
-
-.messages-page__title,
-.messages-page__subtitle {
-  color: #ffffff;
-}
-
-.messages-page__title {
-  font-size: 48rpx;
-  font-weight: 700;
-}
-
-.messages-page__unread-pill {
-  padding: 8rpx 18rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.22);
-}
-
-.messages-page__unread-pill text {
-  color: #fff;
-  font-size: 24rpx;
-  font-weight: 600;
-}
-
-.messages-page__subtitle {
-  max-width: 620rpx;
-  font-size: 26rpx;
-  line-height: 1.55;
-  opacity: 0.96;
+  background: $page-bg;
 }
 
 .messages-page__panel {
-  position: relative;
-  z-index: 3;
-  margin: -36rpx 24rpx 0;
   padding: 8rpx 24rpx 0;
-  border-radius: 28rpx 28rpx 24rpx 24rpx;
-  background: #fff;
-  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.08);
 }
 
 .messages-page__tabs {
@@ -345,7 +282,7 @@ onShow(async () => {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
-  padding: 24rpx;
+  padding: 0 24rpx 24rpx;
 }
 
 .messages-page__card {
@@ -380,9 +317,9 @@ onShow(async () => {
   background: linear-gradient(135deg, #ffb347 0%, $warning 100%);
 }
 
-.messages-page__icon-text {
-  font-size: 40rpx;
-  line-height: 1;
+.messages-page__icon-img {
+  width: 44rpx;
+  height: 44rpx;
 }
 
 .messages-page__body {
@@ -475,10 +412,11 @@ onShow(async () => {
   line-height: 1.5;
 }
 
-.messages-page__meta-icon {
+.messages-page__meta-icon-img {
+  width: 28rpx;
+  height: 28rpx;
   flex-shrink: 0;
-  font-size: 22rpx;
-  line-height: 1.5;
+  margin-top: 4rpx;
 }
 
 .messages-page__meta-text {
@@ -507,11 +445,16 @@ onShow(async () => {
   box-shadow: 0 12rpx 36rpx rgba(15, 107, 214, 0.07);
 }
 
-.messages-page__empty-icon {
-  font-size: 56rpx;
+.messages-page__empty-icon-img {
+  width: 96rpx;
+  height: 96rpx;
 }
 
 .tab-page__safe-bottom {
   height: $tab-bar-safe-bottom;
 }
+</style>
+
+<style lang="scss">
+@use '@/styles/student-page-hero.scss';
 </style>

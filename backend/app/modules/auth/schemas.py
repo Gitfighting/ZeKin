@@ -27,6 +27,9 @@ class StudentActivateRequest(BaseModel):
     phone: str
     code: str
     password: str
+    dormitory_longitude: float | None = None
+    dormitory_latitude: float | None = None
+    dormitory_address: str | None = None
 
 
 class RegisterRequest(BaseModel):

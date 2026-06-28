@@ -1,0 +1,113 @@
+@use '@/styles/tokens.scss' as *;
+
+$student-hero-image-w: 1672;
+$student-hero-image-h: 941;
+$student-hero-sky-cut-ratio: 0.2;
+$student-hero-height: calc(
+  100vw * #{$student-hero-image-h} / #{$student-hero-image-w} * #{1 - $student-hero-sky-cut-ratio} + 30px
+);
+$student-hero-radius: 28rpx;
+$student-hero-overlap-card-height: 210rpx;
+$student-hero-content-padding-top: calc(#{$student-hero-overlap-card-height} * 0.75 + 28rpx);
+
+.student-page-hero {
+  position: relative;
+  z-index: 3;
+  height: $student-hero-height;
+  overflow: hidden;
+}
+
+.student-page-hero__visual {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 0 0 $student-hero-radius $student-hero-radius;
+  background: linear-gradient(180deg, #4da3ff 0%, #7ec8ff 52%, #cfefff 100%);
+}
+
+.student-page-hero__bg-window {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.student-page-hero__bg {
+  display: block;
+  width: 100%;
+  flex-shrink: 0;
+  margin-top: calc(
+    -1 * 100vw * #{$student-hero-image-h} / #{$student-hero-image-w} * #{$student-hero-sky-cut-ratio}
+  );
+}
+
+.student-page-hero__brand-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  padding-left: 32rpx;
+  box-sizing: border-box;
+}
+
+.student-page-hero__brand {
+  font-size: 42rpx;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+  text-shadow: 0 2rpx 12rpx rgba(15, 60, 120, 0.35);
+}
+
+.student-page-hero__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  color: #fff;
+}
+
+.student-page-hero__title {
+  margin-top: 8rpx;
+  font-size: 52rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  text-shadow: 0 2rpx 16rpx rgba(15, 60, 120, 0.4);
+}
+
+.student-page-hero__slogan {
+  color: #fff;
+  font-size: 30rpx;
+  opacity: 0.96;
+  text-shadow: 0 2rpx 12rpx rgba(15, 60, 120, 0.32);
+}
+
+.student-page-header-block {
+  position: relative;
+}
+
+.student-page-overlap-card {
+  position: absolute;
+  right: 24rpx;
+  left: 24rpx;
+  top: $student-hero-height;
+  z-index: 4;
+  transform: translateY(calc(#{$student-hero-overlap-card-height} * -0.25 - 5px));
+  border-radius: $student-hero-radius;
+  background: $card-bg;
+  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.1);
+}
+
+.student-page-content-sheet {
+  position: relative;
+  z-index: 1;
+  margin-top: -32rpx;
+  padding-top: $student-hero-content-padding-top;
+  border-radius: $student-hero-radius $student-hero-radius 0 0;
+  background: $page-bg;
+  box-sizing: border-box;
+}

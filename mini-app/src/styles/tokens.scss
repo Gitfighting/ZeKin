@@ -13,7 +13,7 @@ $border-light: #d8e8ff;
 $page-bg: #fdfdfd;
 $card-bg: #fdfdfd;
 $mobile-gradient: linear-gradient(180deg, #0f8bff 0%, #38b6ff 48%, #fdfdfd 100%);
-$tab-bar-height: 98rpx;
+$tab-bar-height: calc(98rpx + 8px);
 $tab-bar-safe-bottom: calc(#{$tab-bar-height} + env(safe-area-inset-bottom) + 24rpx);
 
 .tab-page,

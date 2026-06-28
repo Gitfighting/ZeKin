@@ -17,6 +17,16 @@ from app.modules.groups.invite import generate_unique_invite_code
 from app.modules.groups.models import Group, GroupMember, GroupTeacher
 from app.modules.rule_templates.models import RuleTemplate
 from app.shared.enums import UserType
+from app.shared.student_default_locations import (
+    DEFAULT_DORMITORY_ADDRESS,
+    DEFAULT_DORMITORY_LABEL,
+    DEFAULT_DORMITORY_LATITUDE,
+    DEFAULT_DORMITORY_LONGITUDE,
+    DEFAULT_INTERNSHIP_ADDRESS,
+    DEFAULT_INTERNSHIP_COMPANY,
+    DEFAULT_INTERNSHIP_LATITUDE,
+    DEFAULT_INTERNSHIP_LONGITUDE,
+)
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 DEFAULT_PASSWORD = "123456"
@@ -85,15 +95,19 @@ DEFAULT_RULE_SNAPSHOT = {
 
 DORM_RULE_SNAPSHOT = {
     "timeRule": {"startTime": "21:30", "endTime": "23:00", "allowLate": False, "allowMakeup": True},
+    "locationRule": {
+        "mode": "student_dorm",
+        "placeName": "学生寝室",
+        "radius": 200,
+        "allowExceptionSubmit": True,
+    },
     "verificationRule": {
         "methods": ["face", "location"],
         "order": ["face", "location"],
         "face": {"tolerance": 0.6, "detectionModel": "hog"},
         "location": {
-            "placeName": "3号宿舍楼",
-            "longitude": 120.000001,
-            "latitude": 30.000001,
-            "radius": 300,
+            "mode": "student_dorm",
+            "radius": 200,
         },
     },
     "reviewRule": {"mode": "exception_only"},
@@ -114,14 +128,18 @@ COURSE_RULE_SNAPSHOT = {
 
 INTERNSHIP_RULE_SNAPSHOT = {
     "timeRule": {"startTime": "08:30", "endTime": "10:00", "allowLate": True, "allowMakeup": True},
+    "locationRule": {
+        "mode": "student_internship",
+        "placeName": "实习单位",
+        "radius": 500,
+        "allowExceptionSubmit": True,
+    },
     "verificationRule": {
         "methods": ["face", "location", "attachment"],
         "order": ["face", "location", "attachment"],
         "face": {"tolerance": 0.65, "detectionModel": "hog"},
         "location": {
-            "placeName": "实习单位",
-            "longitude": 121.500000,
-            "latitude": 31.200000,
+            "mode": "student_internship",
             "radius": 500,
         },
         "attachment": {
@@ -153,6 +171,7 @@ def seed_reference_data(db: Session) -> None:
     _ensure_group_teacher(db, default_group.id, teacher.teacher_profile.id)
     _ensure_rule_template(db, "晚间查寝模板", default_type.id, teacher.id, DEFAULT_RULE_SNAPSHOT)
     _ensure_demo_students(db, default_group)
+    _apply_default_student_locations(db)
 
     # 演示用：三类班级群组 + 三套可组合签到模板
     dorm_type = _ensure_checkin_type(db, "查寝打卡", "宿舍查寝场景")
@@ -244,6 +263,20 @@ def _ensure_teacher(db: Session) -> User:
     return teacher
 
 
+def _apply_default_student_locations(db: Session) -> None:
+    """为全部学生写入默认寝室/实习坐标（查寝、实习打卡按档案校验）。"""
+    profiles = db.scalars(select(StudentProfile)).all()
+    for profile in profiles:
+        profile.dormitory = DEFAULT_DORMITORY_LABEL
+        profile.dormitory_longitude = DEFAULT_DORMITORY_LONGITUDE
+        profile.dormitory_latitude = DEFAULT_DORMITORY_LATITUDE
+        profile.dormitory_address = DEFAULT_DORMITORY_ADDRESS
+        profile.internship_company = DEFAULT_INTERNSHIP_COMPANY
+        profile.internship_longitude = DEFAULT_INTERNSHIP_LONGITUDE
+        profile.internship_latitude = DEFAULT_INTERNSHIP_LATITUDE
+        profile.internship_address = DEFAULT_INTERNSHIP_ADDRESS
+
+
 def _ensure_demo_students(db: Session, group: Group) -> None:
     """预置可登录学生（学号即账号，默认密码 123456）。"""
     for student_no, name, phone in DEMO_STUDENTS:
@@ -266,7 +299,14 @@ def _ensure_demo_students(db: Session, group: Group) -> None:
             major="软件工程",
             grade="2026",
             class_name=group.name,
-            dormitory="3号楼301",
+            dormitory=DEFAULT_DORMITORY_LABEL,
+            dormitory_longitude=DEFAULT_DORMITORY_LONGITUDE,
+            dormitory_latitude=DEFAULT_DORMITORY_LATITUDE,
+            dormitory_address=DEFAULT_DORMITORY_ADDRESS,
+            internship_company=DEFAULT_INTERNSHIP_COMPANY,
+            internship_longitude=DEFAULT_INTERNSHIP_LONGITUDE,
+            internship_latitude=DEFAULT_INTERNSHIP_LATITUDE,
+            internship_address=DEFAULT_INTERNSHIP_ADDRESS,
             activated=True,
             status="active",
         )
@@ -337,8 +377,10 @@ def _ensure_rule_template(
 
 
 if __name__ == "__main__":
-    from app.core.database import SessionLocal
+    from app.core.database import SessionLocal, engine
+    from app.core.schema_patch import ensure_student_location_columns
 
+    ensure_student_location_columns(engine)
     with SessionLocal() as session:
         seed_reference_data(session)
     print("Seed completed. Demo account passwords synced to 123456.")

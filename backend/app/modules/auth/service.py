@@ -73,6 +73,11 @@ class AuthService:
 
         profile.activated = True
         profile.status = "active"
+        if payload.dormitory_longitude is not None and payload.dormitory_latitude is not None:
+            profile.dormitory_longitude = payload.dormitory_longitude
+            profile.dormitory_latitude = payload.dormitory_latitude
+            if payload.dormitory_address:
+                profile.dormitory_address = payload.dormitory_address.strip()
         self.repository.save()
         return StudentActivateResponse(activated=True, access_token=self._create_token(user))
 

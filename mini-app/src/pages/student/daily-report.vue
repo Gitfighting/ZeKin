@@ -20,9 +20,9 @@ const submitting = ref(false)
 const submitted = ref(false)
 
 const moodOptions: { label: string; value: 'good' | 'normal' | 'bad' }[] = [
-  { label: '😊 良好', value: 'good' },
-  { label: '😐 一般', value: 'normal' },
-  { label: '😔 较差', value: 'bad' },
+  { label: '良好', value: 'good' },
+  { label: '一般', value: 'normal' },
+  { label: '较差', value: 'bad' },
 ]
 
 onLoad((options) => {

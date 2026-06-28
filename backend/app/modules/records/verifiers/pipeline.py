@@ -91,15 +91,26 @@ class CheckinPipeline:
     def _resolve_config(self, method: str, rules: dict, vr: dict) -> dict:
         # 新结构：verificationRule[method]
         if method in vr and isinstance(vr.get(method), dict):
-            return vr[method]
-        # 旧结构回退
+            config = dict(vr[method])
+        elif method == CheckinMethod.LOCATION.value:
+            config = dict(rules.get("locationRule", {}))
+        elif method == CheckinMethod.FACE.value:
+            config = rules.get("faceRule", {})
+        elif method == CheckinMethod.ATTACHMENT.value:
+            config = rules.get("attachmentRule", {})
+        else:
+            config = {}
+
         if method == CheckinMethod.LOCATION.value:
-            return rules.get("locationRule", {})
-        if method == CheckinMethod.FACE.value:
-            return rules.get("faceRule", {})
-        if method == CheckinMethod.ATTACHMENT.value:
-            return rules.get("attachmentRule", {})
-        return {}
+            location_rule = rules.get("locationRule", {}) or {}
+            mode = config.get("mode") or location_rule.get("mode")
+            if mode:
+                config["mode"] = mode
+            if config.get("radius") is None and location_rule.get("radius") is not None:
+                config["radius"] = location_rule.get("radius")
+            if not config.get("placeName") and location_rule.get("placeName"):
+                config["placeName"] = location_rule.get("placeName")
+        return config
 
     # ── 执行 ──────────────────────────────────────────────────────────────
 

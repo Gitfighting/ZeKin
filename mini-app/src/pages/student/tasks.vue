@@ -3,7 +3,10 @@ import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 
 import TaskCard from '@/components/TaskCard.vue'
+import VectorIcon from '@/components/VectorIcon.vue'
+import { UI_ICONS } from '@/constants/ui-icons'
 import StudentTabBar from '@/components/StudentTabBar.vue'
+import { useStudentPageHeroLayout } from '@/composables/useStudentPageHeroLayout'
 import { refreshStudentUnreadMessageCount } from '@/composables/useStudentUnreadMessages'
 import { logInfo, showError } from '@/services/feedback'
 import { getStudentTasks, type StudentTask } from '@/services/student'
@@ -37,6 +40,9 @@ const activeStatus = ref<StatusFilter>('all')
 const activeType = ref<TypeFilter>('all')
 const activeTime = ref<TimeFilter>('7d')
 const tasks = ref<StudentTask[]>([])
+const { brandBarStyle, heroContentStyle } = useStudentPageHeroLayout()
+
+const pageSlogan = '知以明志，勤以立身'
 
 function inferTypeKey(task: StudentTask): TypeFilter {
   const haystack = `${task.title}${task.type}${task.description}`
@@ -133,63 +139,71 @@ onShow(async () => {
 <template>
   <view class="student-tab-page">
     <scroll-view scroll-y class="tasks-page student-tab-page__scroll">
-      <view class="tasks-page__hero">
-        <view class="tasks-page__hero-bg-box" aria-hidden="true">
-          <image class="tasks-page__hero-bg" src="/static/student-home-hero.png" mode="aspectFill" />
+      <view class="student-page-header-block">
+        <view class="student-page-hero">
+          <view class="student-page-hero__visual">
+            <view class="student-page-hero__bg-window">
+              <image class="student-page-hero__bg" src="/static/home.png" mode="widthFix" />
+            </view>
+          </view>
+          <view class="student-page-hero__brand-bar" :style="brandBarStyle">
+            <text class="student-page-hero__brand">知勤</text>
+          </view>
+          <view class="student-page-hero__content" :style="heroContentStyle">
+            <text class="student-page-hero__title">打卡任务</text>
+            <text class="student-page-hero__slogan">{{ pageSlogan }}</text>
+          </view>
         </view>
-        <view class="tasks-page__hero-mask" aria-hidden="true"></view>
-        <view class="tasks-page__hero-content">
-          <text class="tasks-page__title">打卡任务</text>
-          <text class="tasks-page__subtitle">按时完成打卡任务，养成自律习惯，记录成长每一步</text>
+
+        <view class="tasks-page__panel student-page-overlap-card">
+          <view class="tasks-page__tabs">
+            <view
+              v-for="item in statusTabs"
+              :key="item.key"
+              class="tasks-page__tab"
+              :class="{ 'tasks-page__tab--active': activeStatus === item.key }"
+              @click="activeStatus = item.key"
+            >
+              <text>{{ item.label }}</text>
+            </view>
+          </view>
+
+          <view class="tasks-page__dropdowns">
+            <view class="tasks-page__dropdown" @click="openTypePicker">
+              <text>{{ activeTypeLabel }}</text>
+              <text class="tasks-page__dropdown-arrow">▾</text>
+            </view>
+            <view class="tasks-page__dropdown tasks-page__dropdown--static">
+              <text>全部班级</text>
+              <text class="tasks-page__dropdown-arrow">▾</text>
+            </view>
+            <view class="tasks-page__dropdown" @click="openTimePicker">
+              <text>{{ activeTimeLabel }}</text>
+              <text class="tasks-page__dropdown-arrow">▾</text>
+            </view>
+          </view>
         </view>
       </view>
 
-      <view class="tasks-page__panel">
-        <view class="tasks-page__tabs">
-          <view
-            v-for="item in statusTabs"
-            :key="item.key"
-            class="tasks-page__tab"
-            :class="{ 'tasks-page__tab--active': activeStatus === item.key }"
-            @click="activeStatus = item.key"
-          >
-            <text>{{ item.label }}</text>
+      <view class="student-page-content-sheet">
+        <view class="tasks-page__list">
+          <TaskCard
+            v-for="task in visibleTasks"
+            :key="task.id"
+            :task="task"
+            @action="openTask"
+            @click="openTask"
+          />
+          <view v-if="visibleTasks.length === 0" class="tasks-page__empty">
+            <VectorIcon class="tasks-page__empty-icon" :src="UI_ICONS.empty" size="64rpx" />
+            <text class="tasks-page__empty-text">暂无符合条件的任务</text>
           </view>
         </view>
 
-        <view class="tasks-page__dropdowns">
-          <view class="tasks-page__dropdown" @click="openTypePicker">
-            <text>{{ activeTypeLabel }}</text>
-            <text class="tasks-page__dropdown-arrow">▾</text>
-          </view>
-          <view class="tasks-page__dropdown tasks-page__dropdown--static">
-            <text>全部班级</text>
-            <text class="tasks-page__dropdown-arrow">▾</text>
-          </view>
-          <view class="tasks-page__dropdown" @click="openTimePicker">
-            <text>{{ activeTimeLabel }}</text>
-            <text class="tasks-page__dropdown-arrow">▾</text>
-          </view>
+        <view class="tasks-page__tip">
+          <VectorIcon class="tasks-page__tip-icon" :src="UI_ICONS.info" size="28rpx" />
+          <text class="tasks-page__tip-text">任务时间以实际发起为准，请及时完成打卡</text>
         </view>
-      </view>
-
-      <view class="tasks-page__list">
-        <TaskCard
-          v-for="task in visibleTasks"
-          :key="task.id"
-          :task="task"
-          @action="openTask"
-          @click="openTask"
-        />
-        <view v-if="visibleTasks.length === 0" class="tasks-page__empty">
-          <text class="tasks-page__empty-icon">📭</text>
-          <text class="tasks-page__empty-text">暂无符合条件的任务</text>
-        </view>
-      </view>
-
-      <view class="tasks-page__tip">
-        <text class="tasks-page__tip-icon">ⓘ</text>
-        <text class="tasks-page__tip-text">任务时间以实际发起为准，请及时完成打卡</text>
       </view>
 
       <view class="tab-page__safe-bottom"></view>
@@ -202,68 +216,11 @@ onShow(async () => {
 @use '@/styles/tokens.scss' as *;
 
 .tasks-page {
-  background: #f5f8fc;
-}
-
-.tasks-page__hero {
-  position: relative;
-  height: 360rpx;
-  overflow: hidden;
-}
-
-.tasks-page__hero-bg-box {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 175%;
-}
-
-.tasks-page__hero-bg {
-  width: 100%;
-  height: 100%;
-}
-
-.tasks-page__hero-mask {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(15, 120, 255, 0.08) 0%, rgba(15, 120, 255, 0.42) 100%);
-}
-
-.tasks-page__hero-content {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-  padding: 112rpx 32rpx 48rpx;
-}
-
-.tasks-page__title,
-.tasks-page__subtitle {
-  color: #ffffff;
-}
-
-.tasks-page__title {
-  font-size: 48rpx;
-  font-weight: 700;
-}
-
-.tasks-page__subtitle {
-  max-width: 620rpx;
-  font-size: 26rpx;
-  line-height: 1.55;
-  opacity: 0.96;
+  background: $page-bg;
 }
 
 .tasks-page__panel {
-  position: relative;
-  z-index: 3;
-  margin: -36rpx 24rpx 0;
   padding: 8rpx 24rpx 24rpx;
-  border-radius: 28rpx 28rpx 24rpx 24rpx;
-  background: #fff;
-  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.08);
 }
 
 .tasks-page__tabs {
@@ -335,7 +292,7 @@ onShow(async () => {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
-  padding: 24rpx;
+  padding: 0 24rpx 24rpx;
 }
 
 .tasks-page__empty {
@@ -380,4 +337,8 @@ onShow(async () => {
 .tab-page__safe-bottom {
   height: $tab-bar-safe-bottom;
 }
+</style>
+
+<style lang="scss">
+@use '@/styles/student-page-hero.scss';
 </style>

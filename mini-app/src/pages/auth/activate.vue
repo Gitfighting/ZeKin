@@ -13,12 +13,37 @@ const form = reactive<ActivateStudentPayload>({
   confirmPassword: '',
 })
 
+const dormLocation = reactive({
+  placeName: '',
+  longitude: 0,
+  latitude: 0,
+})
+
 const submitting = ref(false)
+const pickingLocation = ref(false)
 
 function goLogin() {
   uni.navigateBack({
     delta: 1,
   })
+}
+
+function hasDormLocation(): boolean {
+  return Math.abs(dormLocation.latitude) > 0.0001 && Math.abs(dormLocation.longitude) > 0.0001
+}
+
+async function chooseDormLocation() {
+  pickingLocation.value = true
+  try {
+    const result = await uni.chooseLocation()
+    dormLocation.placeName = result.name || result.address || '寝室位置'
+    dormLocation.longitude = result.longitude
+    dormLocation.latitude = result.latitude
+  } catch {
+    uni.showToast({ title: '未选择寝室位置', icon: 'none' })
+  } finally {
+    pickingLocation.value = false
+  }
 }
 
 async function handleActivate() {
@@ -41,7 +66,12 @@ async function handleActivate() {
   submitting.value = true
 
   try {
-    const session = await activateStudent(form)
+    const session = await activateStudent({
+      ...form,
+      dormitoryLongitude: hasDormLocation() ? dormLocation.longitude : undefined,
+      dormitoryLatitude: hasDormLocation() ? dormLocation.latitude : undefined,
+      dormitoryAddress: hasDormLocation() ? dormLocation.placeName : undefined,
+    })
     logInfo('学生账号激活成功', {
       studentNo: form.studentNo,
       userId: session.user.id,
@@ -104,6 +134,21 @@ async function handleActivate() {
             password
             placeholder="再次输入登录密码"
           />
+        </view>
+
+        <view class="auth-form__field">
+          <text class="auth-form__label">寝室位置（选填）</text>
+          <text class="auth-form__hint">若管理员已导入寝室坐标可跳过；查寝打卡将按此位置校验</text>
+          <button
+            class="auth-form__location-btn"
+            :loading="pickingLocation"
+            @click="chooseDormLocation"
+          >
+            {{ hasDormLocation() ? '重新选择寝室位置' : '在地图上选择寝室位置' }}
+          </button>
+          <text v-if="hasDormLocation()" class="auth-form__location-text">
+            已选：{{ dormLocation.placeName }}
+          </text>
         </view>
 
         <button class="auth-form__button" type="primary" :loading="submitting" @click="handleActivate">
@@ -201,6 +246,12 @@ async function handleActivate() {
   font-weight: 600;
 }
 
+.auth-form__hint {
+  color: $text-secondary;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
 .auth-form__input {
   box-sizing: border-box;
   width: 100%;
@@ -211,6 +262,20 @@ async function handleActivate() {
   border: 2rpx solid rgba($primary, 0.08);
   color: $text-primary;
   font-size: 28rpx;
+}
+
+.auth-form__location-btn {
+  border: none;
+  border-radius: 22rpx;
+  background: #f0f7ff;
+  color: $primary;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.auth-form__location-text {
+  color: $text-secondary;
+  font-size: 24rpx;
 }
 
 .auth-form__button {

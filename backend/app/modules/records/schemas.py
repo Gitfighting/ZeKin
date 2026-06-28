@@ -24,3 +24,16 @@ class CheckinRequest(BaseModel):
 class AppealRequest(BaseModel):
     reason: str
     attachment_ids: list[int]
+
+
+class DormitoryLocationUpdateRequest(BaseModel):
+    longitude: float
+    latitude: float
+    address: str | None = None
+
+
+class InternshipLocationUpdateRequest(BaseModel):
+    longitude: float
+    latitude: float
+    company: str | None = None
+    address: str | None = None

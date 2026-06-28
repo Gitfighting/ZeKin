@@ -1,3 +1,4 @@
+from collections import Counter
 from copy import deepcopy
 from datetime import datetime, timedelta
 
@@ -14,6 +15,7 @@ from app.modules.tasks.models import (
     CheckinTaskGroup,
     CheckinTaskOccurrence,
 )
+from app.modules.tasks.lifecycle import TaskLifecycleService
 from app.modules.tasks.repository import TaskRepository
 from app.modules.qr_code.service import generate_token, render_qr_data_url
 from app.modules.tasks.schemas import CreateTaskRequest
@@ -86,6 +88,14 @@ class TaskService:
     def __init__(self, db: Session) -> None:
         self.db = db
         self.repository = TaskRepository(db)
+        self.lifecycle = TaskLifecycleService(db)
+
+    def _ensure_task_fresh(self, task: CheckinTask) -> None:
+        if self.lifecycle.refresh_task(task):
+            self.repository.commit()
+
+    def _ensure_tasks_fresh(self, tasks: list[CheckinTask]) -> None:
+        self.lifecycle.refresh_tasks(tasks)
 
     def create_task(self, *, teacher_user: User, payload: CreateTaskRequest) -> dict:
         self._require_teacher_group_scope(teacher_user, payload.group_ids)
@@ -112,10 +122,9 @@ class TaskService:
         return self.serialize_task(task)
 
     def list_teacher_tasks(self, teacher_user_id: int) -> dict:
-        items = [
-            self.serialize_task(task)
-            for task in self.repository.list_tasks_by_teacher(teacher_user_id)
-        ]
+        tasks = self.repository.list_tasks_by_teacher(teacher_user_id)
+        self._ensure_tasks_fresh(tasks)
+        items = [self.serialize_task(task) for task in tasks]
         return {"items": items, "total": len(items)}
 
     def get_task_detail(self, task_id: int, teacher_user: User | None = None) -> dict:
@@ -124,6 +133,7 @@ class TaskService:
             raise ValueError("任务不存在")
         if teacher_user is not None:
             self._require_task_owner(task, teacher_user)
+        self._ensure_task_fresh(task)
         task_item = self.serialize_task(task)
         return {
             **task_item,
@@ -234,6 +244,9 @@ class TaskService:
         if task is None:
             raise ValueError("任务不存在")
         self._require_task_owner(task, teacher_user)
+        self._ensure_task_fresh(task)
+        if task.status == TaskStatus.ENDED.value:
+            return {"ended": True, "status": task.status}
         task.status = TaskStatus.ENDED.value
         self.repository.commit()
         return {"ended": True, "status": task.status}
@@ -326,6 +339,7 @@ class TaskService:
 
     def teacher_dashboard(self, teacher_user_id: int) -> dict:
         tasks = self.repository.list_tasks_by_teacher(teacher_user_id)
+        self._ensure_tasks_fresh(tasks)
         task_ids = [task.id for task in tasks]
         exceptions = self.repository.list_exceptions_for_teacher_task_ids(task_ids)
         pending_reviews = [
@@ -391,6 +405,7 @@ class TaskService:
 
         students = self._students_for_group(group_id)
         tasks = self.repository.list_tasks_for_group_ids([group_id])
+        self._ensure_tasks_fresh(tasks)
         task_ids = [task.id for task in tasks]
         exceptions = self.repository.list_exceptions_for_teacher_task_ids(task_ids)
         pending_review_count = sum(
@@ -555,10 +570,23 @@ class TaskService:
             "recentTaskCount": len(tasks),
         }
 
+    def _group_student_meta(self, students: list[StudentProfile]) -> dict[str, str]:
+        if not students:
+            return {"grade": "", "major": ""}
+        grades = Counter(student.grade for student in students if student.grade)
+        majors = Counter(student.major for student in students if student.major)
+        return {
+            "grade": grades.most_common(1)[0][0] if grades else "",
+            "major": majors.most_common(1)[0][0] if majors else "",
+        }
+
     def _serialize_teacher_group(self, group: Group) -> dict:
         students = self._students_for_group(group.id)
         tasks = self.repository.list_tasks_for_group_ids([group.id])
         recent_task_count = len(tasks)
+        meta = self._group_student_meta(students)
+        created_at = group.created_at
+        created_iso = created_at.isoformat() if created_at else None
         return {
             "id": group.id,
             "name": group.name,
@@ -571,6 +599,10 @@ class TaskService:
             "recentTaskCount": recent_task_count,
             "course_name": group.group_type,
             "courseName": group.group_type,
+            "grade": meta["grade"],
+            "major": meta["major"],
+            "created_at": created_iso,
+            "createdAt": created_iso,
         }
 
     def _serialize_task_students(self, task_id: int) -> list[dict]:
