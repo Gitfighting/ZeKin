@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onLaunch, onShow, onHide } from '@dcloudio/uni-app'
 
+import PrivacyAuthorize from '@/components/PrivacyAuthorize.vue'
 import { tryRestoreSession } from '@/services/auth'
 
 onLaunch(() => {
@@ -21,6 +22,13 @@ onHide(() => {
   console.log('App Hide')
 })
 </script>
+
+<template>
+  <!-- #ifdef MP-WEIXIN -->
+  <PrivacyAuthorize />
+  <!-- #endif -->
+</template>
+
 <style lang="scss">
 /* 小程序不再引入 iconfont.scss，避免 font-family:iconfont 触发 /static/fonts/iconfont.ttf 500 */
 /* #ifndef MP-WEIXIN */

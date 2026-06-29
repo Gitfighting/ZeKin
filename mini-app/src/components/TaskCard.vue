@@ -37,24 +37,38 @@ function inferCategory(task: StudentTask): { label: string; tone: TaskTone; icon
 
 const category = computed(() => inferCategory(props.task))
 
+const isMissedEnded = computed(
+  () => props.task.taskStatus === 'ended' && props.task.status !== 'normal',
+)
+
 const statusInfo = computed(() => {
-  switch (props.task.status) {
-    case 'in-progress':
-      return { label: '待完成', tone: 'pending' as const }
-    case 'pending':
-      return {
-        label: props.task.attachmentRule.required ? '待提交' : '待完成',
-        tone: 'pending' as const,
-      }
-    case 'normal':
-      return { label: '已完成', tone: 'done' as const }
-    case 'ended':
-      return { label: '已结束', tone: 'ended' as const }
-    case 'exception':
-      return { label: '异常', tone: 'exception' as const }
-    default:
-      return { label: '待完成', tone: 'pending' as const }
+  if (props.task.status === 'normal') {
+    return { label: '已完成', tone: 'done' as const }
   }
+  if (props.task.status === 'exception') {
+    return { label: '异常', tone: 'exception' as const }
+  }
+  if (props.task.status === 'pending') {
+    return {
+      label: props.task.attachmentRule.required ? '待提交' : '待审核',
+      tone: 'exception' as const,
+    }
+  }
+  if (isMissedEnded.value) {
+    return { label: '未签到', tone: 'missed' as const }
+  }
+  if (props.task.status === 'in-progress') {
+    return { label: '待完成', tone: 'pending' as const }
+  }
+  if (props.task.status === 'ended') {
+    return { label: '未签到', tone: 'missed' as const }
+  }
+  return { label: '待完成', tone: 'pending' as const }
+})
+
+const dateLabel = computed(() => {
+  const value = props.task.taskDate || props.task.deadline.match(/(\d{4}-\d{2}-\d{2})/)?.[1] || ''
+  return value ? `日期：${value}` : '日期：--'
 })
 
 const timeLabel = computed(() => {
@@ -69,8 +83,10 @@ const requirementsLabel = computed(() => {
   return '要求：按任务要求'
 })
 
-const isPrimaryAction = computed(() =>
-  ['in-progress', 'pending', 'exception'].includes(props.task.status),
+const isPrimaryAction = computed(
+  () =>
+    props.task.taskStatus !== 'ended'
+    && ['in-progress', 'pending', 'exception'].includes(props.task.status),
 )
 </script>
 
@@ -95,6 +111,10 @@ const isPrimaryAction = computed(() =>
         <view class="task-card__meta-list">
           <view class="task-card__meta">
             <image class="task-card__meta-icon" src="/static/task-icons/meta-clock.svg" mode="aspectFit" />
+            <text class="task-card__meta-text">{{ dateLabel }}</text>
+          </view>
+          <view class="task-card__meta">
+            <image class="task-card__meta-icon" src="/static/task-icons/meta-clock.svg" mode="aspectFit" />
             <text class="task-card__meta-text">{{ timeLabel }}</text>
           </view>
           <view class="task-card__meta">
@@ -105,7 +125,10 @@ const isPrimaryAction = computed(() =>
 
         <button
           class="task-card__action"
-          :class="{ 'task-card__action--primary': isPrimaryAction, 'task-card__action--outline': !isPrimaryAction }"
+          :class="{
+            'task-card__action--primary': isPrimaryAction,
+            'task-card__action--outline': !isPrimaryAction,
+          }"
           @click.stop="emit('action', task)"
         >
           {{ task.actionText }}
@@ -242,6 +265,11 @@ const isPrimaryAction = computed(() =>
 }
 
 .task-card__status--exception {
+  background: rgba($danger, 0.12);
+  color: $danger;
+}
+
+.task-card__status--missed {
   background: rgba($danger, 0.12);
   color: $danger;
 }

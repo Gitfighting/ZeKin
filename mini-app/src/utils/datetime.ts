@@ -41,6 +41,22 @@ export function formatBeijingClock(value?: string | null): string {
   return match?.[1] ?? ''
 }
 
+export function formatBeijingDate(value?: string | null): string {
+  const formatted = formatBeijingDateTime(value)
+  const match = formatted.match(/^(\d{4}-\d{2}-\d{2})/)
+  return match?.[1] ?? ''
+}
+
+/** 时间线展示：05月28日 20:45 */
+export function formatTimelineDateTime(value?: string | null): string {
+  const formatted = formatBeijingDateTime(value)
+  const match = formatted.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/)
+  if (!match) {
+    return formatted
+  }
+  return `${match[2]}月${match[3]}日 ${match[4]}:${match[5]}`
+}
+
 export function formatBeijingDateTimeNow(timestamp = Date.now()): string {
   return formatBeijingFromTimestamp(timestamp)
 }

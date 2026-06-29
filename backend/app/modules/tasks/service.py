@@ -1,6 +1,7 @@
 from collections import Counter
 from copy import deepcopy
 from datetime import datetime, timedelta
+import logging
 
 from sqlalchemy.orm import Session
 
@@ -20,7 +21,7 @@ from app.modules.tasks.repository import TaskRepository
 from app.modules.qr_code.service import generate_token, render_qr_data_url
 from app.modules.tasks.schemas import CreateTaskRequest
 from app.shared.attendance import resolve_attendance_status
-from app.shared.datetime_utils import get_beijing_now
+from app.shared.datetime_utils import as_beijing_datetime, get_beijing_now, to_beijing_iso
 from app.shared.enums import (
     AttendanceStatus,
     RecordStatus,
@@ -29,6 +30,19 @@ from app.shared.enums import (
 )
 
 MAX_MATERIALIZED_DAYS = 90
+
+PUBLISHED_TASK_STATUSES = frozenset({
+    TaskStatus.NOT_STARTED.value,
+    TaskStatus.IN_PROGRESS.value,
+    TaskStatus.ENDED.value,
+})
+CHECKED_IN_ATTENDANCE_STATUSES = frozenset({
+    AttendanceStatus.PRESENT.value,
+    AttendanceStatus.LATE.value,
+    AttendanceStatus.EARLY_LEAVE.value,
+})
+
+logger = logging.getLogger("zeKin.tasks")
 
 CHECKIN_METHOD_LABELS = {
     "face": "人脸识别",
@@ -95,24 +109,46 @@ class TaskService:
             self.repository.commit()
 
     def _ensure_tasks_fresh(self, tasks: list[CheckinTask]) -> None:
+        self._process_scheduled_publishes()
         self.lifecycle.refresh_tasks(tasks)
+
+    def _parse_task_datetime(self, value: str) -> datetime:
+        normalized = value.strip().replace(" ", "T")
+        if "+" not in normalized and len(normalized) >= 16:
+            normalized = f"{normalized}+08:00"
+        return datetime.fromisoformat(normalized)
+
+    def _process_scheduled_publishes(self) -> None:
+        now = get_beijing_now()
+        pending = self.repository.list_tasks_pending_scheduled_publish(now)
+        if not pending:
+            return
+        for task in pending:
+            self._apply_publish(task)
+        self.repository.commit()
 
     def create_task(self, *, teacher_user: User, payload: CreateTaskRequest) -> dict:
         self._require_teacher_group_scope(teacher_user, payload.group_ids)
         schedule_mode = ScheduleMode(payload.schedule_mode)
         is_recurring = schedule_mode == ScheduleMode.RECURRING
+        scheduled_publish_at = None
+        if payload.scheduled_publish_at:
+            scheduled_publish_at = self._parse_task_datetime(payload.scheduled_publish_at)
+            if scheduled_publish_at <= get_beijing_now():
+                raise ValueError("定时发放时间须晚于当前时间")
         task = CheckinTask(
             title=payload.title,
             type_id=payload.type_id,
             teacher_user_id=teacher_user.id,
             status=TaskStatus.DRAFT.value,
-            starts_at=datetime.fromisoformat(payload.starts_at),
-            ends_at=datetime.fromisoformat(payload.ends_at),
+            starts_at=self._parse_task_datetime(payload.starts_at),
+            ends_at=self._parse_task_datetime(payload.ends_at),
             rules_snapshot_jsonb=deepcopy(payload.rules_snapshot),
             schedule_mode=schedule_mode.value,
             is_recurring=is_recurring,
             recurrence_rule=payload.recurrence_rule
             or ("FREQ=DAILY" if is_recurring else None),
+            scheduled_publish_at=scheduled_publish_at,
         )
         self.repository.add(task)
         self.repository.flush()
@@ -161,13 +197,20 @@ class TaskService:
         if task is None:
             raise ValueError("任务不存在")
         self._require_task_owner(task, teacher_user)
+        if task.is_published:
+            raise ValueError("任务已发布")
+        result = self._apply_publish(task)
+        self.repository.commit()
+        return result
+
+    def _apply_publish(self, task: CheckinTask) -> dict:
         task.is_published = True
+        task.scheduled_publish_at = None
         task.status = TaskStatus.NOT_STARTED.value
         self.repository.flush()
 
         occurrences = self._materialize_occurrences(task)
         notified = self._notify_group_members(task)
-        self.repository.commit()
         return {
             "published": True,
             "status": task.status,
@@ -454,6 +497,33 @@ class TaskService:
         ]
         return {"items": items, "total": len(items)}
 
+    def get_student_group_attendance(
+        self, group_id: int, student_user: User
+    ) -> dict:
+        if student_user.student_profile is None:
+            raise ValueError("学生档案不存在")
+        student_profile_id = student_user.student_profile.id
+        group = self.repository.get_group(group_id)
+        if group is None:
+            raise ValueError("班级不存在")
+        if not self.repository.group_member_exists(group_id, student_profile_id):
+            raise PermissionError("无权查看该班级")
+
+        attendance = self._compute_group_attendance(group_id, student_profile_id)
+        teachers = self.repository.list_teachers_for_group(group_id)
+        primary_teacher = teachers[0] if teachers else None
+        return {
+            "group": {
+                "id": group.id,
+                "name": group.name,
+                "teacher_name": primary_teacher.name if primary_teacher else "",
+                "teacherName": primary_teacher.name if primary_teacher else "",
+            },
+            "summary": attendance["summary"],
+            "tasks": attendance["tasks"],
+            "timeline": attendance["timeline"],
+        }
+
     def join_group_by_invite_code(self, student_user: User, invite_code: str) -> dict:
         if student_user.student_profile is None:
             raise ValueError("学生档案不存在")
@@ -508,6 +578,14 @@ class TaskService:
             "startsAt": task.starts_at.isoformat(),
             "ends_at": task.ends_at.isoformat(),
             "endsAt": task.ends_at.isoformat(),
+            "is_published": task.is_published,
+            "published": task.is_published,
+            "scheduled_publish_at": (
+                task.scheduled_publish_at.isoformat() if task.scheduled_publish_at else None
+            ),
+            "scheduledPublishAt": (
+                task.scheduled_publish_at.isoformat() if task.scheduled_publish_at else None
+            ),
             "schedule_mode": task.schedule_mode,
             "scheduleMode": task.schedule_mode,
             "is_recurring": task.is_recurring,
@@ -551,6 +629,8 @@ class TaskService:
         teachers = self.repository.list_teachers_for_group(group.id)
         primary_teacher = teachers[0] if teachers else None
         teacher_names = [teacher.name for teacher in teachers]
+        attendance = self._compute_group_attendance(group.id, student_profile_id)
+        summary = attendance["summary"]
         return {
             "id": group.id,
             "name": group.name,
@@ -568,7 +648,265 @@ class TaskService:
             "studentCount": len(students),
             "recent_task_count": len(tasks),
             "recentTaskCount": len(tasks),
+            "checked_in_count": summary["checked_in_count"],
+            "checkedInCount": summary["checked_in_count"],
+            "published_count": summary["published_count"],
+            "publishedCount": summary["published_count"],
         }
+
+    def _teacher_display_name(self, teacher_user_id: int) -> str:
+        user = self.repository.db.get(User, teacher_user_id)
+        if user is None:
+            return ""
+        if user.teacher_profile is not None and user.teacher_profile.name:
+            return user.teacher_profile.name
+        return user.display_name or ""
+
+    def _leave_category(self, record: CheckinRecord | None) -> str:
+        if record is None:
+            return "personal"
+        remark = (record.manual_remark or "").strip()
+        if "病" in remark:
+            return "sick"
+        if "公" in remark:
+            return "official"
+        return "personal"
+
+    def _attendance_display_label(
+        self,
+        attendance: str,
+        record: CheckinRecord | None,
+        is_expired: bool,
+    ) -> str:
+        if is_expired:
+            return "已过期"
+        if attendance == AttendanceStatus.LEAVE.value:
+            category = self._leave_category(record)
+            if category == "sick":
+                return "病假"
+            if category == "official":
+                return "公假"
+            return "事假"
+        labels = {
+            AttendanceStatus.PRESENT.value: "出勤",
+            AttendanceStatus.LATE.value: "迟到",
+            AttendanceStatus.EARLY_LEAVE.value: "早退",
+            AttendanceStatus.ABSENT.value: "缺勤",
+        }
+        return labels.get(attendance, "缺勤")
+
+    def _compute_group_attendance(
+        self, group_id: int, student_profile_id: int
+    ) -> dict:
+        tasks = self.repository.list_tasks_for_group_ids([group_id])
+        published_tasks = [
+            task for task in tasks if task.status in PUBLISHED_TASK_STATUSES
+        ]
+        self._ensure_tasks_fresh(published_tasks)
+        task_ids = [task.id for task in published_tasks]
+        records_index = self.repository.map_records_for_student_tasks(
+            student_profile_id, task_ids
+        )
+        exceptions = self.repository.list_exceptions_for_teacher_task_ids(task_ids)
+        logger.info(
+            "compute_group_attendance group_id=%s student_profile_id=%s "
+            "tasks_in_group=%s published_tasks=%s record_index_size=%s task_ids=%s",
+            group_id,
+            student_profile_id,
+            len(tasks),
+            len(published_tasks),
+            len(records_index),
+            task_ids,
+        )
+        exception_by_record: dict[int, CheckinException] = {}
+        for item in exceptions:
+            if item.record_id is not None:
+                exception_by_record[item.record_id] = item
+
+        published_count = 0
+        checked_in_count = 0
+        present_count = 0
+        late_count = 0
+        early_leave_count = 0
+        absent_count = 0
+        expired_count = 0
+        sick_leave_count = 0
+        personal_leave_count = 0
+        official_leave_count = 0
+        task_items: list[dict] = []
+        timeline: list[dict] = []
+        teacher_name_cache: dict[int, str] = {}
+        now = get_beijing_now()
+
+        for task in sorted(published_tasks, key=lambda item: item.ends_at, reverse=True):
+            teacher_name = teacher_name_cache.get(task.teacher_user_id)
+            if teacher_name is None:
+                teacher_name = self._teacher_display_name(task.teacher_user_id)
+                teacher_name_cache[task.teacher_user_id] = teacher_name
+
+            occurrences = self.repository.list_occurrences_for_task(task.id)
+            occ_by_date = {occ.occurrence_date: occ for occ in occurrences}
+            if occurrences:
+                occurrence_dates = [occ.occurrence_date for occ in occurrences]
+            else:
+                occurrence_dates = [
+                    as_beijing_datetime(task.ends_at).date().isoformat()
+                ]
+
+            task_published = len(occurrence_dates)
+            task_checked = 0
+            last_attendance = AttendanceStatus.ABSENT.value
+
+            for occurrence_date in occurrence_dates:
+                published_count += 1
+                record = records_index.get((task.id, occurrence_date))
+                if record is None:
+                    record = records_index.get((task.id, ""))
+                exception = (
+                    exception_by_record.get(record.id) if record is not None else None
+                )
+                occ = occ_by_date.get(occurrence_date)
+                ends_at = occ.ends_at if occ is not None else task.ends_at
+                ends_at_bj = as_beijing_datetime(ends_at)
+                is_past = ends_at_bj <= now
+                is_expired = record is None and is_past
+
+                if is_expired:
+                    attendance = AttendanceStatus.ABSENT.value
+                    expired_count += 1
+                else:
+                    attendance = resolve_attendance_status(
+                        record=record, exception=exception
+                    )
+                    if attendance == AttendanceStatus.PRESENT.value:
+                        present_count += 1
+                    elif attendance == AttendanceStatus.LATE.value:
+                        late_count += 1
+                    elif attendance == AttendanceStatus.EARLY_LEAVE.value:
+                        early_leave_count += 1
+                    elif attendance == AttendanceStatus.LEAVE.value:
+                        leave_category = self._leave_category(record)
+                        if leave_category == "sick":
+                            sick_leave_count += 1
+                        elif leave_category == "official":
+                            official_leave_count += 1
+                        else:
+                            personal_leave_count += 1
+                    elif attendance == AttendanceStatus.ABSENT.value:
+                        absent_count += 1
+
+                last_attendance = attendance
+                if attendance in CHECKED_IN_ATTENDANCE_STATUSES:
+                    checked_in_count += 1
+                    task_checked += 1
+
+                status_label = self._attendance_display_label(
+                    attendance, record, is_expired
+                )
+                if record is not None and record.submitted_at is not None:
+                    occurred_at = record.submitted_at
+                elif occ is not None:
+                    occurred_at = occ.starts_at
+                else:
+                    occurred_at = ends_at
+                occurred_iso = to_beijing_iso(occurred_at)
+
+                timeline.append(
+                    {
+                        "task_id": task.id,
+                        "taskId": task.id,
+                        "task_title": task.title,
+                        "taskTitle": task.title,
+                        "occurrence_date": occurrence_date,
+                        "occurrenceDate": occurrence_date,
+                        "occurred_at": occurred_iso,
+                        "occurredAt": occurred_iso,
+                        "initiator_name": teacher_name,
+                        "initiatorName": teacher_name,
+                        "attendance_status": attendance,
+                        "attendanceStatus": attendance,
+                        "status_label": status_label,
+                        "statusLabel": status_label,
+                        "is_expired": is_expired,
+                        "isExpired": is_expired,
+                    }
+                )
+
+            if task_published == 1:
+                display_attendance = last_attendance
+            elif task_checked == 0:
+                display_attendance = AttendanceStatus.ABSENT.value
+            elif task_checked >= task_published:
+                display_attendance = AttendanceStatus.PRESENT.value
+            else:
+                display_attendance = "partial"
+
+            task_items.append(
+                {
+                    "id": task.id,
+                    "title": task.title,
+                    "task_status": task.status,
+                    "taskStatus": task.status,
+                    "starts_at": task.starts_at.isoformat(),
+                    "startsAt": task.starts_at.isoformat(),
+                    "ends_at": task.ends_at.isoformat(),
+                    "endsAt": task.ends_at.isoformat(),
+                    "is_recurring": task.is_recurring,
+                    "isRecurring": task.is_recurring,
+                    "occurrence_count": task_published,
+                    "occurrenceCount": task_published,
+                    "checked_in_count": task_checked,
+                    "checkedInCount": task_checked,
+                    "checked_in": task_checked > 0,
+                    "checkedIn": task_checked > 0,
+                    "attendance_status": display_attendance,
+                    "attendanceStatus": display_attendance,
+                }
+            )
+
+        timeline.sort(key=lambda item: item.get("occurred_at") or "", reverse=True)
+
+        leave_count = sick_leave_count + personal_leave_count + official_leave_count
+        logger.info(
+            "compute_group_attendance done group_id=%s published=%s checked_in=%s timeline=%s summary=%s",
+            group_id,
+            published_count,
+            checked_in_count,
+            len(timeline),
+            {
+                "present": present_count,
+                "late": late_count,
+                "absent": absent_count,
+                "expired": expired_count,
+                "leave": leave_count,
+            },
+        )
+
+        summary = {
+            "checked_in_count": checked_in_count,
+            "checkedInCount": checked_in_count,
+            "published_count": published_count,
+            "publishedCount": published_count,
+            "present_count": present_count,
+            "presentCount": present_count,
+            "late_count": late_count,
+            "lateCount": late_count,
+            "early_leave_count": early_leave_count,
+            "earlyLeaveCount": early_leave_count,
+            "absent_count": absent_count,
+            "absentCount": absent_count,
+            "expired_count": expired_count,
+            "expiredCount": expired_count,
+            "sick_leave_count": sick_leave_count,
+            "sickLeaveCount": sick_leave_count,
+            "personal_leave_count": personal_leave_count,
+            "personalLeaveCount": personal_leave_count,
+            "official_leave_count": official_leave_count,
+            "officialLeaveCount": official_leave_count,
+            "leave_count": leave_count,
+            "leaveCount": leave_count,
+        }
+        return {"summary": summary, "tasks": task_items, "timeline": timeline}
 
     def _group_student_meta(self, students: list[StudentProfile]) -> dict[str, str]:
         if not students:

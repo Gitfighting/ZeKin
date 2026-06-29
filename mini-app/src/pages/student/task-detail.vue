@@ -58,8 +58,27 @@ function syncNavLayout() {
 
 const hasException = computed(() => task.value?.status === 'exception')
 const isCompleted = computed(
-  () => checkinDone.value || task.value?.status === 'normal' || task.value?.status === 'ended',
+  () => checkinDone.value || task.value?.status === 'normal',
 )
+const isMissedEnded = computed(
+  () =>
+    !isCompleted.value
+    && task.value?.status !== 'exception'
+    && task.value?.status !== 'pending'
+    && (task.value?.taskStatus === 'ended' || task.value?.status === 'ended'),
+)
+const displayStatusTag = computed(() => {
+  if (!task.value) {
+    return 'pending' as const
+  }
+  if (isCompleted.value) {
+    return 'normal' as const
+  }
+  if (isMissedEnded.value || task.value.taskStatus === 'ended') {
+    return 'ended' as const
+  }
+  return task.value.status
+})
 const primaryLabel = computed(() => {
   if (hasException.value) {
     return '去申诉'
@@ -67,8 +86,12 @@ const primaryLabel = computed(() => {
   if (isCompleted.value) {
     return '打卡完成'
   }
+  if (isMissedEnded.value) {
+    return '无法签到'
+  }
   return '签到'
 })
+const isPrimaryDisabled = computed(() => isMissedEnded.value)
 
 function previousPageRoute(): string {
   if (typeof getCurrentPages !== 'function') {
@@ -106,6 +129,11 @@ async function loadTask(id?: string) {
 function handlePrimaryAction() {
   if (!task.value) {
     uni.showToast({ title: '任务尚未加载', icon: 'none' })
+    return
+  }
+
+  if (isMissedEnded.value) {
+    uni.showToast({ title: '打卡时间已结束', icon: 'none' })
     return
   }
 
@@ -157,7 +185,7 @@ onLoad((options) => {
           <text class="detail-page__title">{{ task.title }}</text>
           <text class="detail-page__desc">{{ task.description }}</text>
         </view>
-        <StatusTag :status="task.status" />
+        <StatusTag :status="displayStatusTag" />
       </view>
     </view>
 
@@ -190,7 +218,9 @@ onLoad((options) => {
         {{
           hasException
             ? '本任务存在异常记录，请补充申诉材料后等待辅导员复核。'
-            : '请在规定时间内完成定位与信息填写，提交后结果会同步到记录与消息页。'
+            : isMissedEnded
+              ? '打卡时间已结束，本次任务已无法签到，可在打卡记录中查看或申诉。'
+              : '请在规定时间内完成定位与信息填写，提交后结果会同步到记录与消息页。'
         }}
       </text>
     </view>
@@ -198,8 +228,12 @@ onLoad((options) => {
     <view class="detail-page__footer">
       <button
         class="detail-page__button"
-        :class="{ 'detail-page__button--done': isCompleted }"
-        type="primary"
+        :class="{
+          'detail-page__button--done': isCompleted,
+          'detail-page__button--disabled': isPrimaryDisabled,
+        }"
+        :type="isPrimaryDisabled ? 'default' : 'primary'"
+        :disabled="isPrimaryDisabled"
         @click="handlePrimaryAction"
       >
         {{ primaryLabel }}
@@ -375,6 +409,16 @@ onLoad((options) => {
 
 .detail-page__button--done {
   background: $success;
+}
+
+.detail-page__button--disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+}
+
+.detail-page__button--disabled[disabled] {
+  background: #e5e7eb;
+  color: #9ca3af;
 }
 
 .detail-page__button--secondary {

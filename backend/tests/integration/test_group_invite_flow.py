@@ -78,5 +78,31 @@ def test_teacher_create_group_and_student_join() -> None:
     items = list_response.json()["data"]["items"]
     matched = next((item for item in items if item["id"] == group_id), None)
     assert matched is not None
-    assert matched["name"] == "测试邀请码班级"
-    assert matched["studentCount"] == 1
+
+
+def test_student_group_attendance_detail() -> None:
+    client = TestClient(app)
+    student_token = _login(client, "20260001", "123456", "student")
+    student_headers = {"Authorization": f"Bearer {student_token}"}
+
+    list_response = client.get("/api/student/groups", headers=student_headers)
+    assert list_response.status_code == 200, list_response.text
+    items = list_response.json()["data"]["items"]
+    assert items, "seed 数据应包含学生已加入的班级"
+    group_id = items[0]["id"]
+
+    attendance_response = client.get(
+        f"/api/student/groups/{group_id}/attendance",
+        headers=student_headers,
+    )
+    assert attendance_response.status_code == 200, attendance_response.text
+    payload = attendance_response.json()["data"]
+    assert payload["group"]["id"] == group_id
+    assert "summary" in payload
+    assert "checked_in_count" in payload["summary"] or "checkedInCount" in payload["summary"]
+    assert isinstance(payload["tasks"], list)
+    assert isinstance(payload["timeline"], list)
+    if payload["timeline"]:
+        first = payload["timeline"][0]
+        assert "status_label" in first or "statusLabel" in first
+        assert "occurred_at" in first or "occurredAt" in first

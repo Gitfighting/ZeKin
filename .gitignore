@@ -23,6 +23,7 @@ pnpm-debug.log*
 .env
 .env.*
 !.env.example
+mini-app/project.private.config.json
 storage/
 backend/*.db
 

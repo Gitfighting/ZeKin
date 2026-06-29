@@ -19,6 +19,7 @@ class CheckinTask(Base, TimestampMixin):
     starts_at: Mapped[datetime] = mapped_column()
     ends_at: Mapped[datetime] = mapped_column()
     is_published: Mapped[bool] = mapped_column(default=False)
+    scheduled_publish_at: Mapped[datetime | None] = mapped_column(nullable=True)
     rules_snapshot_jsonb: Mapped[dict] = mapped_column(JSON_VARIANT)
     # ── 任务周期：一次任务 / 定时循环任务
     schedule_mode: Mapped[str] = mapped_column(

@@ -40,6 +40,7 @@ type ExpandSection = 'scene' | 'time' | 'methods' | 'location' | 'reminder' | nu
 
 const groups = ref<TeacherGroup[]>([])
 const showGroupPicker = ref(false)
+const groupPickerSession = ref(0)
 const showGesturePicker = ref(false)
 const draftGroupIds = ref<number[]>([])
 const groupFilterGrade = ref('')
@@ -47,6 +48,8 @@ const groupFilterMajor = ref('')
 const groupFilterName = ref('')
 const groupCreatedAfter = ref('')
 const submitting = ref(false)
+const scheduledPublishEnabled = ref(false)
+const scheduledPublishAt = ref('')
 const currentStep = ref<WizardStep>(1)
 const expandedSection = ref<ExpandSection>(null)
 const activeScene = ref<SceneType>('class')
@@ -210,8 +213,12 @@ function matchesGroupFilters(group: TeacherGroup): boolean {
     return false
   }
   const keyword = groupFilterName.value.trim().toLowerCase()
-  if (keyword && !group.name.toLowerCase().includes(keyword)) {
-    return false
+  if (keyword) {
+    const nameMatch = group.name.toLowerCase().includes(keyword)
+    const majorMatch = (group.major ?? '').toLowerCase().includes(keyword)
+    if (!nameMatch && !majorMatch) {
+      return false
+    }
   }
   if (groupCreatedAfter.value.trim()) {
     const threshold = parseBeijingDateTime(groupCreatedAfter.value)
@@ -224,6 +231,47 @@ function matchesGroupFilters(group: TeacherGroup): boolean {
 }
 
 const filteredGroups = computed(() => groups.value.filter((group) => matchesGroupFilters(group)))
+
+const groupFilterGradeLabel = computed(() => groupFilterGrade.value || '全部年份')
+const groupFilterMajorLabel = computed(() => groupFilterMajor.value || '全部专业')
+
+function openGroupGradePicker() {
+  if (typeof uni === 'undefined') {
+    return
+  }
+  const options = [{ key: '', label: '全部年份' }, ...gradeOptions.value.map((grade) => ({
+    key: grade,
+    label: grade,
+  }))]
+  uni.showActionSheet({
+    itemList: options.map((item) => item.label),
+    success: (result) => {
+      const picked = options[result.tapIndex]
+      if (picked) {
+        groupFilterGrade.value = picked.key
+      }
+    },
+  })
+}
+
+function openGroupMajorPicker() {
+  if (typeof uni === 'undefined') {
+    return
+  }
+  const options = [{ key: '', label: '全部专业' }, ...majorOptions.value.map((major) => ({
+    key: major,
+    label: major,
+  }))]
+  uni.showActionSheet({
+    itemList: options.map((item) => item.label),
+    success: (result) => {
+      const picked = options[result.tapIndex]
+      if (picked) {
+        groupFilterMajor.value = picked.key
+      }
+    },
+  })
+}
 
 const groupCreatedAfterSummary = computed(() => {
   if (!groupCreatedAfter.value.trim()) {
@@ -286,6 +334,23 @@ const startTimePickerStart = computed(() => {
   return '00:00'
 })
 
+const scheduledPublishMinTime = computed(() => {
+  const publishDate = parseDatePart(scheduledPublishAt.value) || todayDate.value
+  if (publishDate === todayDate.value) {
+    return formatBeijingClockNow()
+  }
+  return '00:00'
+})
+
+const scheduledPublishMaxTime = computed(() => {
+  const publishDate = parseDatePart(scheduledPublishAt.value) || todayDate.value
+  const startDate = parseDatePart(form.startsAt)
+  if (startDate && publishDate === startDate) {
+    return parseTimePart(form.startsAt) || '23:59'
+  }
+  return '23:59'
+})
+
 const methodsSummary = computed(() => {
   const labels = methodOptions
     .filter((item) => hasMethod(item.value))
@@ -343,6 +408,11 @@ const ruleSummary = computed(() => {
     `提醒规则：${reminderSummary.value}`,
     `任务周期：${scheduleModes.find((item) => item.value === form.scheduleMode)?.label ?? '一次任务'}`,
   )
+  if (scheduledPublishEnabled.value) {
+    lines.push(`定时发放：${formatDisplayTime(scheduledPublishAt.value) || '未设置'}`)
+  } else {
+    lines.push('发放方式：立即发布')
+  }
   return lines
 })
 
@@ -351,8 +421,57 @@ const step1Ready = computed(() => isStep1FieldsFilled() && isTaskTimeValid())
 const step2Ready = computed(() => (form.methods ?? []).length > 0 && isLocationConfigured())
 
 const readyToPublish = computed(
-  () => step1Ready.value && step2Ready.value && !submitting.value,
+  () =>
+    step1Ready.value &&
+    step2Ready.value &&
+    isScheduledPublishValid() &&
+    !submitting.value,
 )
+
+function isScheduledPublishValid(): boolean {
+  if (!scheduledPublishEnabled.value) {
+    return true
+  }
+  const publishMs = parseBeijingDateTime(scheduledPublishAt.value)
+  const startMs = parseBeijingDateTime(form.startsAt)
+  if (publishMs === null) {
+    return false
+  }
+  if (publishMs <= Date.now()) {
+    return false
+  }
+  if (startMs !== null && publishMs > startMs) {
+    return false
+  }
+  return true
+}
+
+function initScheduledPublishTime() {
+  scheduledPublishAt.value = form.startsAt.trim() || formatBeijingDateTimeNow()
+}
+
+function onScheduledPublishToggle(event: { detail: { value: boolean } }) {
+  scheduledPublishEnabled.value = Boolean(event.detail.value)
+  if (scheduledPublishEnabled.value && !scheduledPublishAt.value.trim()) {
+    initScheduledPublishTime()
+  }
+}
+
+function applyScheduledPublishDateChange(date: string) {
+  const time =
+    parseTimePart(scheduledPublishAt.value) ||
+    parseTimePart(form.startsAt) ||
+    formatBeijingClockNow()
+  scheduledPublishAt.value = `${date} ${time}`
+}
+
+function applyScheduledPublishTimeChange(time: string) {
+  const date =
+    parseDatePart(scheduledPublishAt.value) ||
+    parseDatePart(form.startsAt) ||
+    todayDate.value
+  scheduledPublishAt.value = `${date} ${time}`
+}
 
 function isStep1FieldsFilled(): boolean {
   return (
@@ -427,6 +546,10 @@ function goToConfirm() {
             : '请在地图上确认签到位置')
           : '请完成规则配置',
       )
+      return
+    }
+    if (scheduledPublishEnabled.value && !isScheduledPublishValid()) {
+      showError('请设置有效的定时发放时间（须晚于当前且不晚于打卡开始）')
       return
     }
     return
@@ -559,6 +682,7 @@ function toggleDraftGroup(id: number) {
 
 function openGroupPicker() {
   draftGroupIds.value = [...form.groupIds]
+  groupPickerSession.value += 1
   showGroupPicker.value = true
 }
 
@@ -634,10 +758,19 @@ async function submitTask() {
     const createdTask = await createTeacherTask({
       ...form,
       checkinScene: activeScene.value,
+      scheduledPublishAt: scheduledPublishEnabled.value ? scheduledPublishAt.value : undefined,
     })
-    await publishTeacherTask(createdTask.id)
-    logInfo('教师任务创建成功', { taskId: createdTask.id })
-    showSuccess('已发布')
+    if (scheduledPublishEnabled.value) {
+      logInfo('教师任务定时发放已设置', {
+        taskId: createdTask.id,
+        scheduledPublishAt: scheduledPublishAt.value,
+      })
+      showSuccess('已设置定时发放')
+    } else {
+      await publishTeacherTask(createdTask.id)
+      logInfo('教师任务创建成功', { taskId: createdTask.id })
+      showSuccess('已发布')
+    }
     uni.redirectTo({ url: `/pages/teacher/task-detail?id=${createdTask.id}` })
   } catch (error) {
     showError(error, '发布失败')
@@ -1092,19 +1225,57 @@ onShow(() => {
               </view>
             </view>
           </view>
+
+          <view class="toggle-row toggle-row--standalone">
+            <text class="field-label">定时发放</text>
+            <view class="toggle-row__switch">
+              <switch
+                :checked="scheduledPublishEnabled"
+                color="#1677ff"
+                @change="onScheduledPublishToggle"
+              />
+            </view>
+          </view>
+          <view v-if="scheduledPublishEnabled" class="form-expand form-expand--scheduled">
+            <view class="time-block">
+              <text class="time-block__label">发放时间</text>
+              <view class="datetime-row">
+                <ThemeDatePicker
+                  class="picker-box-wrap"
+                  :model-value="parseDatePart(scheduledPublishAt) || todayDate"
+                  :min-date="datePickerStart"
+                  :max-date="parseDatePart(form.startsAt) || datePickerEnd"
+                  @change="applyScheduledPublishDateChange"
+                />
+                <ThemeTimePicker
+                  :model-value="parseTimePart(scheduledPublishAt) || scheduledPublishMinTime"
+                  :min-time="scheduledPublishMinTime"
+                  :max-time="scheduledPublishMaxTime"
+                  @change="applyScheduledPublishTimeChange"
+                />
+              </view>
+              <text class="scheduled-hint">发放时间须晚于当前，且不晚于打卡开始时间</text>
+            </view>
+          </view>
         </view>
 
         <view v-else class="create-page__form">
           <view class="confirm-card">
             <text class="confirm-card__title">发布前确认</text>
-            <text v-for="item in ruleSummary" :key="item" class="confirm-card__line">{{ item }}</text>
+            <text v-for="(item, index) in ruleSummary" :key="`rule-${index}`" class="confirm-card__line">{{ item }}</text>
           </view>
         </view>
 
         <view class="create-page__footer">
           <view class="create-page__tip">
             <VectorIcon class="create-page__tip-icon-img" :src="UI_ICONS.check" size="28rpx" />
-            <text class="create-page__tip-text">发布后，学生将收到任务通知并按规则进行打卡</text>
+            <text class="create-page__tip-text">
+              {{
+                scheduledPublishEnabled
+                  ? '任务将在设定时间自动发放，学生届时收到通知'
+                  : '发布后，学生将收到任务通知并按规则进行打卡'
+              }}
+            </text>
           </view>
 
           <template v-if="currentStep < 3">
@@ -1125,7 +1296,15 @@ onShow(() => {
               :class="{ 'create-page__btn--disabled': !readyToPublish }"
               @click="submitTask"
             >
-              {{ submitting ? '发布中...' : '确认发布' }}
+              {{
+                submitting
+                  ? scheduledPublishEnabled
+                    ? '提交中...'
+                    : '发布中...'
+                  : scheduledPublishEnabled
+                    ? '确认定时发放'
+                    : '确认发布'
+              }}
             </view>
             <view class="create-page__btn create-page__btn--ghost" @click="goBackToForm">
               返回修改
@@ -1140,7 +1319,7 @@ onShow(() => {
     </scroll-view>
 
     <view v-if="showGroupPicker" class="group-picker-mask" @click="closeGroupPicker">
-      <view class="group-picker-sheet" @click.stop>
+      <view class="group-picker-sheet" :key="groupPickerSession" @click.stop>
         <view class="group-picker-header">
           <text class="group-picker-title">选择发布对象</text>
           <view class="group-picker-close" @click="closeGroupPicker">
@@ -1148,61 +1327,37 @@ onShow(() => {
           </view>
         </view>
 
-        <scroll-view scroll-y class="group-picker-body">
-          <view class="group-filter-block">
-            <text class="field-label">年级</text>
-            <view class="filter-chips">
-              <view
-                class="filter-chip"
-                :class="{ 'filter-chip--active': !groupFilterGrade }"
-                @click="groupFilterGrade = ''"
-              >
-                全部
-              </view>
-              <view
-                v-for="grade in gradeOptions"
-                :key="grade"
-                class="filter-chip"
-                :class="{ 'filter-chip--active': groupFilterGrade === grade }"
-                @click="groupFilterGrade = grade"
-              >
-                {{ grade }}
-              </view>
-            </view>
-          </view>
-
-          <view class="group-filter-block">
-            <text class="field-label">专业</text>
-            <view class="filter-chips">
-              <view
-                class="filter-chip"
-                :class="{ 'filter-chip--active': !groupFilterMajor }"
-                @click="groupFilterMajor = ''"
-              >
-                全部
-              </view>
-              <view
-                v-for="major in majorOptions"
-                :key="major"
-                class="filter-chip"
-                :class="{ 'filter-chip--active': groupFilterMajor === major }"
-                @click="groupFilterMajor = major"
-              >
-                {{ major }}
-              </view>
-            </view>
-          </view>
-
-          <view class="field-block">
-            <text class="field-label">班级名称</text>
+        <view class="group-picker-toolbar">
+          <view class="group-picker-search">
+            <VectorIcon class="group-picker-search__icon" :src="UI_ICONS.search" size="32rpx" />
             <input
               v-model="groupFilterName"
-              class="field-input"
+              class="group-picker-search__input"
               maxlength="40"
-              placeholder="搜索班级名称"
+              placeholder="搜索班级名称、专业"
+              confirm-type="search"
             />
+            <view
+              v-if="groupFilterName"
+              class="group-picker-search__clear"
+              @click="groupFilterName = ''"
+            >
+              ×
+            </view>
           </view>
+          <view class="group-picker-dropdowns">
+            <view class="group-picker-dropdown" @click="openGroupMajorPicker">
+              <text class="group-picker-dropdown__text">{{ groupFilterMajorLabel }}</text>
+              <text class="group-picker-dropdown__arrow">▾</text>
+            </view>
+            <view class="group-picker-dropdown" @click="openGroupGradePicker">
+              <text class="group-picker-dropdown__text">{{ groupFilterGradeLabel }}</text>
+              <text class="group-picker-dropdown__arrow">▾</text>
+            </view>
+          </view>
+        </view>
 
+        <scroll-view scroll-y class="group-picker-body">
           <view class="group-filter-block">
             <text class="field-label">创建时间</text>
             <text class="group-filter-hint">仅显示该时间之后创建的班级（便于找到新建班级）</text>
@@ -1658,10 +1813,87 @@ onShow(() => {
   background: #f5f8ff;
 }
 
+.group-picker-toolbar {
+  flex-shrink: 0;
+  padding: 16rpx 32rpx 20rpx;
+  border-bottom: 1rpx solid rgba(15, 23, 42, 0.06);
+  background: #fff;
+}
+
+.group-picker-search {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 0 20rpx;
+  height: 72rpx;
+  border-radius: 999rpx;
+  background: #f3f6fb;
+}
+
+.group-picker-search__icon {
+  flex-shrink: 0;
+  opacity: 0.55;
+}
+
+.group-picker-search__input {
+  flex: 1;
+  min-width: 0;
+  height: 72rpx;
+  color: $text-primary;
+  font-size: 28rpx;
+}
+
+.group-picker-search__clear {
+  flex-shrink: 0;
+  width: 40rpx;
+  height: 40rpx;
+  color: $text-muted;
+  font-size: 32rpx;
+  line-height: 40rpx;
+  text-align: center;
+}
+
+.group-picker-dropdowns {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.group-picker-dropdown {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: 72rpx;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 0 20rpx;
+  border-radius: 16rpx;
+  background: #f3f6fb;
+}
+
+.group-picker-dropdown:active {
+  opacity: 0.88;
+}
+
+.group-picker-dropdown__text {
+  overflow: hidden;
+  color: $text-primary;
+  font-size: 26rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-picker-dropdown__arrow {
+  flex-shrink: 0;
+  color: $text-secondary;
+  font-size: 22rpx;
+}
+
 .group-picker-body {
   flex: 1;
   min-height: 0;
-  max-height: calc(86vh - 220rpx);
+  max-height: calc(86vh - 320rpx);
   padding: 24rpx 32rpx;
   box-sizing: border-box;
 }
@@ -2036,6 +2268,26 @@ onShow(() => {
 .toggle-row__switch switch {
   transform: scale(0.68);
   transform-origin: center center;
+}
+
+.toggle-row--standalone {
+  margin: 8rpx 0 0;
+  padding: 20rpx 24rpx;
+  border-radius: 20rpx;
+  background: #fff;
+}
+
+.form-expand--scheduled {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.scheduled-hint {
+  display: block;
+  margin-top: 12rpx;
+  color: $text-secondary;
+  font-size: 22rpx;
+  line-height: 1.5;
 }
 
 .field-input--code {

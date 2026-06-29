@@ -65,6 +65,7 @@ export interface TeacherTask {
   pendingReviewCount: number
   exceptionCount: number
   published: boolean
+  scheduledPublishAt?: string
 }
 
 export interface TeacherTaskStudent {
@@ -132,6 +133,7 @@ export interface CreateTeacherTaskPayload {
     allowAppeal?: boolean
     autoEnd?: boolean
   }
+  scheduledPublishAt?: string
 }
 
 export interface ReviewTeacherExceptionPayload {
@@ -198,6 +200,9 @@ interface BackendTeacherTask {
   exceptionCount?: number
   rules_snapshot?: Record<string, unknown>
   published?: boolean
+  is_published?: boolean
+  scheduled_publish_at?: string
+  scheduledPublishAt?: string
 }
 
 interface BackendTeacherException {
@@ -368,7 +373,10 @@ function mapTeacherTask(raw: BackendTeacherTask): TeacherTask {
   const rules = readObject(raw.rules_snapshot)
   const groupIds = raw.group_ids ?? []
   const groupName = raw.groupName ?? raw.group_name ?? raw.group_names?.join(' / ')
-  const published = Boolean(raw.published ?? raw.status !== 'draft')
+  const published = Boolean(
+    raw.published ?? raw.is_published ?? (raw.status !== 'draft' && !raw.scheduledPublishAt),
+  )
+  const scheduledPublishAt = raw.scheduledPublishAt ?? raw.scheduled_publish_at
 
   return {
     id: raw.id,
@@ -385,6 +393,7 @@ function mapTeacherTask(raw: BackendTeacherTask): TeacherTask {
     pendingReviewCount: raw.pendingReviewCount ?? raw.pending_review_count ?? 0,
     exceptionCount: raw.exceptionCount ?? raw.exception_count ?? 0,
     published,
+    scheduledPublishAt: scheduledPublishAt ? formatDateTime(scheduledPublishAt) : undefined,
   }
 }
 
@@ -710,6 +719,9 @@ export function createTeacherTask(payload: CreateTeacherTaskPayload) {
       ends_at: payload.endsAt,
       schedule_mode: scheduleMode,
       ...(scheduleMode === 'recurring' ? { recurrence_rule: 'FREQ=DAILY' } : {}),
+      ...(payload.scheduledPublishAt
+        ? { scheduled_publish_at: payload.scheduledPublishAt }
+        : {}),
       rules_snapshot: buildRulesSnapshot(payload),
     },
   }).then(mapTeacherTask)

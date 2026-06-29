@@ -1,0 +1,17 @@
+{
+  "description": "知勤小程序 — 微信开发者工具请打开 mini-app 目录，miniprogramRoot 指向编译产物。AppID 由 scripts/ensure-weixin-dev.mjs 同步，本地覆盖请用 project.private.config.json",
+  "miniprogramRoot": "dist/dev/mp-weixin/",
+  "compileType": "miniprogram",
+  "libVersion": "3.8.12",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "postcss": false,
+    "minified": false,
+    "newFeature": true,
+    "bigPackageSizeSupport": true
+  },
+  "appid": "touristappid",
+  "projectname": "zeKin-mini-app",
+  "condition": {}
+}

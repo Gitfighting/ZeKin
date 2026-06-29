@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -191,6 +193,26 @@ class TaskRepository:
         )
         return list(self.db.scalars(statement))
 
+    def map_records_for_student_tasks(
+        self, student_profile_id: int, task_ids: list[int]
+    ) -> dict[tuple[int, str], CheckinRecord]:
+        if not task_ids:
+            return {}
+        statement = select(CheckinRecord).where(
+            CheckinRecord.student_profile_id == student_profile_id,
+            CheckinRecord.task_id.in_(task_ids),
+        )
+        indexed: dict[tuple[int, str], CheckinRecord] = {}
+        for record in self.db.scalars(statement):
+            indexed[(record.task_id, record.occurrence_date or "")] = record
+        return indexed
+
+    def get_exception_by_record_id(self, record_id: int) -> CheckinException | None:
+        statement = select(CheckinException).where(
+            CheckinException.record_id == record_id
+        )
+        return self.db.scalar(statement)
+
     def list_exceptions_for_teacher_task_ids(
         self, task_ids: list[int]
     ) -> list[CheckinException]:
@@ -222,5 +244,19 @@ class TaskRepository:
             select(CheckinTaskOccurrence)
             .where(CheckinTaskOccurrence.task_id == task_id)
             .order_by(CheckinTaskOccurrence.occurrence_date)
+        )
+        return list(self.db.scalars(statement))
+
+    def list_tasks_pending_scheduled_publish(
+        self, before: datetime
+    ) -> list[CheckinTask]:
+        statement = (
+            select(CheckinTask)
+            .where(
+                CheckinTask.is_published.is_(False),
+                CheckinTask.scheduled_publish_at.isnot(None),
+                CheckinTask.scheduled_publish_at <= before,
+            )
+            .order_by(CheckinTask.scheduled_publish_at)
         )
         return list(self.db.scalars(statement))

@@ -75,13 +75,21 @@
 		{
 			"path": "pages/student/join-class",
 			"style": {
-				"navigationBarTitleText": "加入班群"
+				"navigationStyle": "custom"
 			}
 		},
 		{
 			"path": "pages/student/my-classes",
 			"style": {
-				"navigationBarTitleText": "我的班级"
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/student/class-detail",
+			"style": {
+				"navigationStyle": "custom",
+				"navigationBarTitleText": "班级详情",
+				"backgroundColor": "#FDFDFD"
 			}
 		},
 		{

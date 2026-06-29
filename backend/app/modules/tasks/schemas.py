@@ -12,6 +12,7 @@ class CreateTaskRequest(BaseModel):
     rules_snapshot: dict
     schedule_mode: ScheduleMode = ScheduleMode.ONE_TIME
     recurrence_rule: str | None = None
+    scheduled_publish_at: str | None = None
 
 
 class SetAttendanceRequest(BaseModel):

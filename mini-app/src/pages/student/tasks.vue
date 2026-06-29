@@ -61,9 +61,11 @@ function parseTaskDate(task: StudentTask): Date | null {
 
 function matchStatusFilter(task: StudentTask, filter: StatusFilter) {
   if (filter === 'all') return true
-  if (filter === 'todo') return task.status === 'in-progress' || task.status === 'pending'
-  if (filter === 'done') return task.status === 'normal' || task.status === 'ended'
-  if (filter === 'exception') return task.status === 'exception'
+  if (filter === 'done') return task.status === 'normal'
+  if (filter === 'todo') {
+    return task.status !== 'normal' && task.status !== 'exception' && task.status !== 'pending'
+  }
+  if (filter === 'exception') return task.status === 'exception' || task.status === 'pending'
   return true
 }
 
@@ -128,7 +130,14 @@ onShow(async () => {
   void refreshStudentUnreadMessageCount()
   try {
     tasks.value = await getStudentTasks()
-    logInfo('学生任务列表加载成功', { count: tasks.value.length })
+    logInfo('学生任务列表加载成功', {
+      count: tasks.value.length,
+      todo: tasks.value.filter(
+        (t) => t.status !== 'normal' && t.status !== 'exception' && t.status !== 'pending',
+      ).length,
+      done: tasks.value.filter((t) => t.status === 'normal').length,
+      statuses: tasks.value.map((t) => ({ id: t.id, status: t.status })),
+    })
   } catch (error) {
     tasks.value = []
     showError(error, '任务列表加载失败')

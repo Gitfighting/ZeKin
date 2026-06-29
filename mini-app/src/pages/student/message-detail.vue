@@ -3,6 +3,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 
 import { refreshStudentUnreadMessageCount } from '@/composables/useStudentUnreadMessages'
+import { useStudentPageHeroLayout } from '@/composables/useStudentPageHeroLayout'
 import VectorIcon from '@/components/VectorIcon.vue'
 import { UI_ICONS } from '@/constants/ui-icons'
 import { logInfo, showError } from '@/services/feedback'
@@ -15,6 +16,10 @@ import {
 } from '@/services/student'
 
 const MESSAGE_PREVIEW_KEY = 'student_message_preview'
+
+const { brandBarStyle, heroContentStyle, backButtonStyle, navRightStyle } = useStudentPageHeroLayout()
+
+const pageSlogan = '以知铸魂，以勤立身'
 
 const message = ref<MessageItem | null>(null)
 const loading = ref(true)
@@ -149,27 +154,38 @@ onLoad((options) => {
 
 <template>
   <scroll-view scroll-y class="message-detail-page">
-    <view class="message-detail-page__hero">
-      <view class="message-detail-page__hero-bg-box" aria-hidden="true">
-        <image class="message-detail-page__hero-bg" src="/static/home.png" mode="aspectFill" />
-      </view>
-      <view class="message-detail-page__hero-mask" aria-hidden="true"></view>
-      <view class="message-detail-page__nav" @click="handleBack">
-        <text class="message-detail-page__nav-back">‹</text>
-      </view>
-      <view class="message-detail-page__hero-content">
-        <text class="message-detail-page__title">消息</text>
-        <text class="message-detail-page__subtitle">消息详情</text>
-      </view>
-    </view>
+    <view class="student-page-header-block">
+      <view class="student-page-hero">
+        <view class="student-page-hero__visual">
+          <view class="student-page-hero__bg-window">
+            <image class="student-page-hero__bg" src="/static/home.png" mode="widthFix" />
+          </view>
+        </view>
 
-    <view class="message-detail-page__body">
-      <view v-if="loading" class="message-detail-page__card message-detail-page__card--state">
-        <text class="message-detail-page__state-text">消息加载中...</text>
+        <view class="message-detail-page__nav-bar" :style="brandBarStyle">
+          <view
+            class="message-detail-page__back"
+            :style="backButtonStyle"
+            aria-label="返回"
+            @click="handleBack"
+          ></view>
+          <view class="message-detail-page__nav-spacer" :style="navRightStyle"></view>
+        </view>
+
+        <view class="student-page-hero__content" :style="heroContentStyle">
+          <text class="student-page-hero__title">消息</text>
+          <text class="student-page-hero__slogan">{{ pageSlogan }}</text>
+        </view>
       </view>
 
-      <template v-else-if="message">
-        <view class="message-detail-page__card">
+      <view v-if="loading" class="message-detail-page__overlap student-page-overlap-card">
+        <view class="message-detail-page__overlap-inner message-detail-page__overlap-inner--state">
+          <text class="message-detail-page__state-text">消息加载中...</text>
+        </view>
+      </view>
+
+      <view v-else-if="message" class="message-detail-page__overlap student-page-overlap-card">
+        <view class="message-detail-page__overlap-inner">
           <view class="message-detail-page__header">
             <view class="message-detail-page__icon" aria-hidden="true">
               <VectorIcon :src="UI_ICONS.bell" size="40rpx" />
@@ -203,7 +219,11 @@ onLoad((options) => {
             <text>{{ message.read ? '已读' : '系统已送达' }}</text>
           </view>
         </view>
+      </view>
+    </view>
 
+    <view class="student-page-content-sheet message-detail-page__sheet">
+      <template v-if="message && !loading">
         <view class="message-detail-page__card">
           <view class="message-detail-page__section-head">
             <view class="message-detail-page__section-icon" aria-hidden="true">
@@ -250,7 +270,7 @@ onLoad((options) => {
         </view>
       </template>
 
-      <view v-else class="message-detail-page__card message-detail-page__card--state">
+      <view v-else-if="!loading" class="message-detail-page__card message-detail-page__card--state">
         <text class="message-detail-page__state-text">消息不存在或已失效</text>
       </view>
     </view>
@@ -262,92 +282,67 @@ onLoad((options) => {
 
 .message-detail-page {
   min-height: 100vh;
-  background: #f5f8fc;
+  background: $page-bg;
 }
 
-.message-detail-page__hero {
-  position: relative;
-  height: 360rpx;
-  overflow: hidden;
-}
-
-.message-detail-page__hero-bg-box {
+.message-detail-page__nav-bar {
   position: absolute;
-  right: 0;
-  bottom: 0;
   left: 0;
-  height: 175%;
-}
-
-.message-detail-page__hero-bg {
-  width: 100%;
-  height: 100%;
-}
-
-.message-detail-page__hero-mask {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(15, 120, 255, 0.08) 0%, rgba(15, 120, 255, 0.42) 100%);
-}
-
-.message-detail-page__nav {
-  position: absolute;
-  top: 88rpx;
-  left: 24rpx;
-  z-index: 3;
+  right: 0;
+  z-index: 4;
   display: flex;
-  width: 64rpx;
-  height: 64rpx;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24rpx 0 32rpx;
+  box-sizing: border-box;
+}
+
+.message-detail-page__back {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 4rpx 16rpx rgba(15, 60, 120, 0.12);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20rpx;
+    height: 20rpx;
+    margin-top: -11rpx;
+    margin-left: -5rpx;
+    border-left: 4rpx solid #fff;
+    border-bottom: 4rpx solid #fff;
+    transform: rotate(45deg);
+  }
+}
+
+.message-detail-page__nav-spacer {
+  flex-shrink: 0;
+}
+
+.message-detail-page__overlap-inner {
+  padding: 8rpx 24rpx 24rpx;
+}
+
+.message-detail-page__overlap-inner--state {
+  display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
+  min-height: 152rpx;
 }
 
-.message-detail-page__nav-back {
-  color: #fff;
-  font-size: 48rpx;
-  font-weight: 300;
-  line-height: 1;
-}
-
-.message-detail-page__hero-content {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-  padding: 140rpx 32rpx 48rpx;
-}
-
-.message-detail-page__title,
-.message-detail-page__subtitle {
-  color: #fff;
-}
-
-.message-detail-page__title {
-  font-size: 48rpx;
-  font-weight: 700;
-}
-
-.message-detail-page__subtitle {
-  font-size: 26rpx;
-  line-height: 1.55;
-  opacity: 0.96;
-}
-
-.message-detail-page__body {
-  display: flex;
-  flex-direction: column;
-  gap: 20rpx;
-  padding: 0 24rpx 48rpx;
-  margin-top: -24rpx;
+.message-detail-page__sheet {
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
 }
 
 .message-detail-page__card {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
+  margin: 0 24rpx 20rpx;
   padding: 32rpx;
   border-radius: 24rpx;
   background: $card-bg;
@@ -546,4 +541,8 @@ onLoad((options) => {
   font-weight: 600;
   line-height: 2.4;
 }
+</style>
+
+<style lang="scss">
+@use '@/styles/student-page-hero.scss';
 </style>

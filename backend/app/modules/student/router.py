@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+import logging
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -18,6 +19,7 @@ from app.shared.enums import UserType
 from app.shared.response import success_response
 
 router = APIRouter(prefix="/api/student", tags=["student"])
+logger = logging.getLogger("zeKin.student")
 
 
 def require_student(current_user: User = Depends(get_current_user)) -> User:
@@ -185,6 +187,43 @@ def groups(
         result = service.list_student_groups(current_user)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    logger.info(
+        "GET /student/groups user_id=%s student_profile_id=%s total=%s items=%s",
+        current_user.id,
+        current_user.student_profile.id if current_user.student_profile else None,
+        result.get("total"),
+        [
+            {
+                "id": item.get("id"),
+                "checkedInCount": item.get("checkedInCount"),
+                "publishedCount": item.get("publishedCount"),
+            }
+            for item in result.get("items", [])
+        ],
+    )
+    return success_response(result)
+
+
+@router.get("/groups/{group_id}/attendance")
+def group_attendance(
+    group_id: int,
+    current_user: User = Depends(require_student),
+    service: TaskService = Depends(get_task_service),
+):
+    try:
+        result = service.get_student_group_attendance(group_id, current_user)
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    logger.info(
+        "GET /student/groups/%s/attendance user_id=%s summary=%s task_count=%s timeline_count=%s",
+        group_id,
+        current_user.id,
+        result.get("summary"),
+        len(result.get("tasks", [])),
+        len(result.get("timeline", [])),
+    )
     return success_response(result)
 
 

@@ -200,12 +200,19 @@ onShow(async () => {
     }
 
     todayTasks.value = tasks.filter(
-
       (task) => task.status === 'in-progress' || task.status === 'pending' || task.status === 'normal',
-
     )
 
-    logInfo('学生首页加载成功', { taskCount: todayTasks.value.length })
+    logInfo('学生首页加载成功', {
+      taskCount: todayTasks.value.length,
+      featuredTaskId: featuredTask.value?.id,
+      featuredStatus: featuredTask.value?.status,
+      tasks: todayTasks.value.map((task) => ({
+        id: task.id,
+        title: task.title,
+        status: task.status,
+      })),
+    })
 
   } catch (error) {
 

@@ -13,7 +13,8 @@ ENV_FILE = PROJECT_ROOT.parent / ".env"
 def _default_database_url() -> str:
     if "pytest" in sys.modules:
         return "sqlite+pysqlite:///:memory:"
-    return "sqlite:///./ai_sizheng.db"
+    db_path = PROJECT_ROOT / "ai_sizheng.db"
+    return f"sqlite:///{db_path.as_posix()}"
 
 
 class Settings(BaseSettings):

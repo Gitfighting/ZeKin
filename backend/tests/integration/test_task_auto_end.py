@@ -81,7 +81,9 @@ def test_task_auto_ends_after_end_time(monkeypatch) -> None:
     student_item = next(
         item for item in student_tasks.json()["data"]["items"] if item["id"] == task_id
     )
-    assert student_item["status"] == "ended"
+    assert student_item["task_status"] == "ended"
+    assert student_item["status"] == "in_progress"
+    assert student_item["checked_in"] is False
 
     checkin = client.post(
         f"/api/student/tasks/{task_id}/checkin",

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 
+import { useStudentPageHeroLayout } from '@/composables/useStudentPageHeroLayout'
 import { logInfo, showError } from '@/services/feedback'
 import {
   ATTENDANCE_LABELS,
@@ -19,6 +20,10 @@ const filters: { key: RecordFilterKey; label: string }[] = [
   { key: 'leave', label: '请假' },
 ]
 
+const { brandBarStyle, heroContentStyle, backButtonStyle, navRightStyle } = useStudentPageHeroLayout()
+
+const pageSlogan = '按日期查看签到、迟到、早退、未签到与请假情况'
+
 const activeFilter = ref<RecordFilterKey>('all')
 const selectedDate = ref('')
 const records = ref<StudentRecord[]>([])
@@ -33,6 +38,10 @@ const visibleRecords = computed(() => {
     return matchDate && matchFilter
   })
 })
+
+function handleBack() {
+  uni.navigateBack({ delta: 1 })
+}
 
 function onDateChange(event: UniHelper.DatePickerChangeEvent) {
   selectedDate.value = event.detail.value
@@ -61,63 +70,85 @@ onShow(async () => {
 
 <template>
   <scroll-view scroll-y class="records-page">
-    <view class="records-page__hero">
-      <text class="records-page__title">打卡记录</text>
-      <text class="records-page__subtitle">按日期查看签到、迟到、早退、未签到与请假情况</text>
-    </view>
-
-    <view class="records-page__panel">
-      <view class="records-page__date-row">
-        <text class="records-page__date-label">日期选择</text>
-        <picker mode="date" :value="selectedDate" @change="onDateChange">
-          <view class="records-page__date-picker">
-            <text>{{ selectedDate || '全部日期' }}</text>
-            <text class="records-page__date-arrow">▼</text>
+    <view class="student-page-header-block">
+      <view class="student-page-hero">
+        <view class="student-page-hero__visual">
+          <view class="student-page-hero__bg-window">
+            <image class="student-page-hero__bg" src="/static/home.png" mode="widthFix" />
           </view>
-        </picker>
-        <text v-if="selectedDate" class="records-page__date-clear" @click="clearDate">清除</text>
-      </view>
+        </view>
 
-      <view class="records-page__filters">
-        <view
-          v-for="item in filters"
-          :key="item.key"
-          class="records-page__filter"
-          :class="{ 'records-page__filter--active': activeFilter === item.key }"
-          @click="activeFilter = item.key"
-        >
-          <text>{{ item.label }}</text>
+        <view class="records-page__nav-bar" :style="brandBarStyle">
+          <view
+            class="records-page__back"
+            :style="backButtonStyle"
+            aria-label="返回"
+            @click="handleBack"
+          ></view>
+          <view class="records-page__nav-spacer" :style="navRightStyle"></view>
+        </view>
+
+        <view class="student-page-hero__content" :style="heroContentStyle">
+          <text class="student-page-hero__title">打卡记录</text>
+          <text class="student-page-hero__slogan">{{ pageSlogan }}</text>
         </view>
       </view>
-    </view>
 
-    <view class="records-page__list">
-      <view v-for="record in visibleRecords" :key="record.id" class="records-page__card">
-        <view class="records-page__header">
-          <view class="records-page__title-group">
-            <text class="records-page__task-title">{{ record.taskTitle }}</text>
-            <text class="records-page__meta">{{ record.occurrenceDate || record.submittedAt }}</text>
-          </view>
-          <text
-            class="records-page__badge"
-            :class="`records-page__badge--${record.attendanceStatus}`"
+      <view class="records-page__panel student-page-overlap-card">
+        <view class="records-page__date-row">
+          <text class="records-page__date-label">日期选择</text>
+          <picker mode="date" :value="selectedDate" @change="onDateChange">
+            <view class="records-page__date-picker">
+              <text>{{ selectedDate || '全部日期' }}</text>
+              <text class="records-page__date-arrow">▼</text>
+            </view>
+          </picker>
+          <text v-if="selectedDate" class="records-page__date-clear" @click="clearDate">清除</text>
+        </view>
+
+        <view class="records-page__filters">
+          <view
+            v-for="item in filters"
+            :key="item.key"
+            class="records-page__filter"
+            :class="{ 'records-page__filter--active': activeFilter === item.key }"
+            @click="activeFilter = item.key"
           >
-            {{ attendanceLabelMap[record.attendanceStatus] }}
-          </text>
+            <text>{{ item.label }}</text>
+          </view>
         </view>
-        <text class="records-page__location">提交时间：{{ record.submittedAt }}</text>
-        <text v-if="record.reviewComment" class="records-page__comment">{{ record.reviewComment }}</text>
-        <button
-          v-if="record.attendanceStatus === 'absent'"
-          class="records-page__button"
-          type="primary"
-          @click="openAppeal(record)"
-        >
-          发起申诉
-        </button>
       </view>
-      <view v-if="visibleRecords.length === 0" class="records-page__empty">
-        <text>暂无符合条件的打卡记录</text>
+    </view>
+
+    <view class="student-page-content-sheet records-page__sheet">
+      <view class="records-page__list">
+        <view v-for="record in visibleRecords" :key="record.id" class="records-page__card">
+          <view class="records-page__header">
+            <view class="records-page__title-group">
+              <text class="records-page__task-title">{{ record.taskTitle }}</text>
+              <text class="records-page__meta">{{ record.occurrenceDate || record.submittedAt }}</text>
+            </view>
+            <text
+              class="records-page__badge"
+              :class="`records-page__badge--${record.attendanceStatus}`"
+            >
+              {{ attendanceLabelMap[record.attendanceStatus] }}
+            </text>
+          </view>
+          <text class="records-page__location">提交时间：{{ record.submittedAt }}</text>
+          <text v-if="record.reviewComment" class="records-page__comment">{{ record.reviewComment }}</text>
+          <button
+            v-if="record.attendanceStatus === 'absent'"
+            class="records-page__button"
+            type="primary"
+            @click="openAppeal(record)"
+          >
+            发起申诉
+          </button>
+        </view>
+        <view v-if="visibleRecords.length === 0" class="records-page__empty">
+          <text>暂无符合条件的打卡记录</text>
+        </view>
       </view>
     </view>
   </scroll-view>
@@ -131,35 +162,50 @@ onShow(async () => {
   background: $page-bg;
 }
 
-.records-page__hero {
+.records-page__nav-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 4;
   display: flex;
-  flex-direction: column;
-  gap: 12rpx;
-  padding: 112rpx 28rpx 34rpx;
-  background: $mobile-gradient;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24rpx 0 32rpx;
+  box-sizing: border-box;
 }
 
-.records-page__title,
-.records-page__subtitle {
-  color: #fff;
+.records-page__back {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 4rpx 16rpx rgba(15, 60, 120, 0.12);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20rpx;
+    height: 20rpx;
+    margin-top: -11rpx;
+    margin-left: -5rpx;
+    border-left: 4rpx solid #fff;
+    border-bottom: 4rpx solid #fff;
+    transform: rotate(45deg);
+  }
 }
 
-.records-page__title {
-  font-size: 48rpx;
-  font-weight: 700;
-}
-
-.records-page__subtitle {
-  font-size: 28rpx;
-  opacity: 0.95;
+.records-page__nav-spacer {
+  flex-shrink: 0;
 }
 
 .records-page__panel {
-  margin: -34rpx 24rpx 0;
-  padding: 24rpx;
-  border-radius: 24rpx;
-  background: $card-bg;
-  box-shadow: 0 16rpx 40rpx rgba(15, 107, 214, 0.08);
+  padding: 8rpx 24rpx 24rpx;
+}
+
+.records-page__sheet {
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
 }
 
 .records-page__date-row {
@@ -223,7 +269,7 @@ onShow(async () => {
   display: flex;
   flex-direction: column;
   gap: 18rpx;
-  padding: 24rpx;
+  padding: 0 24rpx 24rpx;
 }
 
 .records-page__card {
@@ -313,4 +359,8 @@ onShow(async () => {
   font-size: 26rpx;
   text-align: center;
 }
+</style>
+
+<style lang="scss">
+@use '@/styles/student-page-hero.scss';
 </style>

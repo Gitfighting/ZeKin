@@ -42,6 +42,7 @@ async function markAttendance(studentId: number, status: AttendanceStatus) {
   try {
     await setStudentAttendance(detail.value.task.id, studentId, status)
     await loadDetail()
+    expandedStudentId.value = null
     showSuccess('已更新考勤')
   } catch (error) {
     showError(error, '更新考勤失败')
@@ -67,6 +68,16 @@ const detail = ref<TeacherTaskDetail>({
   students: [],
   exceptions: [],
 })
+
+const expandedStudentId = ref<number | null>(null)
+
+function toggleAttendanceEditor(studentId: number) {
+  expandedStudentId.value = expandedStudentId.value === studentId ? null : studentId
+}
+
+function isAttendanceEditorOpen(studentId: number) {
+  return expandedStudentId.value === studentId
+}
 
 const completionLabel = computed(() => `${detail.value.task.completionRate}%`)
 
@@ -191,7 +202,11 @@ onMounted(loadDetail)
           </view>
           <text class="status-chip" :class="statusClass(student.status)">{{ statusLabel(student.status) }}</text>
         </view>
-        <view class="attend-row">
+        <view class="edit-attendance" @click="toggleAttendanceEditor(student.id)">
+          <text class="edit-attendance__label">修改签到状态</text>
+          <text class="edit-attendance__arrow">{{ isAttendanceEditorOpen(student.id) ? '收起' : '展开' }}</text>
+        </view>
+        <view v-if="isAttendanceEditorOpen(student.id)" class="attend-row">
           <view class="attend-btn ok" @click="markAttendance(student.id, 'present')">签到</view>
           <view class="attend-btn late" @click="markAttendance(student.id, 'late')">迟到</view>
           <view class="attend-btn early" @click="markAttendance(student.id, 'early_leave')">早退</view>
@@ -443,5 +458,25 @@ onMounted(loadDetail)
 .status-info {
   background: rgba(22, 119, 255, 0.12);
   color: #1677ff;
+}
+
+.edit-attendance {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 14rpx;
+  background: #f5f7fa;
+}
+
+.edit-attendance__label {
+  font-size: 24rpx;
+  color: $text-primary;
+}
+
+.edit-attendance__arrow {
+  font-size: 22rpx;
+  color: $primary;
 }
 </style>

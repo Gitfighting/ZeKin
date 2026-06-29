@@ -29,7 +29,7 @@ from app.modules.records.location_target import (
 )
 from app.modules.records.verifiers import CheckinContext, CheckinPipeline
 from app.shared.attendance import resolve_attendance_status
-from app.shared.datetime_utils import get_beijing_now, to_beijing_iso
+from app.shared.datetime_utils import get_beijing_now, to_beijing_iso, as_beijing_datetime
 from app.modules.tasks.lifecycle import TaskLifecycleService
 from app.shared.enums import AttendanceStatus, RecordStatus, TaskStatus
 from app.shared.enums import ExceptionType
@@ -65,7 +65,27 @@ class RecordService:
         profile = self._require_student_profile(current_user.id)
         tasks = self.repository.list_tasks_for_student(profile.id)
         self.task_lifecycle.refresh_tasks(tasks)
-        items = [self._serialize_task(task, profile) for task in tasks]
+        task_ids = [task.id for task in tasks]
+        records_index = self.repository.map_records_for_student_tasks(
+            profile.id, task_ids
+        )
+        logger.info(
+            "学生任务列表 task_count=%s record_count=%s",
+            len(tasks),
+            len(records_index),
+        )
+        items = []
+        for task in tasks:
+            occurrence_date = self._task_occurrence_date(task)
+            occurrence_record = records_index.get((task.id, occurrence_date))
+            items.append(
+                self._serialize_task(
+                    task,
+                    profile,
+                    occurrence_record=occurrence_record,
+                    occurrence_date=occurrence_date,
+                )
+            )
         return {"items": items, "total": len(items)}
 
     def get_student_task(self, current_user: User, task_id: int) -> dict:
@@ -77,7 +97,16 @@ class RecordService:
         if task is None:
             raise ValueError("任务不存在")
         self._ensure_task_fresh(task)
-        return self._serialize_task(task, profile)
+        occurrence_date = self._task_occurrence_date(task)
+        occurrence_record = self.repository.get_record_for_student_task_occurrence(
+            profile.id, task.id, occurrence_date
+        )
+        return self._serialize_task(
+            task,
+            profile,
+            occurrence_record=occurrence_record,
+            occurrence_date=occurrence_date,
+        )
 
     def submit_checkin(
         self, *, current_user: User, task_id: int, payload: CheckinRequest
@@ -522,7 +551,51 @@ class RecordService:
             "need_review": result.need_review,
         }
 
-    def _serialize_task(self, task, profile: StudentProfile | None = None) -> dict:
+    @staticmethod
+    def _task_occurrence_date(task) -> str:
+        return as_beijing_datetime(task.ends_at).date().isoformat()
+
+    def _resolve_student_task_status(
+        self,
+        task,
+        occurrence_record: CheckinRecord | None,
+    ) -> str:
+        if occurrence_record is not None:
+            record_status = occurrence_record.status
+            if record_status == RecordStatus.NORMAL.value:
+                return RecordStatus.NORMAL.value
+            if record_status in {
+                RecordStatus.EXCEPTION.value,
+                RecordStatus.LATE.value,
+                RecordStatus.REJECTED.value,
+            }:
+                return RecordStatus.EXCEPTION.value
+            if (
+                occurrence_record.need_review
+                or record_status in {
+                    RecordStatus.PENDING_REVIEW.value,
+                    "appeal_pending",
+                }
+            ):
+                return RecordStatus.PENDING_REVIEW.value
+            return record_status
+
+        if task.status == TaskStatus.ENDED.value:
+            return TaskStatus.IN_PROGRESS.value
+
+        if task.status == TaskStatus.IN_PROGRESS.value:
+            return TaskStatus.IN_PROGRESS.value
+
+        return task.status
+
+    def _serialize_task(
+        self,
+        task,
+        profile: StudentProfile | None = None,
+        *,
+        occurrence_record: CheckinRecord | None = None,
+        occurrence_date: str | None = None,
+    ) -> dict:
         groups = self.repository.list_groups_for_task(task.id)
         group_name = " / ".join(group.name for group in groups)
         rules = self._sanitize_rules_for_student(deepcopy(task.rules_snapshot_jsonb))
@@ -532,16 +605,40 @@ class RecordService:
             verification = rules.get("verificationRule")
             if isinstance(verification, dict):
                 verification["location"] = {**resolved}
+        today = occurrence_date or self._task_occurrence_date(task)
+        student_status = self._resolve_student_task_status(task, occurrence_record)
+        if profile is not None:
+            logger.info(
+                "序列化学生任务 task_id=%s student_profile_id=%s task_status=%s "
+                "occurrence=%s record_id=%s record_status=%s student_status=%s",
+                task.id,
+                profile.id,
+                task.status,
+                today,
+                occurrence_record.id if occurrence_record else None,
+                occurrence_record.status if occurrence_record else None,
+                student_status,
+            )
         return {
             "id": task.id,
             "title": task.title,
             "description": task.description or "",
-            "status": task.status,
+            "status": student_status,
+            "task_status": task.status,
             "starts_at": task.starts_at.isoformat(),
             "ends_at": task.ends_at.isoformat(),
             "group_name": group_name,
             "groupName": group_name,
             "rules_snapshot": rules,
+            "occurrence_date": today,
+            "checked_in": occurrence_record is not None,
+            "checked_in_today": occurrence_record is not None,
+            "occurrence_record_status": (
+                occurrence_record.status if occurrence_record else None
+            ),
+            "today_record_status": (
+                occurrence_record.status if occurrence_record else None
+            ),
         }
 
     @staticmethod

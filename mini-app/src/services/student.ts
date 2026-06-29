@@ -1,6 +1,7 @@
-import { request } from '@/services/request'
+import { API_BASE_URL, request } from '@/services/request'
 import type { ApiResponse } from '@/services/types'
-import { formatBeijingDateTime, formatBeijingDateTimeNow, formatBeijingClock } from '@/utils/datetime'
+import { logInfo } from '@/services/feedback'
+import { formatBeijingDate, formatBeijingDateTime, formatBeijingDateTimeNow, formatBeijingClock } from '@/utils/datetime'
 
 export type StatusTone = 'normal' | 'in-progress' | 'pending' | 'exception' | 'ended'
 export type ResultState = 'normal' | 'exception' | 'pending_review'
@@ -17,6 +18,8 @@ export interface StudentJoinedGroup {
   inviteCode?: string
   studentCount: number
   recentTaskCount?: number
+  checkedInCount?: number
+  publishedCount?: number
   teacherId?: number
   teacherName?: string
   studentProfileId?: number
@@ -50,6 +53,8 @@ export interface StudentTask {
   title: string
   type: string
   status: StatusTone
+  taskStatus?: 'draft' | 'not_started' | 'in_progress' | 'ended'
+  taskDate: string
   deadline: string
   actionText: string
   groupName: string
@@ -114,12 +119,68 @@ export interface CheckinResult {
 
 export type AttendanceStatusKey = 'present' | 'late' | 'early_leave' | 'absent' | 'leave'
 
+export type ClassAttendanceStatus = AttendanceStatusKey | 'partial'
+
 export const ATTENDANCE_LABELS: Record<AttendanceStatusKey, string> = {
   present: '签到',
   late: '迟到',
   early_leave: '早退',
   absent: '未签到',
   leave: '请假',
+}
+
+export const CLASS_ATTENDANCE_LABELS: Record<ClassAttendanceStatus, string> = {
+  ...ATTENDANCE_LABELS,
+  partial: '部分签到',
+}
+
+export interface StudentGroupAttendanceSummary {
+  checkedInCount: number
+  publishedCount: number
+  presentCount: number
+  lateCount: number
+  earlyLeaveCount: number
+  absentCount: number
+  leaveCount: number
+  expiredCount: number
+  sickLeaveCount: number
+  personalLeaveCount: number
+  officialLeaveCount: number
+}
+
+export interface StudentGroupAttendanceTimelineItem {
+  taskId: number
+  taskTitle: string
+  occurrenceDate: string
+  occurredAt: string
+  initiatorName: string
+  statusLabel: string
+  attendanceStatus: ClassAttendanceStatus | string
+  isExpired: boolean
+}
+
+export interface StudentGroupTaskAttendance {
+  id: number
+  title: string
+  taskStatus: string
+  startsAt: string
+  endsAt: string
+  isRecurring: boolean
+  occurrenceCount: number
+  checkedInCount: number
+  checkedIn: boolean
+  attendanceStatus: ClassAttendanceStatus
+}
+
+export interface StudentGroupAttendanceDetail {
+  group: {
+    id: number
+    name: string
+    teacherName: string
+  }
+  summary: StudentGroupAttendanceSummary
+  tasks: StudentGroupTaskAttendance[]
+  timeline: StudentGroupAttendanceTimelineItem[]
 }
 
 export interface StudentRecord {
@@ -193,12 +254,16 @@ interface BackendStudentTask {
   id: number | string
   title?: string
   status?: string
+  task_status?: string
   starts_at?: string
   ends_at?: string
   type_id?: number
   description?: string
   group_name?: string
   groupName?: string
+  occurrence_date?: string
+  checked_in_today?: boolean
+  today_record_status?: string | null
   rules_snapshot?: Record<string, unknown>
 }
 
@@ -357,13 +422,19 @@ function mapTaskType(typeId?: number): string {
   return typeId === 1 ? '晚间查寝' : '打卡任务'
 }
 
-function mapActionText(status: StatusTone): string {
+function mapActionText(status: StatusTone, taskStatus?: string): string {
+  if (status === 'normal') {
+    return '查看详情'
+  }
+  if (taskStatus === 'ended') {
+    return '详情'
+  }
   const actionMap: Record<StatusTone, string> = {
     normal: '查看详情',
     'in-progress': '立即打卡',
     pending: '查看规则',
     exception: '去申诉',
-    ended: '查看记录',
+    ended: '详情',
   }
   return actionMap[status]
 }
@@ -445,6 +516,15 @@ function mapStudentTask(raw: BackendStudentTask): StudentTask {
   const dynamicFields = readArray(submitRule.fields).map(mapDynamicField)
   const methods = resolveMethods(rules)
   const status = normalizeTaskStatus(raw.status)
+  logInfo('映射学生任务状态', {
+    taskId: String(raw.id),
+    apiStatus: raw.status,
+    taskStatus: raw.task_status,
+    checkedInToday: raw.checked_in_today,
+    todayRecordStatus: raw.today_record_status,
+    mappedStatus: status,
+    occurrenceDate: raw.occurrence_date,
+  })
   const locationName = readString(locationRule.placeName, '指定地点')
   const radius = readNumber(locationRule.radius)
   const locationSource = readString(locationRule.source)
@@ -469,14 +549,19 @@ function mapStudentTask(raw: BackendStudentTask): StudentTask {
     (raw as Record<string, unknown>).schedule_mode as string,
     'one_time',
   ) === 'recurring' ? 'recurring' : 'one_time'
+  const taskStatus = readString(raw.task_status, 'in_progress') as StudentTask['taskStatus']
+  const taskDate =
+    readString(raw.occurrence_date) || formatBeijingDate(raw.ends_at) || formatBeijingDate(raw.starts_at)
 
   return {
     id: String(raw.id),
     title: readString(raw.title, '打卡任务'),
     type: mapTaskType(raw.type_id),
     status,
+    taskStatus,
+    taskDate,
     deadline: raw.ends_at ? `${formatDateTime(raw.ends_at)} 截止` : '按任务要求截止',
-    actionText: mapActionText(status),
+    actionText: mapActionText(status, taskStatus),
     groupName: readString(raw.groupName ?? raw.group_name, ''),
     description: readString(raw.description, `请在${timeWindow || '规定时间'}内完成${locationName}打卡。`),
     timeWindow: timeWindow || '按任务要求',
@@ -813,11 +898,23 @@ export async function getStudentDashboard(): Promise<StudentDashboard> {
 }
 
 export async function getStudentTasks(_query?: StudentTaskQuery): Promise<StudentTask[]> {
+  logInfo('请求学生任务列表', { url: '/student/tasks' })
   const response = await request<ApiResponse<BackendList<BackendStudentTask>>>({
     url: '/student/tasks',
     method: 'GET',
   })
-  return unwrapItems(response).map(mapStudentTask)
+  const items = unwrapItems(response)
+  logInfo('学生任务列表 API 返回', {
+    count: items.length,
+    sample: items.slice(0, 3).map((item) => ({
+      id: item.id,
+      status: item.status,
+      taskStatus: item.task_status,
+      checkedInToday: item.checked_in_today,
+      todayRecordStatus: item.today_record_status,
+    })),
+  })
+  return items.map(mapStudentTask)
 }
 
 export async function getStudentTaskDetail(taskId: string): Promise<StudentTask> {
@@ -1032,6 +1129,10 @@ interface BackendStudentGroup {
   studentCount?: number
   recent_task_count?: number
   recentTaskCount?: number
+  checked_in_count?: number
+  checkedInCount?: number
+  published_count?: number
+  publishedCount?: number
   teacher_id?: number
   teacherId?: number
   teacher_name?: string
@@ -1046,6 +1147,8 @@ function mapStudentGroup(raw: BackendStudentGroup): StudentJoinedGroup {
     name: readString(raw.name, '班级'),
     studentCount: raw.studentCount ?? raw.student_count ?? 0,
     recentTaskCount: raw.recentTaskCount ?? raw.recent_task_count ?? 0,
+    checkedInCount: raw.checkedInCount ?? raw.checked_in_count ?? 0,
+    publishedCount: raw.publishedCount ?? raw.published_count ?? 0,
     teacherId: raw.teacherId ?? raw.teacher_id,
     teacherName: readString(raw.teacherName ?? raw.teacher_name, ''),
     studentProfileId: raw.studentProfileId ?? raw.student_profile_id,
@@ -1053,11 +1156,253 @@ function mapStudentGroup(raw: BackendStudentGroup): StudentJoinedGroup {
 }
 
 export async function getStudentJoinedGroups(): Promise<StudentJoinedGroup[]> {
+  logInfo('[我的班级] 请求班级列表', { url: '/student/groups', apiBase: API_BASE_URL })
   const response = await request<ApiResponse<BackendList<BackendStudentGroup>>>({
     url: '/student/groups',
     method: 'GET',
   })
-  return unwrapItems(response).map(mapStudentGroup)
+  const rawItems = unwrapItems(response)
+  logInfo('[我的班级] 班级列表原始响应', {
+    count: rawItems.length,
+    items: rawItems.map((item) => ({
+      id: item.id,
+      name: item.name,
+      checked_in_count: item.checked_in_count,
+      checkedInCount: item.checkedInCount,
+      published_count: item.published_count,
+      publishedCount: item.publishedCount,
+    })),
+  })
+  const mapped = rawItems.map(mapStudentGroup)
+  logInfo('[我的班级] 班级列表映射结果', {
+    groups: mapped.map((group) => ({
+      id: group.id,
+      name: group.name,
+      checkedInCount: group.checkedInCount,
+      publishedCount: group.publishedCount,
+    })),
+  })
+  return mapped
+}
+
+function mapGroupAttendanceSummary(raw: Record<string, unknown>): StudentGroupAttendanceSummary {
+  return {
+    checkedInCount: Number(raw.checkedInCount ?? raw.checked_in_count ?? 0),
+    publishedCount: Number(raw.publishedCount ?? raw.published_count ?? 0),
+    presentCount: Number(raw.presentCount ?? raw.present_count ?? 0),
+    lateCount: Number(raw.lateCount ?? raw.late_count ?? 0),
+    earlyLeaveCount: Number(raw.earlyLeaveCount ?? raw.early_leave_count ?? 0),
+    absentCount: Number(raw.absentCount ?? raw.absent_count ?? 0),
+    leaveCount: Number(raw.leaveCount ?? raw.leave_count ?? 0),
+    expiredCount: Number(raw.expiredCount ?? raw.expired_count ?? 0),
+    sickLeaveCount: Number(raw.sickLeaveCount ?? raw.sick_leave_count ?? 0),
+    personalLeaveCount: Number(raw.personalLeaveCount ?? raw.personal_leave_count ?? 0),
+    officialLeaveCount: Number(raw.officialLeaveCount ?? raw.official_leave_count ?? 0),
+  }
+}
+
+function mapGroupAttendanceTimelineItem(
+  raw: Record<string, unknown>,
+): StudentGroupAttendanceTimelineItem {
+  const attendance = String(raw.attendanceStatus ?? raw.attendance_status ?? 'absent')
+  const normalizedAttendance: ClassAttendanceStatus | string =
+    attendance in CLASS_ATTENDANCE_LABELS ? (attendance as ClassAttendanceStatus) : attendance
+  return {
+    taskId: Number(raw.taskId ?? raw.task_id ?? 0),
+    taskTitle: readString(raw.taskTitle ?? raw.task_title, '打卡任务'),
+    occurrenceDate: readString(raw.occurrenceDate ?? raw.occurrence_date, ''),
+    occurredAt: readString(raw.occurredAt ?? raw.occurred_at, ''),
+    initiatorName: readString(raw.initiatorName ?? raw.initiator_name, ''),
+    statusLabel: readString(raw.statusLabel ?? raw.status_label, '缺勤'),
+    attendanceStatus: normalizedAttendance,
+    isExpired: Boolean(raw.isExpired ?? raw.is_expired),
+  }
+}
+
+function mapGroupTaskAttendance(raw: Record<string, unknown>): StudentGroupTaskAttendance {
+  const attendance = String(raw.attendanceStatus ?? raw.attendance_status ?? 'absent')
+  const normalizedAttendance: ClassAttendanceStatus =
+    attendance in CLASS_ATTENDANCE_LABELS ? (attendance as ClassAttendanceStatus) : 'absent'
+  return {
+    id: Number(raw.id ?? 0),
+    title: readString(raw.title, '打卡任务'),
+    taskStatus: readString(raw.taskStatus ?? raw.task_status, 'ended'),
+    startsAt: readString(raw.startsAt ?? raw.starts_at, ''),
+    endsAt: readString(raw.endsAt ?? raw.ends_at, ''),
+    isRecurring: Boolean(raw.isRecurring ?? raw.is_recurring),
+    occurrenceCount: Number(raw.occurrenceCount ?? raw.occurrence_count ?? 1),
+    checkedInCount: Number(raw.checkedInCount ?? raw.checked_in_count ?? 0),
+    checkedIn: Boolean(raw.checkedIn ?? raw.checked_in),
+    attendanceStatus: normalizedAttendance,
+  }
+}
+
+function isHttpNotFoundError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false
+  }
+  const payload = error as { statusCode?: number; data?: unknown }
+  return payload.statusCode === 404
+}
+
+function taskBelongsToGroup(task: StudentTask, groupName: string): boolean {
+  if (!groupName.trim()) {
+    return false
+  }
+  const normalizedGroupName = groupName.trim()
+  const segments = task.groupName.split('/').map((item) => item.trim()).filter(Boolean)
+  return segments.includes(normalizedGroupName) || task.groupName.includes(normalizedGroupName)
+}
+
+function mapStudentTaskAttendanceStatus(task: StudentTask): ClassAttendanceStatus {
+  if (task.status === 'normal') {
+    return 'present'
+  }
+  if (task.status === 'exception') {
+    return 'absent'
+  }
+  return 'absent'
+}
+
+function mapStudentTaskToGroupAttendance(task: StudentTask): StudentGroupTaskAttendance {
+  const attendanceStatus = mapStudentTaskAttendanceStatus(task)
+  const checkedIn = attendanceStatus === 'present'
+  return {
+    id: Number(task.id),
+    title: task.title,
+    taskStatus: task.taskStatus ?? 'ended',
+    startsAt: task.deadline,
+    endsAt: task.deadline,
+    isRecurring: task.scheduleMode === 'recurring',
+    occurrenceCount: 1,
+    checkedInCount: checkedIn ? 1 : 0,
+    checkedIn,
+    attendanceStatus,
+  }
+}
+
+async function buildFallbackGroupAttendance(
+  groupId: number | string,
+): Promise<StudentGroupAttendanceDetail> {
+  const id = Number(groupId)
+  logInfo('[班级详情] 考勤接口不可用，使用班级列表与任务数据降级', { groupId: id })
+
+  const groups = await getStudentJoinedGroups()
+  const group = groups.find((item) => item.id === id)
+  if (!group) {
+    throw new Error('班级不存在')
+  }
+
+  const allTasks = await getStudentTasks()
+  const groupTasks = allTasks.filter((task) => taskBelongsToGroup(task, group.name))
+  const mappedTasks = groupTasks.map(mapStudentTaskToGroupAttendance)
+
+  let presentCount = 0
+  let absentCount = 0
+  let checkedInCount = 0
+  for (const task of mappedTasks) {
+    if (task.attendanceStatus === 'present') {
+      presentCount += 1
+      checkedInCount += 1
+    } else {
+      absentCount += 1
+    }
+  }
+
+  const publishedCount = group.publishedCount ?? mappedTasks.length
+  const summary: StudentGroupAttendanceSummary = {
+    checkedInCount: group.checkedInCount ?? checkedInCount,
+    publishedCount,
+    presentCount,
+    lateCount: 0,
+    earlyLeaveCount: 0,
+    absentCount: Math.max(absentCount, publishedCount - (group.checkedInCount ?? checkedInCount)),
+    leaveCount: 0,
+    expiredCount: 0,
+    sickLeaveCount: 0,
+    personalLeaveCount: 0,
+    officialLeaveCount: 0,
+  }
+
+  const timeline: StudentGroupAttendanceTimelineItem[] = mappedTasks
+    .filter((task) => task.checkedIn)
+    .map((task) => ({
+      taskId: task.id,
+      taskTitle: task.title,
+      occurrenceDate: formatBeijingDate(task.endsAt),
+      occurredAt: task.endsAt,
+      initiatorName: group.teacherName ?? '',
+      statusLabel: CLASS_ATTENDANCE_LABELS[task.attendanceStatus] ?? '出勤',
+      attendanceStatus: task.attendanceStatus,
+      isExpired: false,
+    }))
+
+  const detail: StudentGroupAttendanceDetail = {
+    group: {
+      id: group.id,
+      name: group.name,
+      teacherName: group.teacherName ?? '',
+    },
+    summary,
+    tasks: mappedTasks,
+    timeline,
+  }
+
+  logInfo('[班级详情] 降级数据构建完成', {
+    groupId: id,
+    groupName: detail.group.name,
+    summary: detail.summary,
+    taskCount: detail.tasks.length,
+  })
+  return detail
+}
+
+export async function getStudentGroupAttendance(
+  groupId: number | string,
+): Promise<StudentGroupAttendanceDetail> {
+  logInfo('[班级详情] 请求考勤数据', { groupId, url: `/student/groups/${groupId}/attendance` })
+  try {
+    const response = await request<ApiResponse<Record<string, unknown>>>({
+      url: `/student/groups/${groupId}/attendance`,
+      method: 'GET',
+    })
+    const data = unwrapData(response)
+    logInfo('[班级详情] 考勤接口响应', {
+      groupId,
+      hasGroup: Boolean(data.group),
+      hasSummary: Boolean(data.summary),
+      taskCount: Array.isArray(data.tasks) ? data.tasks.length : 0,
+    })
+    const groupRaw = (data.group ?? {}) as Record<string, unknown>
+    const summaryRaw = (data.summary ?? {}) as Record<string, unknown>
+    const tasksRaw = Array.isArray(data.tasks) ? data.tasks : []
+    const timelineRaw = Array.isArray(data.timeline) ? data.timeline : []
+    const mapped: StudentGroupAttendanceDetail = {
+      group: {
+        id: Number(groupRaw.id ?? groupId),
+        name: readString(groupRaw.name, '班级'),
+        teacherName: readString(groupRaw.teacherName ?? groupRaw.teacher_name, ''),
+      },
+      summary: mapGroupAttendanceSummary(summaryRaw),
+      tasks: tasksRaw.map((item) => mapGroupTaskAttendance(item as Record<string, unknown>)),
+      timeline: timelineRaw.map((item) =>
+        mapGroupAttendanceTimelineItem(item as Record<string, unknown>),
+      ),
+    }
+    logInfo('[班级详情] 考勤数据映射完成', {
+      groupId,
+      groupName: mapped.group.name,
+      summary: mapped.summary,
+      taskCount: mapped.tasks.length,
+    })
+    return mapped
+  } catch (error) {
+    if (isHttpNotFoundError(error)) {
+      logInfo('[班级详情] 考勤接口返回 404，尝试降级加载', { groupId })
+      return buildFallbackGroupAttendance(groupId)
+    }
+    throw error
+  }
 }
 
 export async function joinClassByInviteCode(inviteCode: string): Promise<StudentJoinedGroup> {

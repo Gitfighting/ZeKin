@@ -1,0 +1,8 @@
+{
+  "appid": "wx你的测试号AppID",
+  "libVersion": "3.8.12",
+  "setting": {
+    "urlCheck": false,
+    "es6": true
+  }
+}

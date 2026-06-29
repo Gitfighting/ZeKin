@@ -59,6 +59,46 @@ class RecordRepository:
         )
         return list(self.db.scalars(statement))
 
+    def list_records_for_student_on_date(
+        self, student_profile_id: int, occurrence_date: str
+    ) -> list[CheckinRecord]:
+        statement = (
+            select(CheckinRecord)
+            .where(
+                CheckinRecord.student_profile_id == student_profile_id,
+                CheckinRecord.occurrence_date == occurrence_date,
+            )
+            .order_by(CheckinRecord.id)
+        )
+        return list(self.db.scalars(statement))
+
+    def map_records_for_student_tasks(
+        self, student_profile_id: int, task_ids: list[int]
+    ) -> dict[tuple[int, str], CheckinRecord]:
+        if not task_ids:
+            return {}
+        statement = select(CheckinRecord).where(
+            CheckinRecord.student_profile_id == student_profile_id,
+            CheckinRecord.task_id.in_(task_ids),
+        )
+        indexed: dict[tuple[int, str], CheckinRecord] = {}
+        for record in self.db.scalars(statement):
+            indexed[(record.task_id, record.occurrence_date or "")] = record
+        return indexed
+
+    def get_record_for_student_task_occurrence(
+        self,
+        student_profile_id: int,
+        task_id: int,
+        occurrence_date: str,
+    ) -> CheckinRecord | None:
+        statement = select(CheckinRecord).where(
+            CheckinRecord.student_profile_id == student_profile_id,
+            CheckinRecord.task_id == task_id,
+            CheckinRecord.occurrence_date == occurrence_date,
+        )
+        return self.db.scalar(statement)
+
     def list_messages_for_user(self, user_id: int) -> list[Message]:
         statement = (
             select(Message)

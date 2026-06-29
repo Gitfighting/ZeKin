@@ -1,4 +1,4 @@
-﻿from copy import deepcopy
+from copy import deepcopy
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -153,3 +153,14 @@ def test_checkin_flow_and_rule_snapshot_is_immutable(monkeypatch) -> None:
     )
     assert checkin_response.status_code == 200
     assert checkin_response.json()["data"]["status"] == "normal"
+
+    tasks_response = client.get(
+        "/api/student/tasks",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    assert tasks_response.status_code == 200
+    task_items = tasks_response.json()["data"]["items"]
+    checked_task = next(item for item in task_items if item["id"] == task_id)
+    assert checked_task["status"] == "normal"
+    assert checked_task["checked_in_today"] is True
+    assert checked_task["today_record_status"] == "normal"

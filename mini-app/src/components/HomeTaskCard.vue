@@ -33,14 +33,14 @@ const deadlineText = computed(() => {
 })
 
 const statusLabel = computed(() => {
-  if (props.task.status === 'normal' || props.task.status === 'ended') {
+  if (props.task.status === 'normal') {
     return '已完成'
   }
   return '待完成'
 })
 
 const statusClass = computed(() =>
-  props.task.status === 'normal' || props.task.status === 'ended' ? 'done' : 'pending',
+  props.task.status === 'normal' ? 'done' : 'pending',
 )
 </script>
 

@@ -30,3 +30,16 @@ def ensure_student_location_columns(engine: Engine) -> None:
             connection.execute(
                 text(f"ALTER TABLE student_profiles ADD COLUMN {name} {sql_type}")
             )
+
+
+def ensure_task_scheduled_publish_column(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "checkin_tasks" not in inspector.get_table_names():
+        return
+    existing = {column["name"] for column in inspector.get_columns("checkin_tasks")}
+    if "scheduled_publish_at" in existing:
+        return
+    with engine.begin() as connection:
+        connection.execute(
+            text("ALTER TABLE checkin_tasks ADD COLUMN scheduled_publish_at DATETIME")
+        )
